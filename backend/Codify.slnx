@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Codify.API/Codify.API.csproj" />
+    <Project Path="src/Codify.Application/Codify.Application.csproj" />
+    <Project Path="src/Codify.Domain/Codify.Domain.csproj" />
+    <Project Path="src/Codify.Infrastructure/Codify.Infrastructure.csproj" />
+  </Folder>
+</Solution>
