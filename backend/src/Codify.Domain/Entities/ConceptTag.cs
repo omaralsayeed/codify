@@ -4,7 +4,11 @@ public class ConceptTag
 {
     public Guid Id { get; private set; }
     public string Name { get; private set; } = string.Empty;
+    public string Slug { get; private set; } = string.Empty;
     public string Description { get; private set; } = string.Empty;
+    public DateTime CreatedAt { get; private set; }
+    public DateTime UpdatedAt { get; private set; }
+    public bool IsDeleted { get; private set; }
 
     // Navigation
     public ICollection<ProblemTag> ProblemTags { get; private set; } = [];
@@ -17,7 +21,19 @@ public class ConceptTag
         {
             Id = Guid.NewGuid(),
             Name = name,
-            Description = description
+            Slug = GenerateSlug(name),
+            Description = description,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            IsDeleted = false
         };
     }
+
+    private static string GenerateSlug(string name) =>
+        name.ToLowerInvariant()
+            .Replace(" ", "-")
+            .Replace("&", "and")
+            .Where(c => char.IsLetterOrDigit(c) || c == '-')
+            .Aggregate(string.Empty, (acc, c) => acc + c)
+            .Trim('-');
 }

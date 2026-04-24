@@ -20,4 +20,16 @@ public class SubmissionRepository(CodifyDbContext db) : ISubmissionRepository
             .OrderByDescending(s => s.SubmittedAt)
             .ToListAsync();
     }
+
+    public async Task<Submission?> GetByIdWithDetailsAsync(Guid id) =>
+        await db.Submissions
+            .Include(s => s.Result)
+            .Include(s => s.FeedbackRecords)
+            .FirstOrDefaultAsync(s => s.Id == id);
+
+    public async Task AddAsync(Submission submission) =>
+        await db.Submissions.AddAsync(submission);
+
+    public async Task SaveChangesAsync() =>
+        await db.SaveChangesAsync();
 }

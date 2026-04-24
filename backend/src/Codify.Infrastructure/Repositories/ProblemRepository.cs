@@ -46,6 +46,11 @@ public class ProblemRepository(CodifyDbContext db) : IProblemRepository
             .Include(p => p.TestCases)
             .FirstOrDefaultAsync(p => p.Id == id);
 
+    public async Task<Problem?> GetByIdWithTestCasesAsync(Guid id) =>
+        await db.Problems
+            .Include(p => p.TestCases)
+            .FirstOrDefaultAsync(p => p.Id == id);
+
     public async Task AddAsync(Problem problem) =>
         await db.Problems.AddAsync(problem);
 

@@ -21,6 +21,12 @@ public class CreateProblemRequest
     public List<Guid> TagIds { get; set; } = [];
 
     public List<CreateTestCaseRequest> TestCases { get; set; } = [];
+
+    [Range(100, 30000)]
+    public int TimeLimitMs { get; set; } = 2000;
+
+    [Range(16, 1024)]
+    public int MemoryLimitMb { get; set; } = 256;
 }
 
 public class CreateTestCaseRequest

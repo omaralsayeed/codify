@@ -14,6 +14,13 @@ public class Submission
     public int? ExecutionTimeMs { get; private set; }
     public int? MemoryUsedKb { get; private set; }
 
+    // ER diagram additions
+    public int PassedTestCases { get; private set; }
+    public int TotalTestCases { get; private set; }
+    public decimal? Score { get; private set; }
+    public DateTime UpdatedAt { get; private set; }
+    public bool IsDeleted { get; private set; }
+
     // Navigation
     public Problem Problem { get; private set; } = null!;
     public User User { get; private set; } = null!;
@@ -32,16 +39,43 @@ public class Submission
             Code = code,
             Language = language,
             Status = SubmissionStatus.Pending,
-            SubmittedAt = DateTime.UtcNow
+            SubmittedAt = DateTime.UtcNow,
+            PassedTestCases = 0,
+            TotalTestCases = 0,
+            UpdatedAt = DateTime.UtcNow,
+            IsDeleted = false
         };
     }
 
-    public void MarkAsRunning() => Status = SubmissionStatus.Running;
-    public void MarkAsAccepted(int executionTimeMs, int memoryUsedKb)
+    public void MarkAsRunning()
+    {
+        Status = SubmissionStatus.Running;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void MarkAsAccepted(int executionTimeMs, int memoryUsedKb, int passedTestCases, int totalTestCases)
     {
         Status = SubmissionStatus.Accepted;
         ExecutionTimeMs = executionTimeMs;
         MemoryUsedKb = memoryUsedKb;
+        PassedTestCases = passedTestCases;
+        TotalTestCases = totalTestCases;
+        Score = totalTestCases > 0 ? (decimal)passedTestCases / totalTestCases * 100 : 0;
+        UpdatedAt = DateTime.UtcNow;
     }
-    public void MarkAsFailed(SubmissionStatus reason) => Status = reason;
+
+    public void MarkAsFailed(SubmissionStatus reason, int passedTestCases, int totalTestCases)
+    {
+        Status = reason;
+        PassedTestCases = passedTestCases;
+        TotalTestCases = totalTestCases;
+        Score = totalTestCases > 0 ? (decimal)passedTestCases / totalTestCases * 100 : 0;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SoftDelete()
+    {
+        IsDeleted = true;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

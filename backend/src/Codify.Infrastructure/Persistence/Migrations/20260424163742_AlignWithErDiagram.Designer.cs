@@ -4,6 +4,7 @@ using Codify.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Codify.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(CodifyDbContext))]
-    partial class CodifyDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260424163742_AlignWithErDiagram")]
+    partial class AlignWithErDiagram
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

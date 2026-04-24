@@ -33,6 +33,7 @@ public static class DependencyInjection
         services.AddScoped<IProblemService, ProblemService>();
         services.AddScoped<IConceptTagService, ConceptTagService>();
         services.AddScoped<ISubmissionService, SubmissionService>();
+        services.AddScoped<IExecutionService, ExecutionService>();
 
         return services;
     }

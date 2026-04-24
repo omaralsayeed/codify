@@ -33,7 +33,7 @@ public class ProblemService(
         return MapToDetail(problem);
     }
 
-    public async Task<ProblemDetailResponse> CreateAsync(CreateProblemRequest request)
+    public async Task<ProblemDetailResponse> CreateAsync(CreateProblemRequest request, Guid authorId)
     {
         var tags = await tagRepo.GetByIdsAsync(request.TagIds);
         var languageJson = JsonSerializer.Serialize(request.LanguageSupport);
@@ -43,18 +43,23 @@ public class ProblemService(
             request.Statement,
             request.Difficulty,
             request.Constraints,
-            languageJson);
+            languageJson,
+            authorId,
+            request.TimeLimitMs,
+            request.MemoryLimitMb);
 
         foreach (var tag in tags)
             problem.ProblemTags.Add(ProblemTag.Create(problem.Id, tag.Id));
 
+        int orderIndex = 0;
         foreach (var tc in request.TestCases)
             problem.TestCases.Add(TestCase.Create(
                 problem.Id,
                 tc.InputData,
                 tc.ExpectedOutput,
                 tc.IsSample,
-                tc.VisibilityMode));
+                tc.VisibilityMode,
+                orderIndex++));
 
         await problemRepo.AddAsync(problem);
         await problemRepo.SaveChangesAsync();
@@ -114,14 +119,21 @@ public class ProblemService(
         {
             Id = p.Id,
             Title = p.Title,
+            Slug = p.Slug,
             Statement = p.Statement,
             Difficulty = p.Difficulty,
             Constraints = p.Constraints,
             LanguageSupport = languages,
             Tags = p.ProblemTags.Select(pt => pt.ConceptTag.Name).ToList(),
             IsActive = p.IsActive,
+            IsPublic = p.IsPublic,
+            TimeLimitMs = p.TimeLimitMs,
+            MemoryLimitMb = p.MemoryLimitMb,
+            AcceptedSubmissionsCount = p.AcceptedSubmissionsCount,
+            TotalSubmissionsCount = p.TotalSubmissionsCount,
             SampleTestCases = p.TestCases
                 .Where(tc => tc.IsSample)
+                .OrderBy(tc => tc.OrderIndex)
                 .Select(tc => new SampleTestCaseResponse
                 {
                     Input = tc.InputData,

@@ -31,7 +31,8 @@ public class ProblemsController(IProblemService problemService, ISubmissionServi
     [Authorize(Roles = "Instructor")]
     public async Task<IActionResult> Create([FromBody] CreateProblemRequest request)
     {
-        var result = await problemService.CreateAsync(request);
+        var authorId = User.GetUserId();
+        var result = await problemService.CreateAsync(request, authorId);
         return StatusCode(201, ApiResponse.Ok(result));
     }
 

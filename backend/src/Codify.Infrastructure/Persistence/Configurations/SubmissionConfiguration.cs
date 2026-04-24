@@ -13,6 +13,13 @@ public class SubmissionConfiguration : IEntityTypeConfiguration<Submission>
         builder.Property(s => s.Language).HasConversion<string>();
         builder.Property(s => s.Status).HasConversion<string>();
         builder.Property(s => s.SubmittedAt).IsRequired();
+        builder.Property(s => s.PassedTestCases).HasDefaultValue(0);
+        builder.Property(s => s.TotalTestCases).HasDefaultValue(0);
+        builder.Property(s => s.Score).HasColumnType("decimal(5,2)");
+        builder.Property(s => s.UpdatedAt).IsRequired();
+        builder.Property(s => s.IsDeleted).IsRequired().HasDefaultValue(false);
+
+        builder.HasQueryFilter(s => !s.IsDeleted);
 
         builder.HasOne(s => s.User)
             .WithMany(u => u.Submissions)

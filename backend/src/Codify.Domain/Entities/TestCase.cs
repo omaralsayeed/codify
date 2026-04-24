@@ -11,6 +11,12 @@ public class TestCase
     public bool IsSample { get; private set; }
     public TestCaseVisibility VisibilityMode { get; private set; }
 
+    // ER diagram additions
+    public int OrderIndex { get; private set; }
+    public DateTime CreatedAt { get; private set; }
+    public DateTime UpdatedAt { get; private set; }
+    public bool IsDeleted { get; private set; }
+
     // Navigation
     public Problem Problem { get; private set; } = null!;
 
@@ -21,7 +27,8 @@ public class TestCase
         string inputData,
         string expectedOutput,
         bool isSample,
-        TestCaseVisibility visibilityMode)
+        TestCaseVisibility visibilityMode,
+        int orderIndex = 0)
     {
         return new TestCase
         {
@@ -30,7 +37,11 @@ public class TestCase
             InputData = inputData,
             ExpectedOutput = expectedOutput,
             IsSample = isSample,
-            VisibilityMode = visibilityMode
+            VisibilityMode = visibilityMode,
+            OrderIndex = orderIndex,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            IsDeleted = false
         };
     }
 }
