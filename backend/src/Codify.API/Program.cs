@@ -103,6 +103,7 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<CodifyDbContext>();
     db.Database.EnsureCreated();
     await ConceptTagSeed.SeedAsync(db);
+    await ProblemSeed.SeedAsync(db);
 }
 
 if (app.Environment.IsDevelopment())

@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Codify.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+feaeac079d5a51c56c4d77782ba2d89d64167118")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1e2e93f4b45af7712ca6783357cdd8436103945a")]
 [assembly: System.Reflection.AssemblyProductAttribute("Codify.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Codify.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
