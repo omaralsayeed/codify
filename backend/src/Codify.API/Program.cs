@@ -1,9 +1,11 @@
 using System.Text;
+using System.Threading.RateLimiting;
 using Codify.API.Middleware;
 using Codify.Infrastructure;
 using Codify.Infrastructure.Persistence;
 using Codify.Infrastructure.Persistence.Seed;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -29,6 +31,57 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret))
         };
     });
+
+// Rate limiting — per-user sliding window policies
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    // POST /submissions — 30 per hour per user
+    options.AddPolicy("submissions", httpContext =>
+        RateLimitPartition.GetSlidingWindowLimiter(
+            partitionKey: httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                          ?? httpContext.Connection.RemoteIpAddress?.ToString()
+                          ?? "anonymous",
+            factory: _ => new SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = 30,
+                Window = TimeSpan.FromHours(1),
+                SegmentsPerWindow = 6,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }));
+
+    // POST /execution/run — 60 per hour per user
+    options.AddPolicy("execution", httpContext =>
+        RateLimitPartition.GetSlidingWindowLimiter(
+            partitionKey: httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                          ?? httpContext.Connection.RemoteIpAddress?.ToString()
+                          ?? "anonymous",
+            factory: _ => new SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = 60,
+                Window = TimeSpan.FromHours(1),
+                SegmentsPerWindow = 6,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }));
+
+    // POST /ai/hints — 10 per hour per user
+    options.AddPolicy("ai-hints", httpContext =>
+        RateLimitPartition.GetSlidingWindowLimiter(
+            partitionKey: httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                          ?? httpContext.Connection.RemoteIpAddress?.ToString()
+                          ?? "anonymous",
+            factory: _ => new SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromHours(1),
+                SegmentsPerWindow = 6,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }));
+});
 
 builder.Services.AddAuthorization();
 builder.Services.AddControllers();
@@ -60,6 +113,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseMiddleware<ExceptionMiddleware>();
 app.UseCors();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
