@@ -10,3 +10,15 @@ D:\mohamed khaled\ITI\Graduation Project\codify\backend\src\Codify.Domain\obj\De
 D:\mohamed khaled\ITI\Graduation Project\codify\backend\src\Codify.Domain\obj\Debug\net10.0\refint\Codify.Domain.dll
 D:\mohamed khaled\ITI\Graduation Project\codify\backend\src\Codify.Domain\obj\Debug\net10.0\Codify.Domain.pdb
 D:\mohamed khaled\ITI\Graduation Project\codify\backend\src\Codify.Domain\obj\Debug\net10.0\ref\Codify.Domain.dll
+D:\All Courses\ITI\Graduation Project\omaralsayeed\codify\backend\src\Codify.Domain\bin\Debug\net10.0\Codify.Domain.deps.json
+D:\All Courses\ITI\Graduation Project\omaralsayeed\codify\backend\src\Codify.Domain\bin\Debug\net10.0\Codify.Domain.dll
+D:\All Courses\ITI\Graduation Project\omaralsayeed\codify\backend\src\Codify.Domain\bin\Debug\net10.0\Codify.Domain.pdb
+D:\All Courses\ITI\Graduation Project\omaralsayeed\codify\backend\src\Codify.Domain\obj\Debug\net10.0\Codify.Domain.GeneratedMSBuildEditorConfig.editorconfig
+D:\All Courses\ITI\Graduation Project\omaralsayeed\codify\backend\src\Codify.Domain\obj\Debug\net10.0\Codify.Domain.AssemblyInfoInputs.cache
+D:\All Courses\ITI\Graduation Project\omaralsayeed\codify\backend\src\Codify.Domain\obj\Debug\net10.0\Codify.Domain.AssemblyInfo.cs
+D:\All Courses\ITI\Graduation Project\omaralsayeed\codify\backend\src\Codify.Domain\obj\Debug\net10.0\Codify.Domain.csproj.CoreCompileInputs.cache
+D:\All Courses\ITI\Graduation Project\omaralsayeed\codify\backend\src\Codify.Domain\obj\Debug\net10.0\Codify.Domain.sourcelink.json
+D:\All Courses\ITI\Graduation Project\omaralsayeed\codify\backend\src\Codify.Domain\obj\Debug\net10.0\Codify.Domain.dll
+D:\All Courses\ITI\Graduation Project\omaralsayeed\codify\backend\src\Codify.Domain\obj\Debug\net10.0\refint\Codify.Domain.dll
+D:\All Courses\ITI\Graduation Project\omaralsayeed\codify\backend\src\Codify.Domain\obj\Debug\net10.0\Codify.Domain.pdb
+D:\All Courses\ITI\Graduation Project\omaralsayeed\codify\backend\src\Codify.Domain\obj\Debug\net10.0\ref\Codify.Domain.dll

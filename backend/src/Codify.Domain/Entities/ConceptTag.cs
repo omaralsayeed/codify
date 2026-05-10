@@ -29,6 +29,20 @@ public class ConceptTag
         };
     }
 
+    public void Update(string name, string description)
+    {
+        Name = name;
+        Slug = GenerateSlug(name);
+        Description = description;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SoftDelete()
+    {
+        IsDeleted = true;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     private static string GenerateSlug(string name) =>
         name.ToLowerInvariant()
             .Replace(" ", "-")

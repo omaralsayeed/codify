@@ -1,23 +1,23 @@
 {
   "format": 1,
   "restore": {
-    "D:\\mohamed khaled\\ITI\\Graduation Project\\codify\\backend\\src\\Codify.Application\\Codify.Application.csproj": {}
+    "D:\\All Courses\\ITI\\Graduation Project\\omaralsayeed\\codify\\backend\\src\\Codify.Application\\Codify.Application.csproj": {}
   },
   "projects": {
-    "D:\\mohamed khaled\\ITI\\Graduation Project\\codify\\backend\\src\\Codify.Application\\Codify.Application.csproj": {
+    "D:\\All Courses\\ITI\\Graduation Project\\omaralsayeed\\codify\\backend\\src\\Codify.Application\\Codify.Application.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\mohamed khaled\\ITI\\Graduation Project\\codify\\backend\\src\\Codify.Application\\Codify.Application.csproj",
+        "projectUniqueName": "D:\\All Courses\\ITI\\Graduation Project\\omaralsayeed\\codify\\backend\\src\\Codify.Application\\Codify.Application.csproj",
         "projectName": "Codify.Application",
-        "projectPath": "D:\\mohamed khaled\\ITI\\Graduation Project\\codify\\backend\\src\\Codify.Application\\Codify.Application.csproj",
-        "packagesPath": "C:\\Users\\DELL\\.nuget\\packages\\",
-        "outputPath": "D:\\mohamed khaled\\ITI\\Graduation Project\\codify\\backend\\src\\Codify.Application\\obj\\",
+        "projectPath": "D:\\All Courses\\ITI\\Graduation Project\\omaralsayeed\\codify\\backend\\src\\Codify.Application\\Codify.Application.csproj",
+        "packagesPath": "C:\\Users\\Badry Anas\\.nuget\\packages\\",
+        "outputPath": "D:\\All Courses\\ITI\\Graduation Project\\omaralsayeed\\codify\\backend\\src\\Codify.Application\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\DELL\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\Badry Anas\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -26,14 +26,15 @@
         ],
         "sources": {
           "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net10.0": {
             "targetAlias": "net10.0",
             "projectReferences": {
-              "D:\\mohamed khaled\\ITI\\Graduation Project\\codify\\backend\\src\\Codify.Domain\\Codify.Domain.csproj": {
-                "projectPath": "D:\\mohamed khaled\\ITI\\Graduation Project\\codify\\backend\\src\\Codify.Domain\\Codify.Domain.csproj"
+              "D:\\All Courses\\ITI\\Graduation Project\\omaralsayeed\\codify\\backend\\src\\Codify.Domain\\Codify.Domain.csproj": {
+                "projectPath": "D:\\All Courses\\ITI\\Graduation Project\\omaralsayeed\\codify\\backend\\src\\Codify.Domain\\Codify.Domain.csproj"
               }
             }
           }
@@ -353,20 +354,20 @@
         }
       }
     },
-    "D:\\mohamed khaled\\ITI\\Graduation Project\\codify\\backend\\src\\Codify.Domain\\Codify.Domain.csproj": {
+    "D:\\All Courses\\ITI\\Graduation Project\\omaralsayeed\\codify\\backend\\src\\Codify.Domain\\Codify.Domain.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\mohamed khaled\\ITI\\Graduation Project\\codify\\backend\\src\\Codify.Domain\\Codify.Domain.csproj",
+        "projectUniqueName": "D:\\All Courses\\ITI\\Graduation Project\\omaralsayeed\\codify\\backend\\src\\Codify.Domain\\Codify.Domain.csproj",
         "projectName": "Codify.Domain",
-        "projectPath": "D:\\mohamed khaled\\ITI\\Graduation Project\\codify\\backend\\src\\Codify.Domain\\Codify.Domain.csproj",
-        "packagesPath": "C:\\Users\\DELL\\.nuget\\packages\\",
-        "outputPath": "D:\\mohamed khaled\\ITI\\Graduation Project\\codify\\backend\\src\\Codify.Domain\\obj\\",
+        "projectPath": "D:\\All Courses\\ITI\\Graduation Project\\omaralsayeed\\codify\\backend\\src\\Codify.Domain\\Codify.Domain.csproj",
+        "packagesPath": "C:\\Users\\Badry Anas\\.nuget\\packages\\",
+        "outputPath": "D:\\All Courses\\ITI\\Graduation Project\\omaralsayeed\\codify\\backend\\src\\Codify.Domain\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\DELL\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\Badry Anas\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -375,6 +376,7 @@
         ],
         "sources": {
           "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {

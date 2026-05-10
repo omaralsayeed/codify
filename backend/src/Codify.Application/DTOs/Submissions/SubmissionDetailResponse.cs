@@ -7,6 +7,7 @@ public class SubmissionDetailResponse
     public Guid SubmissionId { get; set; }
     public Guid ProblemId { get; set; }
     public Guid UserId { get; set; }
+    public string Code { get; set; } = string.Empty;   // The submitted source code
     public string Language { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public DateTime SubmittedAt { get; set; }
