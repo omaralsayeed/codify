@@ -1,0 +1,56 @@
+// Brand colors
+$navy:      #1A2B4A;
+$navy2:     #3D4F6B;
+$blue:      #2E86AB;
+$blue-lt:   #E6F4FB;
+$gold:      #C8A951;
+$gold-lt:   #FBF4E3;
+$teal:      #1D9E75;
+$teal-lt:   #E1F5EE;
+$ivory:     #F5F3EE;
+$ivory2:    #ECE9E1;
+$charcoal:  #444441;
+$muted:     #6B6B68;
+$white:     #FFFFFF;
+
+// Fonts
+$ff-display: 'DM Serif Display', serif;
+$ff-body:    'DM Sans', sans-serif;
+$ff-mono:    'JetBrains Mono', monospace;
+
+// Radii
+$r:    10px;
+$r-lg: 16px;
+
+// Shadows / borders
+$border:    rgba(26, 43, 74, 0.12);
+$shadow:    0 2px 24px rgba(26, 43, 74, 0.10);
+$shadow-lg: 0 8px 40px rgba(26, 43, 74, 0.18);
+
+// Breakpoints
+$mobile: 767px;
+$tablet: 1024px;
+
+// CSS custom properties (consumed by components)
+:root {
+  --navy:    #{$navy};
+  --navy2:   #{$navy2};
+  --blue:    #{$blue};
+  --blue-lt: #{$blue-lt};
+  --gold:    #{$gold};
+  --gold-lt: #{$gold-lt};
+  --teal:    #{$teal};
+  --teal-lt: #{$teal-lt};
+  --ivory:   #{$ivory};
+  --ivory2:  #{$ivory2};
+  --charcoal:#{$charcoal};
+  --muted:   #{$muted};
+  --white:   #{$white};
+  --border:  #{$border};
+  --shadow:  #{$shadow};
+  --ff-display: #{$ff-display};
+  --ff-body:    #{$ff-body};
+  --ff-mono:    #{$ff-mono};
+  --r:    #{$r};
+  --r-lg: #{$r-lg};
+}

@@ -1,0 +1,156 @@
+@use '../../../../styles/variables' as *;
+
+.hero {
+  min-height: calc(100vh - 64px);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: 4rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 5rem 2rem 4rem;
+
+  @media (max-width: $tablet) {
+    gap: 2.5rem;
+    padding: 4rem 2rem 3rem;
+  }
+
+  @media (max-width: $mobile) {
+    grid-template-columns: 1fr;
+    min-height: auto;
+    padding: 2.5rem 1rem 2rem;
+    gap: 2rem;
+  }
+}
+
+.hero-left > * {
+  animation: fadeUp 0.5s ease both;
+  @for $i from 1 through 5 {
+    &:nth-child(#{$i}) { animation-delay: #{$i * 0.1}s; }
+  }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: $teal-lt; color: $teal;
+  font-size: 11px; font-weight: 600; font-family: $ff-mono;
+  padding: 4px 12px; border-radius: 20px; letter-spacing: 0.05em;
+  margin-bottom: 20px;
+  &::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: $teal; }
+}
+
+h1 {
+  font-family: $ff-display;
+  font-size: clamp(32px, 5vw, 58px);
+  line-height: 1.1; margin-bottom: 20px;
+  em { font-style: italic; color: $blue; }
+
+  @media (max-width: $mobile) {
+    font-size: clamp(28px, 8vw, 40px);
+  }
+}
+
+.hero-sub {
+  font-size: 17px; color: $muted; line-height: 1.7;
+  margin-bottom: 32px; max-width: 480px;
+
+  @media (max-width: $mobile) {
+    font-size: 15px;
+    margin-bottom: 24px;
+  }
+}
+
+.hero-actions {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+
+  @media (max-width: $mobile) {
+    flex-direction: column;
+    align-items: stretch;
+
+    .btn {
+      width: 100%;
+      min-height: 44px;
+      justify-content: center;
+    }
+  }
+}
+
+.hero-stats {
+  display: flex; gap: 28px; margin-top: 40px;
+  padding-top: 32px; border-top: 1px solid $border;
+
+  @media (max-width: $mobile) {
+    gap: 16px;
+    margin-top: 28px;
+    padding-top: 24px;
+    flex-wrap: wrap;
+  }
+}
+
+.stat-val {
+  font-family: $ff-display; font-size: 26px; color: $navy;
+
+  @media (max-width: $mobile) {
+    font-size: 22px;
+  }
+}
+
+.stat-lbl { font-size: 12px; color: $muted; margin-top: 2px; }
+
+// Code card
+.hero-visual {
+  position: relative;
+  animation: fadeUp 0.6s ease 0.3s both;
+
+  @media (max-width: $tablet) {
+    // Shrink slightly on tablet
+    .code-card { padding: 16px 18px; }
+    .code-block { font-size: 11px; }
+  }
+
+  @media (max-width: $mobile) {
+    // Full width on mobile, order after text
+    order: 2;
+    width: 100%;
+  }
+}
+
+.code-card {
+  background: $navy; border-radius: $r-lg;
+  padding: 20px 24px;
+  box-shadow: 0 8px 40px rgba(26,43,74,0.22);
+  overflow: hidden;
+}
+
+.code-card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.code-dots { display: flex; gap: 6px; flex-shrink: 0; }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
+.dot--red    { background: #ff5f57; }
+.dot--yellow { background: #febc2e; }
+.dot--green  { background: #28c840; }
+
+.code-filename { font-family: $ff-mono; font-size: 11px; color: rgba(255,255,255,0.4); }
+.code-tag { font-family: $ff-mono; font-size: 10px; padding: 2px 8px; border-radius: 4px; background: rgba(200,169,81,0.15); color: $gold; }
+
+.code-block {
+  font-family: $ff-mono; font-size: 12.5px; line-height: 1.7;
+  color: rgba(255,255,255,0.85); overflow-x: auto;
+  .kw  { color: #82AAFF; }
+  .fn  { color: #FFCB6B; }
+  .num { color: #F78C6C; }
+
+  @media (max-width: $mobile) {
+    font-size: 11px;
+  }
+}

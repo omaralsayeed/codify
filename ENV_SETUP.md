@@ -71,8 +71,7 @@ Fill in your values in `appsettings.Development.json`:
     "Issuer": "codify-api",
     "ExpiryHours": 24
   },
-  "LLM": {
-    "Provider": "openai",
+  "OpenAI": {
     "ApiKey": "sk-...",
     "Model": "gpt-4o"
   },
@@ -161,8 +160,8 @@ App runs at: `http://localhost:4200`
 |----------|-------------|--------------|
 | `ConnectionStrings:DefaultConnection` | PostgreSQL connection string | Backend |
 | `Jwt:Secret` | JWT signing key (min 32 chars) | Backend |
-| `LLM:ApiKey` | OpenAI or Gemini API key | Backend (Omar's setup) |
-| `LLM:Provider` | `openai` or `gemini` | Backend |
+| `OpenAI:ApiKey` | OpenAI API key | Backend (Omar's setup) |
+| `OpenAI:Model` | LLM model name | Backend |
 | `VectorDB:ChromaUrl` | Chroma host URL | Backend |
 | `Docker:SocketPath` | Docker socket (execution engine) | Backend (Badry's setup) |
 

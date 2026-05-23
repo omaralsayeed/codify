@@ -59,6 +59,7 @@ public class SubmissionService(
         SubmissionId = s.Id,
         ProblemId = s.ProblemId,
         UserId = s.UserId,
+        Code = s.Code,
         Language = s.Language.ToString(),
         Status = s.Status.ToString(),
         SubmittedAt = s.SubmittedAt,

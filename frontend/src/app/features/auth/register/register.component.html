@@ -1,0 +1,238 @@
+<div class="auth-container">
+  <div class="auth-card">
+    <h1>Create Your Account</h1>
+    <p class="subtitle">Join Codify and start your learning journey</p>
+
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
+      <!-- Profile Picture Upload -->
+      <div class="profile-picture-upload">
+        <input
+          type="file"
+          id="profilePicture"
+          accept="image/jpeg,image/png,image/webp"
+          (change)="onProfilePictureSelect($event)"
+          style="display: none;"
+        />
+        <label for="profilePicture" class="profile-picture-label">
+          @if (profilePicturePreview) {
+            <img [src]="profilePicturePreview" alt="Profile preview" class="profile-preview" />
+          } @else {
+            <div class="profile-placeholder">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                <circle cx="12" cy="13" r="4"></circle>
+              </svg>
+            </div>
+          }
+        </label>
+      </div>
+
+      <!-- Full Name Field -->
+      <div class="form-field">
+        <label for="fullName">Full Name</label>
+        <input
+          id="fullName"
+          type="text"
+          formControlName="fullName"
+          placeholder="Enter your full name"
+          [class.error]="registerForm.get('fullName')?.touched && registerForm.get('fullName')?.invalid"
+        />
+        @if (getErrorMessage('fullName')) {
+          <div class="error-message">{{ getErrorMessage('fullName') }}</div>
+        }
+      </div>
+
+      <!-- Email Field -->
+      <div class="form-field">
+        <label for="email">Email</label>
+        <input
+          id="email"
+          type="email"
+          formControlName="email"
+          placeholder="Enter your email"
+          [class.error]="registerForm.get('email')?.touched && registerForm.get('email')?.invalid"
+        />
+        @if (getErrorMessage('email')) {
+          <div class="error-message">{{ getErrorMessage('email') }}</div>
+        }
+      </div>
+
+      <!-- Password Field -->
+      <div class="form-field">
+        <label for="password">Password</label>
+        <div class="password-field">
+          <input
+            id="password"
+            [type]="showPassword ? 'text' : 'password'"
+            formControlName="password"
+            placeholder="Create a password"
+            [class.error]="registerForm.get('password')?.touched && registerForm.get('password')?.invalid"
+          />
+          <button
+            type="button"
+            class="toggle-icon"
+            (click)="togglePasswordVisibility('password')"
+            [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'"
+          >
+            @if (showPassword) {
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+              </svg>
+            } @else {
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            }
+          </button>
+        </div>
+        @if (getErrorMessage('password')) {
+          <div class="error-message">{{ getErrorMessage('password') }}</div>
+        }
+      </div>
+
+      <!-- Confirm Password Field -->
+      <div class="form-field">
+        <label for="confirmPassword">Confirm Password</label>
+        <div class="password-field">
+          <input
+            id="confirmPassword"
+            [type]="showConfirmPassword ? 'text' : 'password'"
+            formControlName="confirmPassword"
+            placeholder="Confirm your password"
+            [class.error]="(registerForm.get('confirmPassword')?.touched && registerForm.get('confirmPassword')?.invalid) || getPasswordMismatchError()"
+          />
+          <button
+            type="button"
+            class="toggle-icon"
+            (click)="togglePasswordVisibility('confirmPassword')"
+            [attr.aria-label]="showConfirmPassword ? 'Hide password' : 'Show password'"
+          >
+            @if (showConfirmPassword) {
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+              </svg>
+            } @else {
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            }
+          </button>
+        </div>
+        @if (getErrorMessage('confirmPassword')) {
+          <div class="error-message">{{ getErrorMessage('confirmPassword') }}</div>
+        }
+        @if (getPasswordMismatchError()) {
+          <div class="error-message">{{ getPasswordMismatchError() }}</div>
+        }
+      </div>
+
+      <!-- Role Selector -->
+      <div class="form-field">
+        <label for="role">I am a...</label>
+        <select
+          id="role"
+          formControlName="role"
+          [class.error]="registerForm.get('role')?.touched && registerForm.get('role')?.invalid"
+        >
+          <option value="">Select your role</option>
+          <option value="student">Student</option>
+          <option value="instructor">Instructor</option>
+        </select>
+        @if (getErrorMessage('role')) {
+          <div class="error-message">{{ getErrorMessage('role') }}</div>
+        }
+      </div>
+
+      <!-- Organization Field -->
+      <div class="form-field">
+        <label for="organization">Organization</label>
+        <select
+          id="organization"
+          formControlName="organization"
+          [class.error]="registerForm.get('organization')?.touched && registerForm.get('organization')?.invalid"
+        >
+          <option value="">Select your organization</option>
+          @for (org of organizations; track org) {
+            <option [value]="org">{{ org }}</option>
+          }
+        </select>
+        @if (getErrorMessage('organization')) {
+          <div class="error-message">{{ getErrorMessage('organization') }}</div>
+        }
+      </div>
+
+      <!-- Organization Other Field (Conditional) -->
+      @if (showOrganizationOther) {
+        <div class="form-field">
+          <label for="organizationOther">Organization Name</label>
+          <input
+            id="organizationOther"
+            type="text"
+            formControlName="organizationOther"
+            placeholder="Enter your organization name"
+          />
+        </div>
+      }
+
+      <!-- Phone Number Field -->
+      <div class="form-field">
+        <label for="phoneNumber">Phone Number (Optional)</label>
+        <input
+          id="phoneNumber"
+          type="tel"
+          formControlName="phoneNumber"
+          placeholder="Enter your phone number"
+          [class.error]="registerForm.get('phoneNumber')?.touched && registerForm.get('phoneNumber')?.invalid"
+        />
+        @if (getErrorMessage('phoneNumber')) {
+          <div class="error-message">{{ getErrorMessage('phoneNumber') }}</div>
+        }
+      </div>
+
+      <!-- Country and City Row -->
+      <div class="form-row">
+        <div class="form-field">
+          <label for="country">Country (Optional)</label>
+          <select
+            id="country"
+            formControlName="country"
+          >
+            <option value="">Select country</option>
+            @for (country of countries; track country) {
+              <option [value]="country">{{ country }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="form-field">
+          <label for="city">City (Optional)</label>
+          <input
+            id="city"
+            type="text"
+            formControlName="city"
+            placeholder="Enter your city"
+          />
+        </div>
+      </div>
+
+      <!-- Submit Button -->
+      <button
+        type="submit"
+        class="btn-primary"
+        [disabled]="registerForm.invalid"
+      >
+        Create Account
+      </button>
+
+      <!-- Login Link -->
+      <p class="footer-text">
+        Already have an account?
+        <a routerLink="/auth/login" class="link-primary">Log in</a>
+      </p>
+    </form>
+  </div>
+</div>

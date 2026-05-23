@@ -1,5 +1,7 @@
+using Codify.Application.Agents;
 using Codify.Application.Interfaces;
 using Codify.Application.Services;
+using Codify.Infrastructure.AI;
 using Codify.Infrastructure.Auth;
 using Codify.Infrastructure.Persistence;
 using Codify.Infrastructure.Repositories;
@@ -34,6 +36,17 @@ public static class DependencyInjection
         services.AddScoped<IConceptTagService, ConceptTagService>();
         services.AddScoped<ISubmissionService, SubmissionService>();
         services.AddScoped<IExecutionService, ExecutionService>();
+        services.AddScoped<IAiHintService, AiHintService>();
+
+        // AI
+        services.Configure<OpenAiOptions>(options =>
+        {
+            options.ApiKey = configuration[$"{OpenAiOptions.SectionName}:ApiKey"] ?? string.Empty;
+            options.Model = configuration[$"{OpenAiOptions.SectionName}:Model"] ?? OpenAiOptions.DefaultModel;
+        });
+        services.AddSingleton<ILLMClient, OpenAiChatClient>();
+        services.AddSingleton<IPromptLoader, PromptLoader>();
+        services.AddScoped<ITutorAgent, TutorAgent>();
 
         return services;
     }

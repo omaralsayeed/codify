@@ -1,0 +1,47 @@
+@use '../../../styles/variables' as *;
+
+.footer {
+  background: $navy;
+  color: rgba(255,255,255,0.5);
+  padding: 40px 2rem 32px;
+}
+
+.footer-inner {
+  max-width: 1200px; margin: 0 auto;
+  display: flex; align-items: center;
+  justify-content: space-between; flex-wrap: wrap; gap: 16px;
+
+  @media (max-width: $mobile) {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 20px;
+  }
+}
+
+.footer-logo {
+  font-family: $ff-display;
+  font-size: 20px; color: $ivory;
+}
+
+.footer-links {
+  display: flex; gap: 20px; flex-wrap: wrap;
+
+  @media (max-width: $mobile) {
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+}
+
+.footer-link {
+  font-size: 13px; color: rgba(255,255,255,0.4);
+  transition: color 0.15s; min-height: 44px;
+  display: flex; align-items: center;
+  &:hover { color: $ivory; }
+}
+
+.footer-copy {
+  font-size: 12px; font-family: $ff-mono;
+  color: rgba(255,255,255,0.25);
+}
