@@ -8,6 +8,13 @@
 # OPERATING SYSTEM
 # ============================================
 
+#Generated Folders
+**/bin/
+**/obj/
+*.dll
+*.pdb
+*.exe
+
 # macOS
 .DS_Store
 .AppleDouble
