@@ -1,0 +1,193 @@
+# CONVENTIONS.md
+# Codify — Code Conventions & Standards
+
+> Follow these rules in every file you create. Consistency matters more than personal preference here. When in doubt, match the style of what's already there.
+
+---
+
+## 1. General Rules
+
+- **Clarity over cleverness.** Write code a teammate can understand without asking you.
+- **One thing per file.** One class, one service, one component per file.
+- **No magic numbers.** Name your constants.
+- **Comment the why, not the what.** Code explains what it does; comments explain why.
+
+---
+
+## 2. Git & Branching
+
+### Branch Naming
+```
+feature/<short-description>     # New functionality
+fix/<short-description>         # Bug fix
+chore/<short-description>       # Infra, config, docs
+```
+
+Examples:
+- `feature/auth-jwt-middleware`
+- `fix/submission-timeout-handling`
+- `chore/seed-concept-tags`
+
+### Commit Message Format
+```
+<type>: <short description>
+
+Types: feat | fix | refactor | test | docs | chore
+```
+
+Examples:
+- `feat: add hint level tracking per user`
+- `fix: handle null execution result from Docker`
+- `docs: update API spec for analytics endpoints`
+
+### PR Rules
+- Every PR needs at least **one reviewer** before merging
+- PR title matches the commit format
+- Link the PR to the relevant task/ticket
+- Do not merge your own PRs (unless explicitly agreed)
+
+---
+
+## 3. Backend Conventions (C# / ASP.NET Core)
+
+### Naming
+| Thing | Convention | Example |
+|-------|-----------|---------|
+| Class | PascalCase | `SubmissionService` |
+| Interface | IPascalCase | `ISubmissionService` |
+| Method | PascalCase | `GetSubmissionById` |
+| Variable | camelCase | `submissionResult` |
+| Constant | UPPER_SNAKE | `MAX_HINT_LEVEL` |
+| File | Matches class name | `SubmissionService.cs` |
+
+### Project Structure Rules
+- **Controllers** — only receive HTTP input, call a service, return response. No business logic.
+- **Services (Application layer)** — business logic, orchestration, calls to repositories and agents.
+- **Repositories (Infrastructure layer)** — data access only. Returns domain entities.
+- **Entities (Domain layer)** — pure C# classes, no EF attributes if avoidable.
+- **DTOs** — separate request/response objects. Never expose entities directly from API.
+
+### DTO Naming
+```csharp
+// Request DTOs (incoming)
+public class CreateProblemRequest { }
+public class LoginRequest { }
+
+// Response DTOs (outgoing)
+public class SubmissionResponse { }
+public class HintResponse { }
+```
+
+### Service Pattern
+```csharp
+public class SubmissionService : ISubmissionService
+{
+    // Constructor injection only
+    public SubmissionService(
+        ISubmissionRepository repo,
+        IExecutionService execution)
+    { }
+
+    public async Task<SubmissionResponse> SubmitAsync(
+        CreateSubmissionRequest request,
+        Guid userId)
+    {
+        // 1. Validate
+        // 2. Call domain logic
+        // 3. Persist
+        // 4. Trigger side effects (async)
+        // 5. Return DTO
+    }
+}
+```
+
+### Error Handling
+- Use a global exception middleware — don't try/catch in every controller
+- Throw domain-specific exceptions: `NotFoundException`, `ForbiddenException`, `ValidationException`
+- The middleware catches them and maps to the standard error response envelope
+
+### Async Rules
+- All I/O operations must be `async/await`
+- Never use `.Result` or `.Wait()` — this causes deadlocks
+- Method names end with `Async`: `GetByIdAsync`, `CreateAsync`
+
+---
+
+## 4. Frontend Conventions (Angular / TypeScript)
+
+### Naming
+| Thing | Convention | Example |
+|-------|-----------|---------|
+| Component | PascalCase + Component | `ProblemDetailComponent` |
+| Service | PascalCase + Service | `SubmissionService` |
+| Interface | PascalCase (no I prefix) | `Submission`, `HintResponse` |
+| File | kebab-case | `problem-detail.component.ts` |
+| CSS class | kebab-case | `hint-panel`, `code-editor` |
+
+### Folder Structure Per Feature
+```
+student/
+├── problem-detail/
+│   ├── problem-detail.component.ts
+│   ├── problem-detail.component.html
+│   ├── problem-detail.component.css
+│   └── problem-detail.module.ts   (if lazy loaded)
+```
+
+### Service Rules
+- All HTTP calls go through a service — never call `HttpClient` directly from a component
+- Services return `Observable<T>` — use `async pipe` in templates where possible
+- Map API responses to typed interfaces immediately
+
+```typescript
+// models/submission.model.ts
+export interface Submission {
+  submissionId: string;
+  status: 'Pending' | 'Accepted' | 'WrongAnswer' | 'RuntimeError';
+  executionTimeMs: number;
+}
+```
+
+### Component Rules
+- Components are dumb where possible — they display data, they don't fetch it
+- Smart components (pages) handle data fetching and pass to dumb child components
+- Use `OnPush` change detection for performance on list components
+
+---
+
+## 5. Database Conventions
+
+- All migrations are generated by EF Core — do not write raw SQL migrations
+- Migration names describe what they do: `AddSubmissionResultTable`, `SeedConceptTags`
+- Never delete a migration that has been applied to staging or production
+- All UUID PKs are generated in application code (`Guid.NewGuid()`), not by the database
+
+---
+
+## 6. AI / Agent Conventions
+
+- All agent inputs and outputs are defined as C# classes with JSON serialization attributes
+- Prompt templates live in `/Codify.Infrastructure/AI/Prompts/` as `.txt` files — not hardcoded strings
+- Every LLM call is wrapped in a try/catch — use the defined fallback response on failure
+- Log every LLM call: input token count, output token count, latency, success/failure
+- Never log the full student code submission to external services (privacy)
+
+---
+
+## 7. Testing Conventions
+
+- Test file: `SubmissionServiceTests.cs` mirrors `SubmissionService.cs`
+- Test method naming: `MethodName_Scenario_ExpectedResult`
+  - Example: `SubmitCode_WithInvalidLanguage_ThrowsValidationException`
+- Use `xUnit` for unit tests
+- Use `WebApplicationFactory` for integration tests
+- Arrange / Act / Assert — always use these three sections, separated by blank lines
+
+---
+
+## 8. Environment & Config
+
+- Secrets go in `.env` or `appsettings.Development.json` — never in code
+- `appsettings.json` contains only non-secret defaults
+- See [ENV_SETUP.md](../ENV_SETUP.md) for what variables are required
+- Never commit `.env` or any file containing real API keys

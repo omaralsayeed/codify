@@ -1,59 +1,65 @@
-# Codify
+# Codify — AI-Powered Programming Education Platform
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.5.
+> **Capstone Project · 12-Week MVP · Team of 5**
 
-## Development server
+Codify is a web-based learning platform that helps students solve algorithmic problems through guided AI hints, code submission analysis, performance tracking, and instructor-facing insights. It demonstrates a practical multi-agent AI architecture.
 
-To start a local development server, run:
+---
 
-```bash
-ng serve
+## Quick Navigation
+
+| Document | Purpose |
+|----------|---------|
+| [PROJECT_CONTEXT.md](./PROJECT_CONTEXT.md) | What we're building and why — read this first |
+| [ARCHITECTURE.md](./docs/architecture/ARCHITECTURE.md) | System design, layers, component diagram |
+| [DATA_MODEL.md](./docs/database/DATA_MODEL.md) | All entities, fields, and relationships |
+| [API_SPEC.md](./docs/api/API_SPEC.md) | All endpoints, request/response shapes |
+| [AGENTS.md](./docs/agents/AGENTS.md) | AI agent design, prompts, I/O contracts |
+| [DECISIONS.md](./docs/architecture/DECISIONS.md) | Why we chose each technology |
+| [CONVENTIONS.md](./CONVENTIONS.md) | Code style, naming, folder structure rules |
+| [ROADMAP.md](./docs/sprints/ROADMAP.md) | Sprint plan, milestones, who owns what |
+| [CONTRIBUTING.md](./CONTRIBUTING.md) | Git workflow, PR rules, branch naming |
+| [ENV_SETUP.md](./ENV_SETUP.md) | How to run the project locally |
+
+---
+
+## Team
+
+| Name | Role | Area |
+|------|------|------|
+| Omar | AI Lead | Agent design, prompt engineering, RAG pipeline |
+| Khaled | Backend | ASP.NET Core API, business logic, database |
+| Badry | Backend | API integration, execution engine integration |
+| Salah | Frontend | Angular UI, student and instructor views |
+| Owais | Frontend | Component library, dashboard, UX flows |
+
+---
+
+## Tech Stack (Summary)
+
+```
+Frontend   → Angular + TypeScript + Tailwind CSS
+Backend    → ASP.NET Core Web API (C#) — Modular Monolith
+Database   → PostgreSQL + Entity Framework Core
+Auth       → JWT (Student / Instructor roles)
+AI Layer   → LLM provider (OpenAI or Gemini) + RAG pipeline
+Vector DB  → Chroma (recommended) — TBD
+Execution  → Docker sandbox (Judge0 as fallback)
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+---
 
-## Code scaffolding
+## Getting Started
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+1. Clone the repo
+2. Read [PROJECT_CONTEXT.md](./PROJECT_CONTEXT.md)
+3. Follow [ENV_SETUP.md](./ENV_SETUP.md) to run locally
+4. Check [ROADMAP.md](./docs/sprints/ROADMAP.md) for what's currently in progress
+5. Review [CONTRIBUTING.md](./CONTRIBUTING.md) before making your first PR
 
-```bash
-ng generate component component-name
-```
+---
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+## Current Sprint
 
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+> **Sprint 1 — Core Backend & Auth Integration**
+> See [ROADMAP.md](./docs/sprints/ROADMAP.md) for task breakdown.
