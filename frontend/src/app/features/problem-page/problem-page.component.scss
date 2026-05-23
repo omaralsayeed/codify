@@ -11,9 +11,11 @@
 
 // ── Problem Toolbar ──────────────────────────────────────────────────────────
 .problem-toolbar {
-  position: sticky;
-  top: 64px; // sits flush below the global navbar
-  z-index: 50;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100; // above all content
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -240,6 +242,7 @@
   overflow: hidden;
   position: relative;
   min-height: 0; // allow flex shrinking when bottom panel opens
+  margin-top: 52px; // offset for fixed toolbar
 }
 
 .split-panel {
@@ -398,6 +401,55 @@
   overflow: hidden;
 }
 
+// ── Content Tab Bar ───────────────────────────────────────────────────────────
+.content-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid $border;
+  background: $white;
+  flex-shrink: 0;
+  padding: 0 16px;
+}
+
+.content-tab {
+  position: relative;
+  padding: 14px 20px;
+  font-family: $ff-body;
+  font-size: 14px;
+  font-weight: 500;
+  color: $muted;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 0.15s;
+  white-space: nowrap;
+
+  &:hover {
+    color: $navy;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: -2px;
+  }
+
+  &--active {
+    color: $blue;
+    font-weight: 600;
+
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: $blue;
+      transition: all 0.2s ease;
+    }
+  }
+}
+
 // ── Tab Bar ───────────────────────────────────────────────────────────────────
 .problem-tabs {
   display: flex;
@@ -425,6 +477,11 @@
     color: $navy;
   }
 
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: -2px;
+  }
+
   &--active {
     color: $blue;
     font-weight: 600;
@@ -437,6 +494,7 @@
       right: 0;
       height: 2px;
       background: $blue;
+      transition: all 0.2s ease;
     }
   }
 }
@@ -447,6 +505,39 @@
   overflow-y: auto;
   overflow-x: hidden;
   padding: 20px;
+
+  // Custom scrollbar styling
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(26, 43, 74, 0.15);
+    border-radius: 4px;
+
+    &:hover {
+      background: rgba(26, 43, 74, 0.25);
+    }
+  }
+}
+
+// ── Tab Content Fade Transition ───────────────────────────────────────────────
+.tab-content-wrapper,
+#description-panel {
+  animation: fadeIn 0.18s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 // ── Problem Header ────────────────────────────────────────────────────────────
@@ -464,10 +555,11 @@
 
 .problem-title {
   font-family: $ff-display;
-  font-size: 24px;
+  font-size: 28px;
   color: $navy;
   margin: 0;
   line-height: 1.3;
+  font-weight: 600;
 }
 
 .solved-toggle {
@@ -501,11 +593,6 @@
   }
 }
 
-.problem-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
 
 // ── Action Pills ──────────────────────────────────────────────────────────────
 .action-pills {
@@ -513,6 +600,17 @@
   gap: 8px;
   flex-wrap: wrap;
   margin-bottom: 20px;
+
+  // Difficulty badge in pills row gets hover state
+  .badge {
+    cursor: default;
+    transition: all 0.15s;
+
+    &:hover {
+      filter: brightness(0.95);
+      transform: translateY(-1px);
+    }
+  }
 }
 
 .pill {
@@ -536,6 +634,12 @@
     background: $ivory2;
     border-color: $navy2;
     color: $navy;
+    transform: translateY(-1px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
   }
 
   &--hint {
@@ -547,6 +651,7 @@
     &:hover {
       background: darken($teal-lt, 4%);
       border-color: $teal;
+      transform: translateY(-1px);
     }
   }
 }
@@ -562,7 +667,7 @@
 
 .section-heading {
   font-family: $ff-body;
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 600;
   color: $navy;
   margin: 0 0 12px 0;
@@ -570,7 +675,7 @@
 
 .problem-text {
   font-family: $ff-body;
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.7;
   color: $charcoal;
   margin: 0 0 12px 0;
@@ -581,7 +686,7 @@
 
   code {
     font-family: $ff-mono;
-    font-size: 13px;
+    font-size: 14px;
     background: $ivory2;
     padding: 2px 6px;
     border-radius: 4px;
@@ -614,7 +719,7 @@
 
 .example-label {
   font-family: $ff-body;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: $navy2;
   text-transform: uppercase;
@@ -635,7 +740,7 @@
 
 .example-key {
   font-family: $ff-body;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: $navy;
   flex-shrink: 0;
@@ -644,7 +749,7 @@
 
 .example-value {
   font-family: $ff-mono;
-  font-size: 13px;
+  font-size: 14px;
   color: $charcoal;
   background: $white;
   padding: 4px 8px;
@@ -655,7 +760,7 @@
 
 .example-explanation {
   font-family: $ff-body;
-  font-size: 13px;
+  font-size: 14px;
   color: $muted;
   line-height: 1.6;
   flex: 1;
@@ -669,7 +774,7 @@
 
   li {
     font-family: $ff-body;
-    font-size: 14px;
+    font-size: 15px;
     color: $charcoal;
     padding: 6px 0;
     padding-left: 20px;
@@ -685,7 +790,7 @@
 
     code {
       font-family: $ff-mono;
-      font-size: 13px;
+      font-size: 14px;
       background: $ivory2;
       padding: 2px 6px;
       border-radius: 4px;
@@ -724,13 +829,13 @@
 
   &--fullscreen {
     position: fixed;
-    top: 116px; // 64px global nav + 52px toolbar
+    top: 52px; // only problem toolbar, no global nav
     left: 0;
     right: 0;
     bottom: 0;
     z-index: 100;
     width: 100%;
-    height: calc(100vh - 116px);
+    height: calc(100vh - 52px);
   }
 }
 
@@ -1001,6 +1106,11 @@
     background: $ivory2;
   }
 
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: -2px;
+  }
+
   svg {
     transition: transform 0.3s ease;
   }
@@ -1040,6 +1150,11 @@
     color: $navy;
   }
 
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: -2px;
+  }
+
   &--active {
     color: $blue;
     font-weight: 600;
@@ -1052,6 +1167,7 @@
       right: 0;
       height: 2px;
       background: $blue;
+      transition: all 0.2s ease;
     }
   }
 
@@ -1201,6 +1317,11 @@
 // ── Mobile View Switcher ──────────────────────────────────────────────────────
 .mobile-view-switcher {
   display: none; // hidden on desktop/tablet
+  position: fixed;
+  top: 52px; // below toolbar
+  left: 0;
+  right: 0;
+  z-index: 99;
   border-bottom: 1px solid $border;
   background: $white;
   flex-shrink: 0;
@@ -1306,6 +1427,310 @@
   }
 }
 
+// ── Tab Content Wrappers ──────────────────────────────────────────────────────
+.tab-content-wrapper {
+  padding: 20px;
+}
+
+.tab-content-heading {
+  font-family: $ff-display;
+  font-size: 24px;
+  color: $navy;
+  margin: 0 0 8px 0;
+}
+
+.tab-content-subtitle {
+  font-family: $ff-body;
+  font-size: 14px;
+  color: $muted;
+  margin: 0 0 20px 0;
+}
+
+// ── Discussions Tab ───────────────────────────────────────────────────────────
+.discussion-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.discussion-card {
+  background: $white;
+  border: 1px solid $border;
+  border-radius: $r;
+  padding: 14px 16px;
+  transition: box-shadow 0.15s;
+
+  &:hover {
+    box-shadow: $shadow;
+  }
+}
+
+.discussion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.discussion-author {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.author-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: $navy;
+  color: $gold;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: $ff-mono;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.author-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.author-name {
+  font-family: $ff-body;
+  font-size: 13px;
+  font-weight: 600;
+  color: $navy;
+}
+
+.discussion-time {
+  font-family: $ff-body;
+  font-size: 11px;
+  color: $muted;
+}
+
+.discussion-votes {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: $ff-mono;
+  font-size: 12px;
+  font-weight: 600;
+  color: $navy2;
+
+  svg {
+    color: $blue;
+  }
+}
+
+.discussion-text {
+  font-family: $ff-body;
+  font-size: 14px;
+  line-height: 1.6;
+  color: $charcoal;
+  margin: 0;
+}
+
+// ── Solutions Tab ─────────────────────────────────────────────────────────────
+.solution-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.solution-card {
+  background: $white;
+  border: 1px solid $border;
+  border-radius: $r;
+  padding: 16px;
+  transition: box-shadow 0.15s;
+
+  &:hover {
+    box-shadow: $shadow;
+  }
+}
+
+.solution-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.solution-author {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.language-badge {
+  margin-left: 8px;
+}
+
+.solution-votes {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: $ff-mono;
+  font-size: 13px;
+  font-weight: 600;
+  color: $navy2;
+
+  svg {
+    color: $blue;
+  }
+}
+
+.solution-title {
+  font-family: $ff-body;
+  font-size: 16px;
+  font-weight: 600;
+  color: $navy;
+  margin: 0 0 8px 0;
+}
+
+.solution-description {
+  font-family: $ff-body;
+  font-size: 14px;
+  line-height: 1.6;
+  color: $charcoal;
+  margin: 0 0 12px 0;
+}
+
+.btn--sm {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+// ── Submissions Tab ───────────────────────────────────────────────────────────
+.submissions-table-wrap {
+  border: 1px solid $border;
+  border-radius: $r;
+  overflow: hidden;
+  background: $white;
+}
+
+.submissions-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th {
+    text-align: left;
+    color: $navy2;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    font-weight: 700;
+    padding: 12px 14px;
+    background: $ivory;
+    border-bottom: 1px solid $border;
+  }
+
+  td {
+    padding: 14px;
+    border-top: 1px solid $border;
+    color: $charcoal;
+    font-size: 13px;
+  }
+
+  tbody tr {
+    transition: background 0.15s;
+
+    &:hover {
+      background: $ivory;
+    }
+  }
+}
+
+.status-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: $ff-mono;
+  padding: 4px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.04em;
+
+  &--accepted {
+    background: $teal-lt;
+    color: $teal;
+  }
+
+  &--wrong {
+    background: #FFEBEE;
+    color: #D32F2F;
+  }
+}
+
+// ── AI Hints Tab ──────────────────────────────────────────────────────────────
+.hints-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.hint-item {
+  display: flex;
+  gap: 14px;
+  padding: 16px;
+  background: $white;
+  border: 1px solid $border;
+  border-radius: $r;
+  border-left: 3px solid $teal;
+}
+
+.hint-level {
+  flex-shrink: 0;
+}
+
+.hint-level-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: $ff-mono;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: $teal-lt;
+  color: $teal;
+  letter-spacing: 0.04em;
+}
+
+.hint-content {
+  flex: 1;
+}
+
+.hint-text {
+  font-family: $ff-body;
+  font-size: 14px;
+  line-height: 1.7;
+  color: $charcoal;
+  margin: 0 0 8px 0;
+}
+
+.hint-time {
+  font-family: $ff-body;
+  font-size: 12px;
+  color: $muted;
+}
+
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  padding: 40px 20px;
+
+  p {
+    font-family: $ff-body;
+    font-size: 14px;
+    color: $muted;
+    text-align: center;
+  }
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // RESPONSIVE BREAKPOINTS
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1360,6 +1785,11 @@
   // Show mobile view switcher
   .mobile-view-switcher {
     display: flex;
+  }
+
+  // Adjust split container for mobile view switcher
+  .split-container {
+    margin-top: 96px; // 52px toolbar + 44px view switcher
   }
 
   // Show mobile action bar
@@ -1495,7 +1925,7 @@
   }
 
   .problem-title {
-    font-size: 20px;
+    font-size: 22px;
   }
 
   .action-pills {
@@ -1527,7 +1957,7 @@
 
   // Fullscreen mode adjustments for mobile
   .right-panel-content--fullscreen {
-    top: 64px; // only global nav, no toolbar on mobile fullscreen
-    height: calc(100vh - 64px);
+    top: 52px; // only problem toolbar, no global nav
+    height: calc(100vh - 52px);
   }
 }

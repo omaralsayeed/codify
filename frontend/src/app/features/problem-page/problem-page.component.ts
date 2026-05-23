@@ -13,18 +13,71 @@ import { AuthService } from '../../core/services/auth.service';
 export class ProblemPageComponent {
   protected readonly auth = inject(AuthService);
 
+  // ── Language configuration ────────────────────────────────────────────────
+  languages = [
+    {
+      name: 'Python',
+      value: 'python',
+      starterCode: `def twoSum(nums: list[int], target: int) -> list[int]:
+    # Write your solution here
+    pass`
+    },
+    {
+      name: 'C#',
+      value: 'csharp',
+      starterCode: `public class Solution {
+    public int[] TwoSum(int[] nums, int target) {
+        // Write your solution here
+        return new int[] {};
+    }
+}`
+    },
+    {
+      name: 'JavaScript',
+      value: 'javascript',
+      starterCode: `/**
+ * @param {number[]} nums
+ * @param {number} target
+ * @return {number[]}
+ */
+var twoSum = function(nums, target) {
+    // Write your solution here
+};`
+    },
+    {
+      name: 'Java',
+      value: 'java',
+      starterCode: `class Solution {
+    public int[] twoSum(int[] nums, int target) {
+        // Write your solution here
+        return new int[]{};
+    }
+}`
+    },
+    {
+      name: 'C++',
+      value: 'cpp',
+      starterCode: `class Solution {
+public:
+    vector<int> twoSum(vector<int>& nums, int target) {
+        // Write your solution here
+        return {};
+    }
+};`
+    }
+  ];
+
   isLeftPanelVisible: boolean = true;
   isRightPanelVisible: boolean = true;
   isEditorFullscreen: boolean = false;
   isBottomPanelOpen: boolean = true;
   activeTab: 'description' | 'editorial' | 'solutions' | 'submissions' = 'description';
+  activeContentTab: 'problem' | 'discussions' | 'solutions' | 'submissions' | 'ai-hints' = 'problem';
   selectedLanguage: string = 'python';
   splitPosition: number = 50; // percentage for the draggable divider
   isSolved: boolean = false; // problem solved status
   isAutocompleteEnabled: boolean = true;
-  editorCode: string = `def twoSum(nums, target):
-    # Write your solution here
-    pass`;
+  currentCode: string = '';
   cursorLine: number = 1;
   cursorColumn: number = 1;
   activeTestCase: number = 0; // index of active test case tab
@@ -38,6 +91,16 @@ export class ProblemPageComponent {
   private isDragging: boolean = false;
   private readonly MIN_PANEL_WIDTH = 20; // minimum 20%
   private readonly MAX_PANEL_WIDTH = 80; // maximum 80%
+  private originalStarterCode: string = ''; // track original code for change detection
+
+  constructor() {
+    // Initialize with Python starter code
+    const pythonLang = this.languages.find(l => l.value === 'python');
+    if (pythonLang) {
+      this.currentCode = pythonLang.starterCode;
+      this.originalStarterCode = pythonLang.starterCode;
+    }
+  }
 
   // ── Toolbar action stubs ──────────────────────────────────────────────────
   onRun(): void {}
@@ -49,6 +112,10 @@ export class ProblemPageComponent {
   // ── Tab switching ─────────────────────────────────────────────────────────
   setActiveTab(tab: 'description' | 'editorial' | 'solutions' | 'submissions'): void {
     this.activeTab = tab;
+  }
+
+  setActiveContentTab(tab: 'problem' | 'discussions' | 'solutions' | 'submissions' | 'ai-hints'): void {
+    this.activeContentTab = tab;
   }
 
   // ── Problem actions ───────────────────────────────────────────────────────
@@ -65,8 +132,27 @@ export class ProblemPageComponent {
   // ── Editor actions ────────────────────────────────────────────────────────
   onLanguageChange(event: Event): void {
     const target = event.target as HTMLSelectElement;
-    this.selectedLanguage = target.value;
-    // TODO: Update editor template based on language
+    const newLanguage = target.value;
+    
+    // Check if code has been modified from the original starter code
+    const hasModifiedCode = this.currentCode !== this.originalStarterCode;
+    
+    if (hasModifiedCode) {
+      const confirmed = confirm('Switching language will reset your code. Continue?');
+      if (!confirmed) {
+        // Revert the select back to current language
+        target.value = this.selectedLanguage;
+        return;
+      }
+    }
+    
+    // Update language and load new starter code
+    this.selectedLanguage = newLanguage;
+    const selectedLang = this.languages.find(l => l.value === newLanguage);
+    if (selectedLang) {
+      this.currentCode = selectedLang.starterCode;
+      this.originalStarterCode = selectedLang.starterCode;
+    }
   }
 
   toggleAutocomplete(): void {
@@ -79,7 +165,7 @@ export class ProblemPageComponent {
 
   onEditorInput(event: Event): void {
     const target = event.target as HTMLTextAreaElement;
-    this.editorCode = target.value;
+    this.currentCode = target.value;
     this.updateCursorPosition(target);
   }
 
