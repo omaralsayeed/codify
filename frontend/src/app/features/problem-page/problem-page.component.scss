@@ -1,1 +1,1533 @@
-// Styles will be added in subsequent chunks
+@use '../../styles/variables' as *;
+
+// ── Page shell ───────────────────────────────────────────────────────────────
+.problem-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: $ivory2;
+  overflow: hidden; // prevent double scrollbars
+}
+
+// ── Problem Toolbar ──────────────────────────────────────────────────────────
+.problem-toolbar {
+  position: sticky;
+  top: 64px; // sits flush below the global navbar
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 52px;
+  padding: 0 16px;
+  background: $white;
+  border-bottom: 1px solid $border;
+  box-shadow: 0 1px 8px rgba(26, 43, 74, 0.06);
+  flex-shrink: 0; // don't let toolbar shrink
+}
+
+// ── Left section ─────────────────────────────────────────────────────────────
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.toolbar-logo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: $ff-display;
+  font-size: 18px;
+  color: $navy;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.toolbar-logo-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: $gold;
+  flex-shrink: 0;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 20px;
+  background: $border;
+  flex-shrink: 0;
+}
+
+.toolbar-back {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: $ff-body;
+  font-size: 13px;
+  font-weight: 500;
+  color: $navy2;
+  text-decoration: none;
+  padding: 4px 8px;
+  border-radius: $r;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+
+  svg { flex-shrink: 0; }
+
+  &:hover {
+    background: $ivory2;
+    color: $navy;
+  }
+}
+
+// ── Center section ────────────────────────────────────────────────────────────
+.toolbar-center {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+// Base toolbar button — extends the global .btn pattern
+.toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  height: 34px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: $ff-body;
+  border-radius: $r;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+
+  svg { flex-shrink: 0; }
+}
+
+// Run — ghost style (matches .btn--ghost)
+.toolbar-btn.btn--ghost {
+  background: transparent;
+  border: 1px solid $border;
+  color: $navy;
+
+  &:hover {
+    background: $ivory2;
+    border-color: $navy2;
+  }
+}
+
+// Submit — primary style (matches .btn--primary)
+.toolbar-btn.btn--primary {
+  background: $blue;
+  color: $white;
+
+  &:hover { filter: brightness(1.08); }
+}
+
+// Copy — subtle ghost, no border
+.toolbar-btn--copy {
+  background: transparent;
+  border: 1px solid $border;
+  color: $navy2;
+
+  &:hover {
+    background: $ivory2;
+    color: $navy;
+  }
+}
+
+// AI Hint — teal accent (from $teal / $teal-lt found in Chunk 1)
+.toolbar-btn--hint {
+  background: $teal-lt;
+  color: $teal;
+  border: 1px solid rgba(29, 158, 117, 0.25);
+  font-weight: 600;
+
+  &:hover {
+    background: darken(#E1F5EE, 4%);
+    border-color: $teal;
+  }
+}
+
+// ── Right section ─────────────────────────────────────────────────────────────
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.toolbar-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: $r;
+  background: transparent;
+  border: none;
+  color: $navy2;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+
+  &:hover {
+    background: $ivory2;
+    color: $navy;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+}
+
+.toolbar-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: $navy;
+  color: $gold;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: $ff-mono;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: default;
+  user-select: none;
+}
+
+// ── Responsive ────────────────────────────────────────────────────────────────
+@media (max-width: $mobile) {
+  .problem-toolbar {
+    padding: 0 10px;
+    gap: 6px;
+  }
+
+  .toolbar-logo {
+    font-size: 16px;
+  }
+
+  // Hide "Problem List" text label on mobile, keep chevron
+  .toolbar-back {
+    font-size: 0; // hide text
+    padding: 4px;
+
+    svg { font-size: initial; }
+  }
+
+  // Hide Copy button label on mobile
+  .toolbar-btn--copy {
+    padding: 6px 8px;
+    span { display: none; }
+  }
+
+  .toolbar-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+}
+
+// ── Split Layout ──────────────────────────────────────────────────────────────
+.split-container {
+  display: flex;
+  flex: 1; // fill remaining height after toolbar and before bottom panel
+  overflow: hidden;
+  position: relative;
+  min-height: 0; // allow flex shrinking when bottom panel opens
+}
+
+.split-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  background: $white;
+  transition: width 0.2s ease;
+}
+
+.split-panel--left {
+  border-right: 1px solid $border;
+}
+
+.split-panel--right {
+  border-left: 1px solid $border;
+}
+
+// ── Resizer ───────────────────────────────────────────────────────────────────
+.split-resizer {
+  width: 6px;
+  background: $ivory2;
+  cursor: col-resize;
+  position: relative;
+  flex-shrink: 0;
+  transition: background 0.15s;
+  z-index: 10;
+
+  &:hover {
+    background: darken($ivory2, 5%);
+  }
+
+  &:active {
+    background: $blue;
+  }
+}
+
+.split-resizer-handle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 3px;
+  height: 40px;
+  background: $border;
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+// ── Panel collapse/expand buttons ─────────────────────────────────────────────
+.panel-collapse-btn {
+  position: absolute;
+  top: 12px;
+  z-index: 20;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $white;
+  border: 1px solid $border;
+  border-radius: 6px;
+  color: $navy2;
+  cursor: pointer;
+  transition: all 0.15s;
+  box-shadow: 0 1px 4px rgba(26, 43, 74, 0.08);
+
+  &:hover {
+    background: $ivory2;
+    color: $navy;
+    border-color: $navy2;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+}
+
+.panel-collapse-btn--left {
+  right: 12px; // top-right corner of left panel
+}
+
+.panel-collapse-btn--right {
+  left: 12px; // top-left corner of right panel
+
+  svg {
+    transform: rotate(180deg); // flip chevron to point right
+  }
+}
+
+.panel-expand-btn {
+  position: absolute;
+  top: 12px;
+  z-index: 20;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $blue;
+  border: none;
+  border-radius: 6px;
+  color: $white;
+  cursor: pointer;
+  transition: all 0.15s;
+  box-shadow: 0 2px 8px rgba(46, 134, 171, 0.3);
+
+  &:hover {
+    background: darken($blue, 8%);
+    transform: translateX(2px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $navy;
+    outline-offset: 2px;
+  }
+}
+
+.panel-expand-btn--left {
+  left: 12px; // left edge when left panel is hidden
+}
+
+.panel-expand-btn--right {
+  right: 12px; // right edge when right panel is hidden
+
+  svg {
+    transform: rotate(180deg); // flip chevron to point left
+  }
+}
+
+// ── Placeholder content (temporary) ───────────────────────────────────────────
+.panel-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  font-family: $ff-mono;
+  font-size: 14px;
+  color: $muted;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 10px,
+    rgba(26, 43, 74, 0.02) 10px,
+    rgba(26, 43, 74, 0.02) 20px
+  );
+}
+
+// ── Left Panel Content ────────────────────────────────────────────────────────
+.left-panel-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+// ── Tab Bar ───────────────────────────────────────────────────────────────────
+.problem-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid $border;
+  background: $white;
+  flex-shrink: 0;
+  padding: 0 16px;
+}
+
+.problem-tab {
+  position: relative;
+  padding: 12px 16px;
+  font-family: $ff-body;
+  font-size: 14px;
+  font-weight: 500;
+  color: $muted;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 0.15s;
+  white-space: nowrap;
+
+  &:hover {
+    color: $navy;
+  }
+
+  &--active {
+    color: $blue;
+    font-weight: 600;
+
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: $blue;
+    }
+  }
+}
+
+// ── Scrollable Content ────────────────────────────────────────────────────────
+.problem-content-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 20px;
+}
+
+// ── Problem Header ────────────────────────────────────────────────────────────
+.problem-header {
+  margin-bottom: 16px;
+}
+
+.problem-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.problem-title {
+  font-family: $ff-display;
+  font-size: 24px;
+  color: $navy;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.solved-toggle {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 2px solid $border;
+  background: $white;
+  color: transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+
+  &:hover {
+    border-color: $teal;
+    background: $teal-lt;
+  }
+
+  &--active {
+    border-color: $teal;
+    background: $teal;
+    color: $white;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+}
+
+.problem-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+// ── Action Pills ──────────────────────────────────────────────────────────────
+.action-pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-family: $ff-body;
+  font-size: 13px;
+  font-weight: 500;
+  color: $navy2;
+  background: $ivory;
+  border: 1px solid $border;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  svg { flex-shrink: 0; }
+
+  &:hover {
+    background: $ivory2;
+    border-color: $navy2;
+    color: $navy;
+  }
+
+  &--hint {
+    background: $teal-lt;
+    color: $teal;
+    border-color: rgba(29, 158, 117, 0.25);
+    font-weight: 600;
+
+    &:hover {
+      background: darken($teal-lt, 4%);
+      border-color: $teal;
+    }
+  }
+}
+
+// ── Problem Content Sections ──────────────────────────────────────────────────
+.problem-section {
+  margin-bottom: 24px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.section-heading {
+  font-family: $ff-body;
+  font-size: 16px;
+  font-weight: 600;
+  color: $navy;
+  margin: 0 0 12px 0;
+}
+
+.problem-text {
+  font-family: $ff-body;
+  font-size: 14px;
+  line-height: 1.7;
+  color: $charcoal;
+  margin: 0 0 12px 0;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  code {
+    font-family: $ff-mono;
+    font-size: 13px;
+    background: $ivory2;
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: $navy;
+  }
+
+  em {
+    font-style: italic;
+    color: $navy2;
+  }
+
+  strong {
+    font-weight: 600;
+    color: $navy;
+  }
+}
+
+// ── Examples ──────────────────────────────────────────────────────────────────
+.example-block {
+  background: $ivory;
+  border: 1px solid $border;
+  border-radius: $r;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.example-label {
+  font-family: $ff-body;
+  font-size: 12px;
+  font-weight: 600;
+  color: $navy2;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 10px;
+}
+
+.example-item {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  align-items: baseline;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.example-key {
+  font-family: $ff-body;
+  font-size: 13px;
+  font-weight: 600;
+  color: $navy;
+  flex-shrink: 0;
+  min-width: 80px;
+}
+
+.example-value {
+  font-family: $ff-mono;
+  font-size: 13px;
+  color: $charcoal;
+  background: $white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid $border;
+  flex: 1;
+}
+
+.example-explanation {
+  font-family: $ff-body;
+  font-size: 13px;
+  color: $muted;
+  line-height: 1.6;
+  flex: 1;
+}
+
+// ── Constraints ───────────────────────────────────────────────────────────────
+.constraints-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+
+  li {
+    font-family: $ff-body;
+    font-size: 14px;
+    color: $charcoal;
+    padding: 6px 0;
+    padding-left: 20px;
+    position: relative;
+
+    &::before {
+      content: '•';
+      position: absolute;
+      left: 6px;
+      color: $blue;
+      font-weight: bold;
+    }
+
+    code {
+      font-family: $ff-mono;
+      font-size: 13px;
+      background: $ivory2;
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: $navy;
+    }
+
+    sup {
+      font-size: 10px;
+    }
+  }
+}
+
+// ── Tab Placeholder Content ───────────────────────────────────────────────────
+.tab-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  padding: 40px 20px;
+
+  p {
+    font-family: $ff-body;
+    font-size: 14px;
+    color: $muted;
+    text-align: center;
+  }
+}
+
+// ── Right Panel Content ───────────────────────────────────────────────────────
+.right-panel-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: #1e1e1e; // VS Code dark theme background
+
+  &--fullscreen {
+    position: fixed;
+    top: 116px; // 64px global nav + 52px toolbar
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 100;
+    width: 100%;
+    height: calc(100vh - 116px);
+  }
+}
+
+// ── Editor Header ─────────────────────────────────────────────────────────────
+.editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  background: #252526; // VS Code header background
+  border-bottom: 1px solid #3e3e42;
+  flex-shrink: 0;
+}
+
+.editor-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.editor-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+// Language Selector
+.language-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: $ff-body;
+  font-size: 13px;
+  color: #cccccc;
+}
+
+.language-label {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.language-dropdown {
+  appearance: none;
+  background: #3c3c3c;
+  border: 1px solid #3e3e42;
+  border-radius: 4px;
+  padding: 5px 28px 5px 10px;
+  color: #cccccc;
+  font-family: $ff-body;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23cccccc' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+
+  &:hover {
+    background-color: #464647;
+    border-color: #007acc;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: #007acc;
+    box-shadow: 0 0 0 1px #007acc;
+  }
+}
+
+// Autocomplete Toggle
+.autocomplete-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: $ff-body;
+  font-size: 13px;
+  color: #cccccc;
+  cursor: pointer;
+  user-select: none;
+
+  input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: #007acc;
+  }
+
+  span {
+    white-space: nowrap;
+  }
+}
+
+// Editor Icon Buttons
+.editor-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  background: transparent;
+  border: none;
+  color: #cccccc;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    background: #3e3e42;
+    color: #ffffff;
+  }
+
+  &:focus-visible {
+    outline: 1px solid #007acc;
+    outline-offset: 2px;
+  }
+}
+
+// ── Editor Body ───────────────────────────────────────────────────────────────
+.editor-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  background: #1e1e1e;
+  position: relative;
+}
+
+.editor-line-numbers {
+  display: flex;
+  flex-direction: column;
+  background: #1e1e1e;
+  border-right: 1px solid #3e3e42;
+  padding: 12px 8px;
+  user-select: none;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.line-number {
+  font-family: $ff-mono;
+  font-size: 13px;
+  line-height: 20px;
+  color: #858585;
+  text-align: right;
+  min-width: 32px;
+  padding-right: 8px;
+}
+
+.editor-textarea {
+  flex: 1;
+  background: #1e1e1e;
+  color: #d4d4d4;
+  font-family: $ff-mono;
+  font-size: 13px;
+  line-height: 20px;
+  padding: 12px 16px;
+  border: none;
+  outline: none;
+  resize: none;
+  overflow-y: auto;
+  overflow-x: auto;
+  white-space: pre;
+  tab-size: 4;
+  caret-color: #ffffff;
+
+  &::placeholder {
+    color: #6a6a6a;
+  }
+
+  &::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #1e1e1e;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #424242;
+    border-radius: 5px;
+
+    &:hover {
+      background: #4e4e4e;
+    }
+  }
+
+  &::-webkit-scrollbar-corner {
+    background: #1e1e1e;
+  }
+}
+
+// ── Status Bar ────────────────────────────────────────────────────────────────
+.editor-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 16px;
+  background: #007acc;
+  color: #ffffff;
+  font-family: $ff-body;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.status-left,
+.status-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 500;
+
+  &--saved {
+    color: #ffffff;
+  }
+
+  svg {
+    flex-shrink: 0;
+  }
+}
+
+.status-cursor {
+  font-family: $ff-mono;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+// ── Bottom Test Case Panel ────────────────────────────────────────────────────
+.bottom-panel-container {
+  position: relative;
+  flex-shrink: 0;
+  background: $white;
+  border-top: 1px solid $border;
+  transition: max-height 0.3s ease;
+  max-height: 40px; // collapsed: just the toggle button visible
+  overflow: hidden;
+
+  &--open {
+    max-height: 280px; // expanded: full panel height
+  }
+}
+
+.bottom-panel-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  height: 40px;
+  background: $ivory;
+  border: none;
+  border-bottom: 1px solid $border;
+  font-family: $ff-body;
+  font-size: 13px;
+  font-weight: 600;
+  color: $navy;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover {
+    background: $ivory2;
+  }
+
+  svg {
+    transition: transform 0.3s ease;
+  }
+}
+
+.bottom-panel-content {
+  display: flex;
+  flex-direction: column;
+  height: 240px; // total height minus toggle button
+  overflow: hidden;
+}
+
+// ── Test Case Tabs ────────────────────────────────────────────────────────────
+.test-case-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid $border;
+  background: $white;
+  flex-shrink: 0;
+  padding: 0 12px;
+}
+
+.test-case-tab {
+  position: relative;
+  padding: 8px 14px;
+  font-family: $ff-body;
+  font-size: 13px;
+  font-weight: 500;
+  color: $muted;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 0.15s;
+  white-space: nowrap;
+
+  &:hover {
+    color: $navy;
+  }
+
+  &--active {
+    color: $blue;
+    font-weight: 600;
+
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: $blue;
+    }
+  }
+
+  &--add {
+    color: $navy2;
+    padding: 8px 10px;
+
+    &:hover {
+      color: $blue;
+    }
+
+    svg {
+      display: block;
+    }
+  }
+}
+
+// ── Test Case Content ─────────────────────────────────────────────────────────
+.test-case-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  gap: 16px;
+  padding: 12px 16px;
+}
+
+.test-case-inputs {
+  flex: 0 0 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.test-case-outputs {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  overflow-x: auto;
+}
+
+.test-section-heading {
+  font-family: $ff-body;
+  font-size: 12px;
+  font-weight: 600;
+  color: $navy2;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 8px 0;
+}
+
+// Input Fields
+.input-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.input-label {
+  font-family: $ff-mono;
+  font-size: 12px;
+  font-weight: 600;
+  color: $navy;
+}
+
+.input-box {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid $border;
+  border-radius: $r;
+  font-family: $ff-mono;
+  font-size: 13px;
+  color: $charcoal;
+  background: $white;
+  transition: border-color 0.15s;
+
+  &:focus {
+    outline: none;
+    border-color: $blue;
+  }
+
+  &::placeholder {
+    color: $muted;
+  }
+
+  &[readonly] {
+    background: $ivory;
+    cursor: default;
+  }
+}
+
+// Output Sections
+.output-section {
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+}
+
+.output-box {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid $border;
+  border-radius: $r;
+  background: $ivory;
+  font-family: $ff-mono;
+  font-size: 12px;
+  color: $charcoal;
+  overflow-y: auto;
+  overflow-x: hidden;
+  word-break: break-word;
+
+  code {
+    display: block;
+    white-space: pre-wrap;
+  }
+
+  &--empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.output-placeholder {
+  font-family: $ff-body;
+  font-size: 12px;
+  color: $muted;
+  font-style: italic;
+}
+
+// ── Bottom Panel Actions ──────────────────────────────────────────────────────
+.bottom-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-top: 1px solid $border;
+  background: $ivory;
+  flex-shrink: 0;
+
+  .btn {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+}
+
+// ── Mobile View Switcher ──────────────────────────────────────────────────────
+.mobile-view-switcher {
+  display: none; // hidden on desktop/tablet
+  border-bottom: 1px solid $border;
+  background: $white;
+  flex-shrink: 0;
+}
+
+.mobile-view-tab {
+  flex: 1;
+  padding: 12px;
+  font-family: $ff-body;
+  font-size: 14px;
+  font-weight: 500;
+  color: $muted;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 0.15s;
+  position: relative;
+
+  &:hover {
+    color: $navy;
+  }
+
+  &--active {
+    color: $blue;
+    font-weight: 600;
+
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: $blue;
+    }
+  }
+}
+
+// ── Mobile Floating Action Bar ────────────────────────────────────────────────
+.mobile-action-bar {
+  display: none; // hidden on desktop/tablet
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 60;
+  background: $white;
+  border-top: 1px solid $border;
+  padding: 10px 12px;
+  padding-bottom: calc(10px + env(safe-area-inset-bottom));
+  box-shadow: 0 -2px 12px rgba(26, 43, 74, 0.1);
+  gap: 8px;
+}
+
+.mobile-action-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 16px;
+  border-radius: $r;
+  font-family: $ff-body;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  min-height: 44px; // touch target size
+
+  svg {
+    flex-shrink: 0;
+  }
+
+  &--primary {
+    background: $blue;
+    color: $white;
+
+    &:hover {
+      filter: brightness(1.08);
+    }
+  }
+
+  &--secondary {
+    background: transparent;
+    border: 1px solid $border;
+    color: $navy;
+
+    &:hover {
+      background: $ivory2;
+    }
+  }
+
+  &--test {
+    background: $ivory;
+    border: 1px solid $border;
+    color: $navy2;
+
+    &:hover {
+      background: $ivory2;
+      color: $navy;
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// RESPONSIVE BREAKPOINTS
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── Tablet (768px - 1024px) ───────────────────────────────────────────────────
+@media (max-width: $tablet) and (min-width: #{$mobile + 1px}) {
+  
+  // Stack panels vertically
+  .split-container {
+    flex-direction: column;
+  }
+
+  .split-panel {
+    width: 100% !important; // override inline width
+    height: 50%;
+    border-left: none;
+    border-right: none;
+  }
+
+  .split-panel--left {
+    border-bottom: 1px solid $border;
+  }
+
+  // Hide resizer on tablet
+  .split-resizer {
+    display: none;
+  }
+
+  // Adjust panel collapse buttons for vertical layout
+  .panel-collapse-btn--left {
+    top: auto;
+    bottom: 12px;
+  }
+
+  .panel-collapse-btn--right {
+    top: 12px;
+  }
+
+  // Bottom panel adjustments
+  .bottom-panel-container--open {
+    max-height: 240px; // slightly smaller on tablet
+  }
+
+  .test-case-outputs {
+    grid-template-columns: repeat(2, 1fr); // 2 columns instead of 3
+  }
+}
+
+// ── Mobile (≤767px) ───────────────────────────────────────────────────────────
+@media (max-width: $mobile) {
+  
+  // Show mobile view switcher
+  .mobile-view-switcher {
+    display: flex;
+  }
+
+  // Show mobile action bar
+  .mobile-action-bar {
+    display: flex;
+  }
+
+  // Adjust page shell for mobile action bar
+  .problem-page {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom)); // space for action bar
+  }
+
+  // Hide toolbar center actions on mobile (duplicated in action bar)
+  .toolbar-center {
+    display: none;
+  }
+
+  // Stack panels and show only active view
+  .split-container {
+    flex-direction: column;
+  }
+
+  .split-panel {
+    width: 100% !important;
+    height: 100%;
+    border: none;
+  }
+
+  .split-panel--mobile-hidden {
+    display: none;
+  }
+
+  // Hide resizer on mobile
+  .split-resizer {
+    display: none;
+  }
+
+  // Hide panel collapse/expand buttons on mobile
+  .panel-collapse-btn,
+  .panel-expand-btn {
+    display: none;
+  }
+
+  // Hide bottom panel by default on mobile
+  .bottom-panel-container {
+    position: fixed;
+    bottom: calc(64px + env(safe-area-inset-bottom)); // above action bar
+    left: 0;
+    right: 0;
+    z-index: 55;
+    max-height: 0; // hidden by default
+    box-shadow: 0 -4px 16px rgba(26, 43, 74, 0.15);
+
+    &--open {
+      max-height: 60vh; // take up more screen on mobile
+    }
+  }
+
+  .bottom-panel-content {
+    height: calc(60vh - 40px);
+  }
+
+  // Adjust test case layout for mobile
+  .test-case-content {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .test-case-inputs {
+    flex: 0 0 auto;
+  }
+
+  .test-case-outputs {
+    grid-template-columns: 1fr; // single column
+    gap: 10px;
+  }
+
+  // Adjust editor for mobile
+  .editor-header {
+    flex-wrap: wrap;
+    padding: 8px 12px;
+  }
+
+  .editor-header-left {
+    flex: 1 1 100%;
+    margin-bottom: 8px;
+  }
+
+  .language-dropdown {
+    font-size: 12px;
+    padding: 4px 24px 4px 8px;
+  }
+
+  .autocomplete-toggle {
+    font-size: 12px;
+  }
+
+  .editor-line-numbers {
+    padding: 8px 4px;
+  }
+
+  .line-number {
+    font-size: 11px;
+    min-width: 24px;
+    padding-right: 4px;
+  }
+
+  .editor-textarea {
+    font-size: 12px;
+    line-height: 18px;
+    padding: 8px 12px;
+  }
+
+  .editor-status-bar {
+    font-size: 11px;
+    padding: 5px 12px;
+  }
+
+  // Adjust left panel for mobile
+  .problem-tabs {
+    padding: 0 12px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .problem-tab {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .problem-content-scroll {
+    padding: 16px;
+  }
+
+  .problem-title {
+    font-size: 20px;
+  }
+
+  .action-pills {
+    gap: 6px;
+  }
+
+  .pill {
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+
+  .example-block {
+    padding: 12px;
+  }
+
+  .example-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .example-key {
+    min-width: auto;
+  }
+
+  .example-value {
+    width: 100%;
+  }
+
+  // Fullscreen mode adjustments for mobile
+  .right-panel-content--fullscreen {
+    top: 64px; // only global nav, no toolbar on mobile fullscreen
+    height: calc(100vh - 64px);
+  }
+}
