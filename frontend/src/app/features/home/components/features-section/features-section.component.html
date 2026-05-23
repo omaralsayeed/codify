@@ -1,0 +1,16 @@
+<section id="features" class="features-section section-pad">
+  <div class="section-inner">
+    <span class="section-tag tag-blue">Features</span>
+    <h2 class="section-h">Everything you need to<br/>become a stronger programmer</h2>
+    <p class="section-sub">Built around how real problem-solving happens — not how it's tested.</p>
+
+    <div class="features-grid">
+      <div class="feat-card" *ngFor="let f of features">
+        <div class="feat-icon feat-icon--{{ f.iconBg }}">{{ f.icon }}</div>
+        <h3>{{ f.title }}</h3>
+        <p>{{ f.description }}</p>
+        <span class="badge {{ f.badgeClass }}">{{ f.badgeText }}</span>
+      </div>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,265 @@
+@import '../../../styles/variables';
+
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: $ivory;
+  padding: 20px;
+}
+
+.auth-card {
+  background: $white;
+  border-radius: $r-lg;
+  box-shadow: $shadow;
+  padding: 40px;
+  width: 100%;
+  max-width: 520px;
+
+  h1 {
+    font-family: $ff-display;
+    font-size: 32px;
+    color: $navy;
+    margin: 0 0 8px 0;
+    text-align: center;
+  }
+
+  .subtitle {
+    font-family: $ff-body;
+    font-size: 16px;
+    color: $muted;
+    margin: 0 0 32px 0;
+    text-align: center;
+  }
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+}
+
+// Profile Picture Upload
+.profile-picture-upload {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.profile-picture-label {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  overflow: hidden;
+  cursor: pointer;
+  border: 3px solid $border;
+  transition: border-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $ivory;
+
+  &:hover {
+    border-color: $blue;
+  }
+}
+
+.profile-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $muted;
+}
+
+.profile-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.form-field {
+  margin-bottom: 20px;
+
+  label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    color: $charcoal;
+    margin-bottom: 8px;
+    font-family: $ff-body;
+  }
+
+  input, select {
+    width: 100%;
+    height: 44px;
+    padding: 0 16px;
+    border: 1px solid $border;
+    border-radius: $r;
+    font-family: $ff-body;
+    font-size: 16px;
+    color: $charcoal;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+    background-color: $white;
+
+    &::placeholder {
+      color: $muted;
+    }
+
+    &:focus {
+      outline: none;
+      border: 2px solid $blue;
+      padding: 0 15px;
+    }
+
+    &.error {
+      border-color: #D32F2F;
+    }
+  }
+
+  select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236B6B68' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    padding-right: 40px;
+
+    &:focus {
+      padding-right: 39px;
+    }
+  }
+}
+
+// Two-column row for Country/City
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+
+  .form-field {
+    margin-bottom: 0;
+  }
+}
+
+.password-field {
+  position: relative;
+
+  input {
+    padding-right: 48px;
+  }
+
+  .toggle-icon {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: $muted;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+
+    &:hover {
+      color: $charcoal;
+    }
+
+    &:focus {
+      outline: 2px solid $blue;
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+  }
+}
+
+.error-message {
+  font-size: 12px;
+  color: #D32F2F;
+  margin-top: 4px;
+  font-family: $ff-body;
+}
+
+.btn-primary {
+  width: 100%;
+  height: 48px;
+  background-color: $blue;
+  color: $white;
+  border: none;
+  border-radius: $r;
+  font-family: $ff-body;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-bottom: 20px;
+  margin-top: 8px;
+
+  &:hover:not(:disabled) {
+    background-color: darken($blue, 10%);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &:focus {
+    outline: 2px solid $navy;
+    outline-offset: 2px;
+  }
+}
+
+.footer-text {
+  text-align: center;
+  font-size: 14px;
+  color: $charcoal;
+  font-family: $ff-body;
+  margin: 0;
+
+  .link-primary {
+    color: $blue;
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.2s;
+
+    &:hover {
+      color: darken($blue, 10%);
+      text-decoration: underline;
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 480px) {
+  .auth-container {
+    padding: 12px;
+    align-items: flex-start;
+    padding-top: 24px;
+  }
+
+  .auth-card {
+    padding: 24px 20px;
+
+    h1 {
+      font-size: 24px;
+    }
+
+    .subtitle {
+      font-size: 14px;
+    }
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+
+    .form-field {
+      margin-bottom: 20px;
+    }
+  }
+}

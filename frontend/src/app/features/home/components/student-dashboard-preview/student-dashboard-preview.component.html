@@ -1,0 +1,84 @@
+<section id="student" class="section-pad" style="background:white;">
+  <div class="section-inner">
+    <span class="section-tag tag-teal">For students</span>
+    <h2 class="section-h">Your personal learning<br/>command center</h2>
+    <p class="section-sub">Everything at a glance — streaks, weak spots, recommended problems, and progress over time.</p>
+
+    <div class="dash-frame">
+      <!-- Topbar -->
+      <div class="dash-topbar">
+        <span class="dash-logo">Codify</span>
+        <div class="dash-topbar-right">
+          <span class="streak">🔥 {{ progress.streak }}-day streak</span>
+          <div class="avatar">AK</div>
+        </div>
+      </div>
+
+      <div class="dash-body">
+        <!-- Sidebar -->
+        <nav class="dash-sidebar">
+          <div class="nav-item active">⊞ Dashboard</div>
+          <div class="nav-item">◻ Problems</div>
+          <div class="nav-item">◈ Progress</div>
+          <div class="nav-item">◉ Hints log</div>
+          <div class="nav-item">◌ Settings</div>
+        </nav>
+
+        <!-- Main -->
+        <div class="dash-main">
+          <h3 class="greeting">Good morning, Ahmed 👋</h3>
+          <p class="date">Sunday, March 29 · 3 problems recommended today</p>
+
+          <!-- Metrics -->
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-val">{{ progress.problemsSolved }}</div>
+              <div class="metric-lbl">Problems solved</div>
+              <div class="metric-change">+5 this week</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-val">{{ progress.avgScore }}%</div>
+              <div class="metric-lbl">Avg. score</div>
+              <div class="metric-change">+4% vs last week</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-val">{{ progress.streak }}</div>
+              <div class="metric-lbl">Day streak</div>
+              <div class="metric-change gold">Personal best!</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-val">{{ progress.hintsUsedToday }}</div>
+              <div class="metric-lbl">Hints used today</div>
+              <div class="metric-change">of {{ progress.hintsLimit }} daily</div>
+            </div>
+          </div>
+
+          <!-- Two columns -->
+          <div class="two-col">
+            <!-- Recommended problems -->
+            <div class="panel">
+              <div class="panel-title">Recommended problems <span>today</span></div>
+              <div class="problem-row" *ngFor="let p of problems">
+                <div>
+                  <div class="problem-name">{{ p.title }}</div>
+                  <div class="problem-topic">{{ p.topicLabel }}</div>
+                </div>
+                <app-difficulty-badge [difficulty]="p.difficulty" />
+              </div>
+            </div>
+
+            <!-- Topic mastery -->
+            <div class="panel">
+              <div class="panel-title">Topic mastery <span>by concept</span></div>
+              <div class="mastery-row" *ngFor="let t of progress.topicMastery">
+                <span class="mastery-label">{{ t.topic }}</span>
+                <div class="bar-wrap"><div class="bar" [style.width.%]="t.percentage" [class]="barColor(t.percentage)"></div></div>
+                <span class="mastery-pct">{{ t.percentage }}%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,78 @@
+@use '../../../../styles/variables' as *;
+
+.how-section  { background: $ivory; }
+.section-h    { font-family: $ff-display; font-size: clamp(28px,3.5vw,42px); margin-bottom: 12px; }
+.section-sub  { font-size: 16px; color: $muted; max-width: 520px; }
+
+.steps-wrap {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem;
+  align-items: center;
+  margin-top: 48px;
+
+  @media (max-width: $tablet) {
+    gap: 2.5rem;
+  }
+
+  @media (max-width: $mobile) {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    margin-top: 32px;
+  }
+}
+
+.step {
+  display: flex; gap: 18px;
+  padding: 20px 0; border-bottom: 1px solid $border;
+  cursor: pointer;
+  &:last-child { border-bottom: none; }
+  &.active .step-num   { background: $navy; color: $gold; }
+  &.active .step-title { color: $navy; }
+
+  @media (max-width: $mobile) {
+    padding: 16px 0;
+  }
+}
+
+.step-num {
+  width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+  background: $ivory2; color: $navy2;
+  font-family: $ff-mono; font-size: 13px; font-weight: 500;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+
+.step-title { font-size: 15px; font-weight: 600; color: $navy2; margin-bottom: 4px; transition: color 0.2s; }
+.step-desc  { font-size: 13px; color: $muted; line-height: 1.6; }
+
+.steps-preview {
+  background: $navy; border-radius: $r-lg;
+  padding: 28px; min-height: 320px;
+  display: flex; flex-direction: column; justify-content: space-between;
+
+  @media (max-width: $mobile) {
+    min-height: 240px;
+    padding: 20px;
+  }
+}
+
+.preview-label  { font-family: $ff-mono; font-size: 10px; color: rgba(255,255,255,0.3); letter-spacing: 0.08em; margin-bottom: 16px; }
+.preview-title  { font-family: $ff-display; font-size: 20px; color: white; margin-bottom: 10px; }
+.preview-text   { font-size: 13px; color: rgba(255,255,255,0.6); line-height: 1.7; }
+.preview-content { flex: 1; }
+
+.preview-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
+.preview-tag {
+  font-family: $ff-mono; font-size: 10px; padding: 3px 9px; border-radius: 20px;
+  background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5);
+  &.active { background: rgba(200,169,81,0.2); color: $gold; }
+}
+
+.preview-bar {
+  height: 4px; background: rgba(255,255,255,0.1);
+  border-radius: 2px; margin-top: 24px; overflow: hidden;
+}
+.preview-fill {
+  height: 100%; background: $gold; border-radius: 2px; transition: width 0.4s ease;
+}

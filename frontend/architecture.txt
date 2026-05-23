@@ -1,0 +1,195 @@
+================================================================================
+  PROJECT ARCHITECTURE OVERVIEW
+  Angular 19 Application (Codify / Learning Platform)
+================================================================================
+
+ROOT FILES
+----------
+  .editorconfig               Editor formatting rules
+  .gitignore                  Git ignore rules
+  .prettierrc                 Prettier code formatting config
+  angular.json                Angular CLI workspace configuration
+  codify_color_palette.html   Design color palette reference
+  package.json                NPM dependencies & scripts
+  package-lock.json           Locked dependency versions
+  tsconfig.json               TypeScript base config
+  tsconfig.app.json           TypeScript config for app build
+  tsconfig.spec.json          TypeScript config for tests
+  README.md                   Project documentation
+
+================================================================================
+  SOURCE CODE  (src/)
+================================================================================
+
+src/
+├── index.html                  App HTML shell
+├── main.ts                     Angular bootstrap entry point
+├── styles.scss                 Global styles
+│
+└── app/
+    ├── app.ts                  Root AppComponent
+    ├── app.html                Root component template
+    ├── app.scss                Root component styles
+    ├── app.spec.ts             Root component tests
+    ├── app.config.ts           App-level providers / config
+    ├── app.routes.ts           Top-level route definitions
+    │
+    ├── core/                   Singleton services & domain models
+    │   ├── models/
+    │   │   ├── hint.model.ts
+    │   │   ├── problem.model.ts
+    │   │   ├── progress.model.ts
+    │   │   └── user.model.ts
+    │   └── services/
+    │       ├── auth.service.ts
+    │       ├── problem.service.ts
+    │       └── progress.service.ts
+    │
+    ├── features/               Feature modules (lazy-loadable)
+    │   │
+    │   ├── auth/
+    │   │   ├── auth.routes.ts
+    │   │   ├── login/
+    │   │   │   └── login.component.ts
+    │   │   └── register/
+    │   │       └── register.component.ts
+    │   │
+    │   ├── home/
+    │   │   ├── home.component.ts
+    │   │   └── components/
+    │   │       ├── hero/
+    │   │       │   ├── hero.component.ts
+    │   │       │   ├── hero.component.html
+    │   │       │   └── hero.component.scss
+    │   │       ├── features-section/
+    │   │       │   ├── features-section.component.ts
+    │   │       │   ├── features-section.component.html
+    │   │       │   └── features-section.component.scss
+    │   │       ├── how-it-works/
+    │   │       │   ├── how-it-works.component.ts
+    │   │       │   ├── how-it-works.component.html
+    │   │       │   └── how-it-works.component.scss
+    │   │       ├── instructor-dashboard-preview/
+    │   │       │   ├── instructor-dashboard-preview.component.ts
+    │   │       │   ├── instructor-dashboard-preview.component.html
+    │   │       │   └── instructor-dashboard-preview.component.scss
+    │   │       └── student-dashboard-preview/
+    │   │           ├── student-dashboard-preview.component.ts
+    │   │           ├── student-dashboard-preview.component.html
+    │   │           └── student-dashboard-preview.component.scss
+    │   │
+    │   └── student-dashboard/
+    │       └── student-dashboard.component.ts
+    │
+    ├── shared/                 Reusable UI components
+    │   └── components/
+    │       ├── navbar/
+    │       │   ├── navbar.component.ts
+    │       │   ├── navbar.component.html
+    │       │   └── navbar.component.scss
+    │       ├── footer/
+    │       │   ├── footer.component.ts
+    │       │   ├── footer.component.html
+    │       │   └── footer.component.scss
+    │       ├── hint-bubble/
+    │       │   ├── hint-bubble.component.ts
+    │       │   ├── hint-bubble.component.html
+    │       │   └── hint-bubble.component.scss
+    │       └── difficulty-badge/
+    │           └── difficulty-badge.component.ts
+    │
+    └── styles/                 Global SCSS partials
+        ├── _reset.scss
+        ├── _typography.scss
+        ├── _utilities.scss
+        └── _variables.scss
+
+================================================================================
+  PUBLIC ASSETS  (public/)
+================================================================================
+
+public/
+└── favicon.ico
+
+================================================================================
+  TOOLING & CONFIG  (.vscode/)
+================================================================================
+
+.vscode/
+├── extensions.json             Recommended VS Code extensions
+├── launch.json                 Debug launch configurations
+├── mcp.json                    MCP server config
+└── tasks.json                  VS Code task definitions
+
+================================================================================
+  DEPENDENCY SUMMARY  (node_modules/)
+================================================================================
+
+Key packages installed:
+
+  Framework
+  ─────────
+  @angular/core                 Angular core framework
+  @angular/common               Common directives & pipes
+  @angular/forms                Reactive & template-driven forms
+  @angular/router               Client-side routing
+  @angular/platform-browser     Browser platform
+  @angular/compiler             Template compiler
+  @angular/compiler-cli         AOT compiler CLI
+  @angular/build                Angular build system
+  @angular/cli                  Angular CLI tooling
+  @schematics/angular           Angular code generation schematics
+  rxjs                          Reactive extensions (observables)
+  tslib                         TypeScript runtime helpers
+  reflect-metadata              Decorator metadata polyfill
+
+  Styling
+  ───────
+  sass                          SCSS preprocessor
+
+  Testing
+  ───────
+  vitest                        Unit test runner
+  @vitest/*                     Vitest utilities
+  jsdom                         DOM simulation for tests
+
+  Build / Bundling
+  ────────────────
+  vite                          Dev server & bundler
+  rollup / rolldown             Module bundler
+  esbuild                       Fast JS/TS bundler
+  postcss                       CSS post-processing
+  prettier                      Code formatter
+
+  Utilities
+  ─────────
+  zod                           Schema validation
+  hono                          Lightweight web framework
+  express                       Node.js HTTP server
+  jose                          JWT / JWK handling
+  algoliasearch                 Search client
+
+================================================================================
+  ARCHITECTURE PATTERN
+================================================================================
+
+  The app follows Angular's recommended feature-based folder structure:
+
+  ┌─────────────────────────────────────────────────────┐
+  │                    AppComponent                     │
+  │                  (app.ts / app.html)                │
+  └──────────────────────┬──────────────────────────────┘
+                         │ Router Outlet
+          ┌──────────────┼──────────────┐
+          │              │              │
+     HomeFeature    AuthFeature   StudentDashboard
+          │
+    ┌─────┴──────────────────────────────┐
+    │  Hero  │  Features  │  HowItWorks  │  ...
+    └────────────────────────────────────┘
+
+  Shared Layer:  Navbar, Footer, HintBubble, DifficultyBadge
+  Core Layer:    AuthService, ProblemService, ProgressService
+  Models:        User, Problem, Progress, Hint
+
+================================================================================

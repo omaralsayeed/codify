@@ -1,0 +1,104 @@
+@use '../../../../styles/variables' as *;
+
+.inst-section { background: $ivory; }
+.section-h    { font-family: $ff-display; font-size: clamp(28px,3.5vw,42px); margin-bottom: 12px; }
+.section-sub  { font-size: 16px; color: $muted; max-width: 520px; }
+
+.inst-frame {
+  margin-top: 48px; border: 1px solid $border; border-radius: $r-lg;
+  overflow: hidden; box-shadow: 0 4px 40px rgba(26,43,74,0.10);
+
+  @media (max-width: $mobile) {
+    margin-top: 32px;
+    border-radius: $r;
+  }
+}
+
+.inst-topbar { background: $navy2; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; }
+.inst-logo   { font-family: $ff-display; font-size: 16px; color: $ivory; }
+.inst-badge  { font-family: $ff-mono; font-size: 10px; padding: 2px 8px; border-radius: 20px; background: rgba(200,169,81,0.2); color: $gold; }
+
+.inst-body {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  min-height: 400px;
+
+  @media (max-width: $tablet) {
+    grid-template-columns: 160px 1fr;
+  }
+
+  @media (max-width: $mobile) {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+}
+
+.inst-sidebar {
+  background: $navy2; padding: 16px 12px;
+
+  @media (max-width: $mobile) {
+    display: none;
+  }
+}
+
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; font-size: 13px; color: rgba(255,255,255,0.5); margin-bottom: 2px; cursor: pointer; &.active { background: rgba(255,255,255,0.08); color: $ivory; } }
+
+.inst-main   { background: $ivory; padding: 24px; overflow: hidden; }
+.greeting    { font-family: $ff-display; font-size: 20px; color: $navy; margin-bottom: 4px; }
+.sub         { font-size: 12px; color: $muted; margin-bottom: 20px; }
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+
+  @media (max-width: $tablet) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: $mobile) {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+}
+
+.metric-card  { background: white; border: 1px solid $border; border-radius: $r; padding: 14px 16px; }
+.metric-val   { font-family: $ff-display; font-size: 24px; color: $navy; }
+.metric-lbl   { font-size: 11px; color: $muted; margin-top: 2px; }
+.metric-change { font-size: 10px; font-family: $ff-mono; color: $teal; margin-top: 4px; &.red { color: #E24B4A; } }
+
+.three-col {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+
+  @media (max-width: $tablet) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: $mobile) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.panel     { background: white; border: 1px solid $border; border-radius: $r; padding: 16px; overflow: hidden; }
+.panel-title { font-size: 12px; font-weight: 600; color: $navy2; letter-spacing: 0.04em; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; span { font-size: 10px; font-family: $ff-mono; color: $muted; } }
+
+.alert-row  { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid $border; &:last-child { border-bottom: none; } }
+.alert-dot  { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; &--red { background: #E24B4A; } &--gold { background: $gold; } &--blue { background: $blue; } }
+.alert-text { font-size: 12px; color: $navy; line-height: 1.5; }
+.alert-time { font-size: 10px; font-family: $ff-mono; color: $muted; margin-top: 2px; }
+
+.student-row  { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid $border; &:last-child { border-bottom: none; } }
+.student-info { display: flex; align-items: center; gap: 8px; }
+.stu-avatar   { width: 24px; height: 24px; border-radius: 50%; background: $navy; color: $gold; font-size: 9px; font-family: $ff-mono; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.stu-name     { font-size: 12px; color: $navy; font-weight: 500; }
+.student-right { text-align: right; }
+.stu-score    { font-size: 11px; font-family: $ff-mono; color: $muted; margin-bottom: 2px; }
+
+.mastery-row  { display: flex; align-items: center; gap: 8px; padding: 5px 0; }
+.mastery-label { font-size: 11px; color: $navy; min-width: 80px; }
+.bar-wrap     { flex: 1; height: 4px; background: $ivory2; border-radius: 2px; min-width: 0; }
+.bar          { height: 100%; border-radius: 2px; &--teal { background: $teal; } &--blue { background: $blue; } &--gold { background: $gold; } &--red  { background: #E24B4A; } }
+.mastery-pct  { font-size: 10px; font-family: $ff-mono; color: $muted; min-width: 28px; text-align: right; }
