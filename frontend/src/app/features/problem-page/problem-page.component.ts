@@ -71,7 +71,7 @@ public:
   isRightPanelVisible: boolean = true;
   isEditorFullscreen: boolean = false;
   isBottomPanelOpen: boolean = true;
-  activeTab: 'description' | 'editorial' | 'solutions' | 'submissions' = 'description';
+  activeTab: 'description' | 'editorial' | 'solutions' | 'submissions' | 'codify' = 'description';
   selectedLanguage: string = 'python';
   splitPosition: number = 50; // percentage for the draggable divider
   isSolved: boolean = false; // problem solved status
@@ -109,7 +109,7 @@ public:
   onSettings(): void {}
 
   // ── Tab switching ─────────────────────────────────────────────────────────
-  setActiveTab(tab: 'description' | 'editorial' | 'solutions' | 'submissions'): void {
+  setActiveTab(tab: 'description' | 'editorial' | 'solutions' | 'submissions' | 'codify'): void {
     this.activeTab = tab;
   }
 
