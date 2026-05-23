@@ -72,7 +72,6 @@ public:
   isEditorFullscreen: boolean = false;
   isBottomPanelOpen: boolean = true;
   activeTab: 'description' | 'editorial' | 'solutions' | 'submissions' = 'description';
-  activeContentTab: 'problem' | 'discussions' | 'solutions' | 'submissions' | 'ai-hints' = 'problem';
   selectedLanguage: string = 'python';
   splitPosition: number = 50; // percentage for the draggable divider
   isSolved: boolean = false; // problem solved status
@@ -112,10 +111,6 @@ public:
   // ── Tab switching ─────────────────────────────────────────────────────────
   setActiveTab(tab: 'description' | 'editorial' | 'solutions' | 'submissions'): void {
     this.activeTab = tab;
-  }
-
-  setActiveContentTab(tab: 'problem' | 'discussions' | 'solutions' | 'submissions' | 'ai-hints'): void {
-    this.activeContentTab = tab;
   }
 
   // ── Problem actions ───────────────────────────────────────────────────────
