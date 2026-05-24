@@ -27,6 +27,7 @@ public static class DependencyInjection
         services.AddScoped<IConceptTagRepository, ConceptTagRepository>();
         services.AddScoped<ISubmissionRepository, SubmissionRepository>();
         services.AddScoped<IHintRepository, HintRepository>();
+        services.AddScoped<IFeedbackRepository, FeedbackRepository>();
 
         // Auth
         services.AddScoped<IJwtService, JwtService>();
