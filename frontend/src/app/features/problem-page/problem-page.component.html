@@ -1,0 +1,710 @@
+<div class="problem-page">
+
+  <!-- ── Problem Toolbar ──────────────────────────────────────────────────── -->
+  <header class="problem-toolbar" role="banner">
+
+    <!-- Left: logo + back link -->
+    <div class="toolbar-left">
+      <a routerLink="/" class="toolbar-logo" aria-label="Codify home">
+        <span class="toolbar-logo-dot"></span>
+        Codify
+      </a>
+      <span class="toolbar-divider" aria-hidden="true"></span>
+      <a routerLink="/problems" class="toolbar-back">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+        Problem List
+      </a>
+    </div>
+
+    <!-- Center: primary actions -->
+    <div class="toolbar-center">
+      <button class="btn btn--ghost toolbar-btn" (click)="onRun()" type="button">
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polygon points="5 3 19 12 5 21 5 3"></polygon>
+        </svg>
+        Run
+      </button>
+
+      <button class="btn btn--primary toolbar-btn" (click)="onSubmit()" type="button">
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        Submit
+      </button>
+
+      <button class="btn toolbar-btn toolbar-btn--copy" (click)="onCopy()" type="button"
+              aria-label="Copy code">
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>
+        Copy
+      </button>
+
+      <button class="btn toolbar-btn toolbar-btn--hint" (click)="onAiHint()" type="button">
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        AI Hint
+      </button>
+    </div>
+
+    <!-- Right: settings + avatar -->
+    <div class="toolbar-right">
+      <button class="toolbar-icon-btn" (click)="onSettings()" type="button"
+              aria-label="Settings">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
+
+      @if (auth.isLoggedIn()) {
+        <div class="toolbar-avatar" aria-label="User avatar">
+          {{ auth.user()?.avatarInitials }}
+        </div>
+      }
+    </div>
+
+  </header>
+
+  <!-- ── Mobile View Switcher (only visible on mobile) ────────────────────── -->
+  <nav class="mobile-view-switcher" role="tablist" aria-label="View switcher">
+    <button 
+      class="mobile-view-tab"
+      [class.mobile-view-tab--active]="activeView === 'problem'"
+      (click)="setActiveView('problem')"
+      type="button"
+      role="tab"
+      [attr.aria-selected]="activeView === 'problem'">
+      Problem
+    </button>
+    <button 
+      class="mobile-view-tab"
+      [class.mobile-view-tab--active]="activeView === 'editor'"
+      (click)="setActiveView('editor')"
+      type="button"
+      role="tab"
+      [attr.aria-selected]="activeView === 'editor'">
+      Editor
+    </button>
+  </nav>
+
+  <!-- ── Split Layout ─────────────────────────────────────────────────────── -->
+  <div class="split-container">
+
+    <!-- Left Panel -->
+    @if (isLeftPanelVisible) {
+      <aside 
+        class="split-panel split-panel--left"
+        [class.split-panel--mobile-hidden]="activeView !== 'problem'"
+        [style.width.%]="isRightPanelVisible ? splitPosition : 100"
+        role="complementary"
+        aria-label="Problem description">
+        
+        <!-- Collapse button (top-right corner of left panel) -->
+        <button 
+          class="panel-collapse-btn panel-collapse-btn--left"
+          (click)="toggleLeftPanel()"
+          type="button"
+          aria-label="Hide problem description">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+
+        <!-- Left panel content -->
+        <div class="left-panel-content">
+
+          <!-- Tab Bar -->
+          <nav class="problem-tabs" role="tablist" aria-label="Problem sections">
+            <button 
+              class="problem-tab"
+              [class.problem-tab--active]="activeTab === 'description'"
+              (click)="setActiveTab('description')"
+              type="button"
+              role="tab"
+              [attr.aria-selected]="activeTab === 'description'"
+              aria-controls="description-panel">
+              Description
+            </button>
+            <button 
+              class="problem-tab"
+              [class.problem-tab--active]="activeTab === 'editorial'"
+              (click)="setActiveTab('editorial')"
+              type="button"
+              role="tab"
+              [attr.aria-selected]="activeTab === 'editorial'"
+              aria-controls="editorial-panel">
+              Editorial
+            </button>
+            <button 
+              class="problem-tab"
+              [class.problem-tab--active]="activeTab === 'solutions'"
+              (click)="setActiveTab('solutions')"
+              type="button"
+              role="tab"
+              [attr.aria-selected]="activeTab === 'solutions'"
+              aria-controls="solutions-panel">
+              Solutions
+            </button>
+            <button 
+              class="problem-tab"
+              [class.problem-tab--active]="activeTab === 'submissions'"
+              (click)="setActiveTab('submissions')"
+              type="button"
+              role="tab"
+              [attr.aria-selected]="activeTab === 'submissions'"
+              aria-controls="submissions-panel">
+              Submissions
+            </button>
+            <button 
+              class="problem-tab"
+              [class.problem-tab--active]="activeTab === 'codify'"
+              (click)="setActiveTab('codify')"
+              type="button"
+              role="tab"
+              [attr.aria-selected]="activeTab === 'codify'"
+              aria-controls="codify-panel">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                   fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                   style="margin-right: 6px;">
+                <rect x="3" y="11" width="18" height="10" rx="2"></rect>
+                <circle cx="12" cy="5" r="2"></circle>
+                <path d="M12 7v4"></path>
+                <line x1="8" y1="16" x2="8" y2="16"></line>
+                <line x1="16" y1="16" x2="16" y2="16"></line>
+              </svg>
+              Codify
+            </button>
+          </nav>
+
+          <!-- Scrollable Content Area -->
+          <div class="problem-content-scroll">
+
+            <!-- Problem Tab Content -->
+            @if (activeTab === 'description') {
+              <div id="description-panel" role="tabpanel" aria-labelledby="description-tab">
+
+                <!-- Problem Header -->
+                <header class="problem-header">
+                  <div class="problem-title-row">
+                    <h1 class="problem-title">1. Two Sum</h1>
+                    <button 
+                      class="solved-toggle"
+                      [class.solved-toggle--active]="isSolved"
+                      (click)="toggleSolved()"
+                      type="button"
+                      [attr.aria-label]="isSolved ? 'Mark as unsolved' : 'Mark as solved'">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                           fill="none" stroke="currentColor" stroke-width="2.5"
+                           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                    </button>
+                  </div>
+                </header>
+
+                <!-- Action Pills -->
+                <div class="action-pills">
+                  <span class="badge badge--easy">Easy</span>
+                  <button class="pill" (click)="onTopicsClick()" type="button">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                         fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                      <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                    </svg>
+                    Topics
+                  </button>
+                  <button class="pill" (click)="onCompaniesClick()" type="button">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                         fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                    </svg>
+                    Companies
+                  </button>
+                  <button class="pill pill--hint" (click)="onHintClick()" type="button">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                         fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                      <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                    Hint
+                  </button>
+                </div>
+
+                <!-- Problem Statement -->
+                <section class="problem-section">
+                  <p class="problem-text">
+                    Given an array of integers <code>nums</code> and an integer <code>target</code>, 
+                    return <em>indices of the two numbers such that they add up to <code>target</code></em>.
+                  </p>
+                  <p class="problem-text">
+                    You may assume that each input would have <strong>exactly one solution</strong>, 
+                    and you may not use the same element twice.
+                  </p>
+                  <p class="problem-text">
+                    You can return the answer in any order.
+                  </p>
+                </section>
+
+                <!-- Examples -->
+                <section class="problem-section">
+                  <h2 class="section-heading">Examples</h2>
+
+                  <!-- Example 1 -->
+                  <div class="example-block">
+                    <div class="example-label">Example 1</div>
+                    <div class="example-item">
+                      <span class="example-key">Input:</span>
+                      <code class="example-value">nums = [2,7,11,15], target = 9</code>
+                    </div>
+                    <div class="example-item">
+                      <span class="example-key">Output:</span>
+                      <code class="example-value">[0,1]</code>
+                    </div>
+                    <div class="example-item">
+                      <span class="example-key">Explanation:</span>
+                      <span class="example-explanation">
+                        Because nums[0] + nums[1] == 9, we return [0, 1].
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- Example 2 -->
+                  <div class="example-block">
+                    <div class="example-label">Example 2</div>
+                    <div class="example-item">
+                      <span class="example-key">Input:</span>
+                      <code class="example-value">nums = [3,2,4], target = 6</code>
+                    </div>
+                    <div class="example-item">
+                      <span class="example-key">Output:</span>
+                      <code class="example-value">[1,2]</code>
+                    </div>
+                  </div>
+
+                  <!-- Example 3 -->
+                  <div class="example-block">
+                    <div class="example-label">Example 3</div>
+                    <div class="example-item">
+                      <span class="example-key">Input:</span>
+                      <code class="example-value">nums = [3,3], target = 6</code>
+                    </div>
+                    <div class="example-item">
+                      <span class="example-key">Output:</span>
+                      <code class="example-value">[0,1]</code>
+                    </div>
+                  </div>
+                </section>
+
+                <!-- Constraints -->
+                <section class="problem-section">
+                  <h2 class="section-heading">Constraints</h2>
+                  <ul class="constraints-list">
+                    <li><code>2 <= nums.length <= 10<sup>4</sup></code></li>
+                    <li><code>-10<sup>9</sup> <= nums[i] <= 10<sup>9</sup></code></li>
+                    <li><code>-10<sup>9</sup> <= target <= 10<sup>9</sup></code></li>
+                    <li>Only one valid answer exists.</li>
+                  </ul>
+                </section>
+
+              </div>
+            }
+
+            <!-- Editorial Tab -->
+            @if (activeTab === 'editorial') {
+              <div id="editorial-panel" role="tabpanel" aria-labelledby="editorial-tab" class="tab-placeholder">
+                <p>Editorial content will be available after you solve the problem.</p>
+              </div>
+            }
+
+            <!-- Solutions Tab -->
+            @if (activeTab === 'solutions') {
+              <div id="solutions-panel" role="tabpanel" aria-labelledby="solutions-tab" class="tab-placeholder">
+                <p>Community solutions will appear here.</p>
+              </div>
+            }
+
+            <!-- Submissions Tab -->
+            @if (activeTab === 'submissions') {
+              <div id="submissions-panel" role="tabpanel" aria-labelledby="submissions-tab" class="tab-placeholder">
+                <p>Your submission history will appear here.</p>
+              </div>
+            }
+
+            <!-- Codify Tab -->
+            @if (activeTab === 'codify') {
+              <div id="codify-panel" role="tabpanel" aria-labelledby="codify-tab" class="tab-placeholder">
+                <p>AI-powered code assistance and explanations will appear here.</p>
+              </div>
+            }
+
+          </div>
+
+        </div>
+
+      </aside>
+    }
+
+    <!-- Resizer (only visible when both panels are shown) -->
+    @if (isLeftPanelVisible && isRightPanelVisible) {
+      <div 
+        class="split-resizer"
+        (mousedown)="onResizerMouseDown($event)"
+        role="separator"
+        aria-label="Resize panels"
+        aria-orientation="vertical">
+        <div class="split-resizer-handle"></div>
+      </div>
+    }
+
+    <!-- Right Panel -->
+    @if (isRightPanelVisible) {
+      <main 
+        class="split-panel split-panel--right"
+        [class.split-panel--mobile-hidden]="activeView !== 'editor'"
+        [style.width.%]="isLeftPanelVisible ? (100 - splitPosition) : 100"
+        role="main"
+        aria-label="Code editor">
+        
+        <!-- Expand left panel button (only shown when left is hidden) -->
+        @if (!isLeftPanelVisible) {
+          <button 
+            class="panel-expand-btn panel-expand-btn--left"
+            (click)="toggleLeftPanel()"
+            type="button"
+            aria-label="Show problem description">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </button>
+        }
+
+        <!-- Collapse button (top-left corner of right panel) -->
+        <button 
+          class="panel-collapse-btn panel-collapse-btn--right"
+          (click)="toggleRightPanel()"
+          type="button"
+          aria-label="Hide code editor">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+
+        <!-- Right panel content -->
+        <div class="right-panel-content" [class.right-panel-content--fullscreen]="isEditorFullscreen">
+
+          <!-- Editor Header -->
+          <header class="editor-header">
+            <div class="editor-header-left">
+              <!-- Language Selector -->
+              <label class="language-selector">
+                <span class="language-label">Language:</span>
+                <select 
+                  class="language-dropdown"
+                  [value]="selectedLanguage"
+                  (change)="onLanguageChange($event)"
+                  aria-label="Select programming language">
+                  @for (lang of languages; track lang.value) {
+                    <option [value]="lang.value">{{ lang.name }}</option>
+                  }
+                </select>
+              </label>
+
+              <!-- Autocomplete Toggle -->
+              <label class="autocomplete-toggle">
+                <input 
+                  type="checkbox"
+                  [checked]="isAutocompleteEnabled"
+                  (change)="toggleAutocomplete()"
+                  aria-label="Toggle autocomplete" />
+                <span>Autocomplete</span>
+              </label>
+            </div>
+
+            <div class="editor-header-right">
+              <!-- Fullscreen Toggle -->
+              <button 
+                class="editor-icon-btn"
+                (click)="toggleFullscreen()"
+                type="button"
+                [attr.aria-label]="isEditorFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'">
+                @if (isEditorFullscreen) {
+                  <!-- Minimize icon -->
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                       fill="none" stroke="currentColor" stroke-width="2"
+                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path>
+                  </svg>
+                } @else {
+                  <!-- Maximize icon -->
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                       fill="none" stroke="currentColor" stroke-width="2"
+                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+                  </svg>
+                }
+              </button>
+            </div>
+          </header>
+
+          <!-- Editor Body -->
+          <div class="editor-body">
+            <!-- Line Numbers -->
+            <div class="editor-line-numbers" aria-hidden="true">
+              @for (line of currentCode.split('\n'); track $index) {
+                <div class="line-number">{{ $index + 1 }}</div>
+              }
+            </div>
+
+            <!-- Code Textarea -->
+            <textarea 
+              class="editor-textarea"
+              [value]="currentCode"
+              (input)="onEditorInput($event)"
+              spellcheck="false"
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="off"
+              aria-label="Code editor"
+              placeholder="Write your code here..."></textarea>
+          </div>
+
+          <!-- Status Bar -->
+          <footer class="editor-status-bar">
+            <div class="status-left">
+              <span class="status-indicator status-indicator--saved">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="2.5"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                Saved
+              </span>
+            </div>
+            <div class="status-right">
+              <span class="status-cursor">Ln {{ cursorLine }}, Col {{ cursorColumn }}</span>
+            </div>
+          </footer>
+
+        </div>
+
+      </main>
+    }
+
+    <!-- Expand right panel button (only shown when right is hidden) -->
+    @if (!isRightPanelVisible) {
+      <button 
+        class="panel-expand-btn panel-expand-btn--right"
+        (click)="toggleRightPanel()"
+        type="button"
+        aria-label="Show code editor">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+      </button>
+    }
+
+  </div>
+
+  <!-- ── Bottom Test Case Panel ───────────────────────────────────────────── -->
+  <div class="bottom-panel-container" [class.bottom-panel-container--open]="isBottomPanelOpen">
+    
+    <!-- Toggle Handle -->
+    <button 
+      class="bottom-panel-toggle"
+      (click)="toggleBottomPanel()"
+      type="button"
+      [attr.aria-label]="isBottomPanelOpen ? 'Close test panel' : 'Open test panel'"
+      [attr.aria-expanded]="isBottomPanelOpen">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+           [style.transform]="isBottomPanelOpen ? 'rotate(180deg)' : 'rotate(0deg)'">
+        <polyline points="18 15 12 9 6 15"></polyline>
+      </svg>
+      <span>Test Cases</span>
+    </button>
+
+    <!-- Panel Content -->
+    @if (isBottomPanelOpen) {
+      <div class="bottom-panel-content">
+
+        <!-- Test Case Tabs -->
+        <nav class="test-case-tabs" role="tablist" aria-label="Test cases">
+          @for (testCase of testCases; track testCase.id; let i = $index) {
+            <button 
+              class="test-case-tab"
+              [class.test-case-tab--active]="activeTestCase === i"
+              (click)="setActiveTestCase(i)"
+              type="button"
+              role="tab"
+              [attr.aria-selected]="activeTestCase === i"
+              [attr.aria-controls]="'testcase-panel-' + i">
+              {{ testCase.label }}
+            </button>
+          }
+          <button 
+            class="test-case-tab test-case-tab--add"
+            (click)="addTestCase()"
+            type="button"
+            aria-label="Add test case">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </button>
+        </nav>
+
+        <!-- Test Case Content -->
+        <div class="test-case-content">
+
+          <!-- Left: Inputs -->
+          <div class="test-case-inputs">
+            <h3 class="test-section-heading">Input</h3>
+            
+            <div class="input-field">
+              <label class="input-label" for="input-nums">nums</label>
+              <input 
+                id="input-nums"
+                type="text"
+                class="input-box"
+                [value]="currentTestCase.nums"
+                readonly
+                placeholder="[2,7,11,15]" />
+            </div>
+
+            <div class="input-field">
+              <label class="input-label" for="input-target">target</label>
+              <input 
+                id="input-target"
+                type="text"
+                class="input-box"
+                [value]="currentTestCase.target"
+                readonly
+                placeholder="9" />
+            </div>
+          </div>
+
+          <!-- Right: Outputs -->
+          <div class="test-case-outputs">
+            
+            <!-- Expected Output -->
+            <div class="output-section">
+              <h3 class="test-section-heading">Expected Output</h3>
+              <div class="output-box">
+                <code>{{ currentTestCase.expected }}</code>
+              </div>
+            </div>
+
+            <!-- Actual Output -->
+            <div class="output-section">
+              <h3 class="test-section-heading">Actual Output</h3>
+              <div class="output-box output-box--empty">
+                <span class="output-placeholder">Run your code to see output</span>
+              </div>
+            </div>
+
+            <!-- Run Output (Console) -->
+            <div class="output-section">
+              <h3 class="test-section-heading">Console</h3>
+              <div class="output-box output-box--empty">
+                <span class="output-placeholder">No output yet</span>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- Bottom Action Row -->
+        <div class="bottom-panel-actions">
+          <button class="btn btn--ghost" (click)="onRun()" type="button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            Run Code
+          </button>
+          <button class="btn btn--primary" (click)="onSubmit()" type="button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            Submit Solution
+          </button>
+        </div>
+
+      </div>
+    }
+
+  </div>
+
+  <!-- ── Mobile Floating Action Bar ───────────────────────────────────────── -->
+  <div class="mobile-action-bar">
+    <button class="mobile-action-btn mobile-action-btn--secondary" (click)="onRun()" type="button">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+      </svg>
+      Run
+    </button>
+    <button class="mobile-action-btn mobile-action-btn--primary" (click)="onSubmit()" type="button">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+      Submit
+    </button>
+    <button class="mobile-action-btn mobile-action-btn--test" (click)="toggleBottomPanel()" type="button">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+        <polyline points="14 2 14 8 20 8"></polyline>
+        <line x1="16" y1="13" x2="8" y2="13"></line>
+        <line x1="16" y1="17" x2="8" y2="17"></line>
+        <polyline points="10 9 9 9 8 9"></polyline>
+      </svg>
+      Tests
+    </button>
+  </div>
+
+</div>
