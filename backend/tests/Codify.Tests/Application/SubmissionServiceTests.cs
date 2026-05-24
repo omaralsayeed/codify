@@ -1,3 +1,4 @@
+using Codify.Application.DTOs.Execution;
 using Codify.Application.DTOs.Submissions;
 using Codify.Application.Interfaces;
 using Codify.Application.Services;
@@ -12,37 +13,56 @@ public class SubmissionServiceTests
 {
     private readonly ISubmissionRepository _submissionRepo = Substitute.For<ISubmissionRepository>();
     private readonly IProblemRepository _problemRepo = Substitute.For<IProblemRepository>();
+    private readonly IUserRepository _userRepo = Substitute.For<IUserRepository>();
+    private readonly IExecutionService _executionService = Substitute.For<IExecutionService>();
+    private readonly IPerformanceService _performanceService = Substitute.For<IPerformanceService>();
     private readonly SubmissionService _sut;
 
     public SubmissionServiceTests()
     {
-        _sut = new SubmissionService(_submissionRepo, _problemRepo);
+        _sut = new SubmissionService(
+            _submissionRepo,
+            _problemRepo,
+            _userRepo,
+            _executionService,
+            _performanceService);
     }
 
     [Fact]
-    public async Task CreateAsync_ShouldReturnPendingSubmission_WhenProblemExists()
+    public async Task CreateAsync_ShouldReturnAcceptedSubmission_WhenAllTestCasesPass()
     {
         var problemId = Guid.NewGuid();
         var userId = Guid.NewGuid();
         var problem = Problem.Create("Two Sum", "...", Difficulty.Easy, "", "[]");
+        problem.TestCases.Add(TestCase.Create(problem.Id, "input1", "output1", true, TestCaseVisibility.Public, 0));
 
         _problemRepo.GetByIdWithTestCasesAsync(problemId).Returns(problem);
+        _executionService.EvaluateAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+            Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(new TestCaseExecutionResult
+            {
+                ActualOutput = "output1",
+                ExecutionTimeMs = 10,
+                MemoryUsedKb = 512
+            });
+
+        _submissionRepo.GetByIdWithDetailsAsync(Arg.Any<Guid>())
+            .Returns(callInfo => Submission.Create(problemId, userId, "code", SubmissionLanguage.Python));
+        _submissionRepo.HasPreviousAcceptedAsync(userId, problemId, Arg.Any<Guid>()).Returns(false);
+        _userRepo.GetByIdAsync(userId).Returns(User.Create("Test", "t@t.com", "hash", UserRole.Student));
 
         var request = new CreateSubmissionRequest
         {
             ProblemId = problemId,
-            Code = "print('hello')",
+            Code = "print('output1')",
             Language = SubmissionLanguage.Python
         };
 
         var result = await _sut.CreateAsync(request, userId);
 
-        Assert.Equal("Pending", result.Status);
-        Assert.Equal(userId, result.UserId);
-        Assert.Equal(problemId, result.ProblemId);
-        Assert.Equal("Python", result.Language);
         await _submissionRepo.Received(1).AddAsync(Arg.Any<Submission>());
-        await _submissionRepo.Received(1).SaveChangesAsync();
+        await _submissionRepo.Received(1).AddResultAsync(Arg.Any<SubmissionResult>());
+        await _performanceService.Received(1).UpdateAfterSubmissionAsync(userId);
     }
 
     [Fact]

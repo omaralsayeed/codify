@@ -41,6 +41,7 @@ public static class DependencyInjection
         services.AddScoped<IExecutionService, ExecutionService>();
         services.AddScoped<IAiHintService, AiHintService>();
         services.AddScoped<IPerformanceService, PerformanceService>();
+        services.AddScoped<IFeedbackRepository, FeedbackRepository>();
 
         // AI
         services.Configure<OpenAiOptions>(options =>
