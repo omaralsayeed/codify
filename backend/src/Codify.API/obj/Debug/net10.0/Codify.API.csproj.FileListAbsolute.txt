@@ -339,3 +339,7 @@ D:\All Courses\ITI\Graduation Project\omaralsayeed\codify\backend\src\Codify.API
 D:\All Courses\ITI\Graduation Project\omaralsayeed\codify\backend\src\Codify.API\obj\Debug\net10.0\Codify.API.pdb
 D:\All Courses\ITI\Graduation Project\omaralsayeed\codify\backend\src\Codify.API\obj\Debug\net10.0\Codify.API.genruntimeconfig.cache
 D:\All Courses\ITI\Graduation Project\omaralsayeed\codify\backend\src\Codify.API\obj\Debug\net10.0\ref\Codify.API.dll
+D:\All Courses\ITI\Graduation Project\omaralsayeed\codify\backend\src\Codify.API\bin\Debug\net10.0\AI\Prompts\code-checker-agent-system.txt
+D:\All Courses\ITI\Graduation Project\omaralsayeed\codify\backend\src\Codify.API\bin\Debug\net10.0\AI\Prompts\tagging-agent-system.txt
+D:\All Courses\ITI\Graduation Project\omaralsayeed\codify\backend\src\Codify.API\bin\Debug\net10.0\AI\Prompts\tutor-agent-system.txt
+D:\All Courses\ITI\Graduation Project\omaralsayeed\codify\backend\src\Codify.API\bin\Debug\net10.0\OpenAI.dll

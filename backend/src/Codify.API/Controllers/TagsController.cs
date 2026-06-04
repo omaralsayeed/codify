@@ -10,7 +10,7 @@ namespace Codify.API.Controllers;
 // and automatic binding of [FromBody], [FromQuery] etc.
 [ApiController]
 [Route("api/tags")]
-[Authorize]
+//[Authorize]
 public class TagsController(IConceptTagService tagService) : ControllerBase
 {
     // ── ConceptTag CRUD ──────────────────────────────────────────────────
@@ -75,7 +75,7 @@ public class TagsController(IConceptTagService tagService) : ControllerBase
     /// Instructor only.
     /// </summary>
     [HttpPost("problems/{problemId:guid}/{conceptTagId:guid}")]
-    [Authorize(Roles = "Instructor")]
+    //[Authorize(Roles = "Instructor")]
     public async Task<IActionResult> AddTagToProblem(Guid problemId, Guid conceptTagId)
     {
         await tagService.AddTagToProblemAsync(problemId, conceptTagId);

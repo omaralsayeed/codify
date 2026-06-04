@@ -38,3 +38,6 @@ D:\All Courses\ITI\Graduation Project\omaralsayeed\codify\backend\src\Codify.Inf
 D:\All Courses\ITI\Graduation Project\omaralsayeed\codify\backend\src\Codify.Infrastructure\obj\Debug\net10.0\Codify.Infrastructure.pdb
 D:\All Courses\ITI\Graduation Project\omaralsayeed\codify\backend\src\Codify.Infrastructure\obj\Debug\net10.0\Codify.Infrastructure.genruntimeconfig.cache
 D:\All Courses\ITI\Graduation Project\omaralsayeed\codify\backend\src\Codify.Infrastructure\obj\Debug\net10.0\ref\Codify.Infrastructure.dll
+D:\All Courses\ITI\Graduation Project\omaralsayeed\codify\backend\src\Codify.Infrastructure\bin\Debug\net10.0\AI\Prompts\code-checker-agent-system.txt
+D:\All Courses\ITI\Graduation Project\omaralsayeed\codify\backend\src\Codify.Infrastructure\bin\Debug\net10.0\AI\Prompts\tagging-agent-system.txt
+D:\All Courses\ITI\Graduation Project\omaralsayeed\codify\backend\src\Codify.Infrastructure\bin\Debug\net10.0\AI\Prompts\tutor-agent-system.txt
