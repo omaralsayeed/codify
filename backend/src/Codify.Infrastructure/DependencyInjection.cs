@@ -37,6 +37,7 @@ public static class DependencyInjection
         services.AddScoped<ISubmissionService, SubmissionService>();
         services.AddScoped<IExecutionService, ExecutionService>();
         services.AddScoped<IQuickRunService, QuickRunService>();
+        services.AddScoped<IQuickRunWithTestsService, QuickRunWithTestsService>();
         services.AddScoped<IAiHintService, AiHintService>();
 
         // AI

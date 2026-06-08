@@ -115,6 +115,20 @@ public class QuickRunService : IQuickRunService
             var stdout = await stdoutTask;
             var stderr = await stderrTask;
 
+            // Exit code 137 means the Linux kernel killed the container (OOM killer).
+            // This happens when the container exceeds its memory limit (--memory=128m).
+            // 137 = 128 + 9 → signal 9 (SIGKILL) sent by the kernel.
+            if (process.ExitCode == 137)
+            {
+                return new QuickRunResponse
+                {
+                    Status          = "memory_limit_exceeded",
+                    Stdout          = string.Empty,
+                    Stderr          = "Process was killed: memory limit exceeded (128MB).",
+                    ExecutionTimeMs = (int)stopwatch.ElapsedMilliseconds
+                };
+            }
+
             return new QuickRunResponse
             {
                 Status          = string.IsNullOrWhiteSpace(stderr) ? "success" : "error",
