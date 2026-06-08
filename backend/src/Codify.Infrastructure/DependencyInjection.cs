@@ -43,6 +43,7 @@ public static class DependencyInjection
 
         // Quick Run
         services.AddScoped<IQuickRunService, QuickRunService>();
+<<<<<<< HEAD
 
         // Execution - Judge0 sandboxed execution
         services.Configure<Judge0Options>(options =>
@@ -95,6 +96,10 @@ public static class DependencyInjection
                 opts,
                 logger);
         });
+=======
+        services.AddScoped<IQuickRunWithTestsService, QuickRunWithTestsService>();
+        services.AddScoped<IAiHintService, AiHintService>();
+>>>>>>> 6638ed5 (feat(judge): add test case runner, output validation, timeout and memory protection)
 
         // AI
         services.Configure<OpenAiOptions>(options =>
