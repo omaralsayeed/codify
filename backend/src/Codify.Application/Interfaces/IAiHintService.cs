@@ -5,4 +5,5 @@ namespace Codify.Application.Interfaces;
 public interface IAiHintService
 {
     Task<HintResponse> GetHintAsync(HintRequest request, Guid userId, CancellationToken cancellationToken = default);
+    Task<HintHistoryResponse> GetHintHistoryAsync(Guid problemId, Guid userId, CancellationToken cancellationToken = default);
 }

@@ -67,4 +67,25 @@ public class AiHintService(
 
         return response;
     }
+
+    public async Task<HintHistoryResponse> GetHintHistoryAsync(
+        Guid problemId,
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        var hints = (await hintRepo.GetByUserAndProblemAsync(userId, problemId)).ToList();
+
+        return new HintHistoryResponse
+        {
+            ProblemId = problemId,
+            TotalHintsUsed = hints.Count,
+            CanRequestMore = hints.Count < MaxHintLevel,
+            Hints = hints.Select(h => new HintHistoryItem
+            {
+                HintLevel = h.HintLevel,
+                HintText = h.ResponseText,
+                CreatedAt = h.CreatedAt
+            }).ToList()
+        };
+    }
 }
