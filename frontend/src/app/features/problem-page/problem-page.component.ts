@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, HostListener, signal, ElementRef, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, HostListener, signal, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
@@ -55,7 +55,7 @@ export interface HintHistoryItem {
   templateUrl: './problem-page.component.html',
   styleUrl: './problem-page.component.scss',
 })
-export class ProblemPageComponent implements OnInit {
+export class ProblemPageComponent implements OnInit, OnDestroy {
   protected readonly auth          = inject(AuthService);
   private  readonly submissionSvc  = inject(SubmissionService);
   private  readonly hintSvc        = inject(HintService);
@@ -211,11 +211,30 @@ public:
     return this.isHintLoading || !this.canRequestMoreHints;
   }
 
+  /**
+   * Toolbar button label — four states per spec:
+   *   • "AI Hint"           — no hints used yet
+   *   • "Thinking…"         — loading
+   *   • "AI Hint · 2/3"     — hints in progress (counter shows spend)
+   *   • "No more hints"     — exhausted
+   */
   get hintButtonLabel(): string {
-    if (this.isHintLoading) return 'Loading…';
-    if (!this.canRequestMoreHints) return 'No more hints';
-    return this.hintLevel === 0 ? 'AI Hint' : `Hint ${this.nextHintLevel}/3`;
+    if (this.isHintLoading) return 'Thinking…';
+    if (!this.canRequestMoreHints && this.hintLevel > 0) return 'No more hints';
+    if (this.hintLevel === 0) return 'AI Hint';
+    return `AI Hint · ${this.hintLevel}/${this.totalHintsAvailable || 3}`;
   }
+
+  // ── Hint overlay card state (Chunk 8) ─────────────────────────────────────
+  showHintOverlay:         boolean = false;
+  hintOverlayExplanation:  string  = '';
+  hintOverlayLevel:        number  = 0;
+  hintOverlayProgress:     number  = 100; // 100→0 over 6s, drives the countdown bar
+  private hintOverlayTimerId:   ReturnType<typeof setTimeout>  | null = null;
+  private hintOverlayIntervalId: ReturnType<typeof setInterval> | null = null;
+
+  // ── Editor highlight state (Chunk 8) ─────────────────────────────────────
+  editorHighlighting: boolean = false;  // drives .editor-textarea--highlight class
 
   private get previousHintTexts(): string[] {
     return this.hintHistory.map(h => h.explanation);
@@ -237,6 +256,10 @@ public:
 
   ngOnInit(): void {
     // Services verified — both SubmissionService and HintService return data correctly.
+  }
+
+  ngOnDestroy(): void {
+    this.clearHintOverlayTimers();
   }
 
   // ── Toolbar: Run ──────────────────────────────────────────────────────────
@@ -452,12 +475,65 @@ public:
   }
 
   /**
-   * Placeholder — Chunk 8 will implement the full highlight animation.
-   * For now, triggers the existing editor glow so there's immediate visual feedback.
+   * Chunk 8 — Hint-applied animation: two effects.
+   *
+   * 1. Editor textarea green highlight (800ms CSS class toggle).
+   *    Applied on any hint, whether narrative or code-diff, so the user
+   *    always gets a visual signal that the hint has been received.
+   *
+   * 2. Shows / updates the hint explanation overlay card.
+   *    The card auto-dismisses after 6 s with a countdown progress bar.
+   *    If called while the overlay is already visible it updates in-place.
    */
   private triggerHintAppliedAnimation(): void {
-    if (this.prefersReducedMotion()) return;
-    this.triggerEditorGlow();
+    // ── Editor textarea highlight ─────────────────────────────────────────
+    if (!this.prefersReducedMotion()) {
+      this.editorHighlighting = true;
+      setTimeout(() => { this.editorHighlighting = false; }, 800);
+    }
+
+    // ── Overlay card (always shown — carries the explanation text) ────────
+    this.showHintOverlayCard(this.lastHintExplanation, this.hintLevel);
+  }
+
+  /** Opens or refreshes the hint explanation overlay and starts the 6 s timer. */
+  showHintOverlayCard(explanation: string, level: number): void {
+    // Update content (in-place refresh if already visible)
+    this.hintOverlayExplanation = explanation;
+    this.hintOverlayLevel       = level;
+    this.showHintOverlay        = true;
+
+    // Clear any running timer + interval from the previous hint
+    this.clearHintOverlayTimers();
+
+    // Reset progress bar to full
+    this.hintOverlayProgress = 100;
+
+    const DURATION_MS    = 6000;
+    const TICK_MS        = 100;
+    const totalTicks     = DURATION_MS / TICK_MS;
+    let   ticksElapsed   = 0;
+
+    // Smooth countdown — decrements progress bar every 100 ms
+    this.hintOverlayIntervalId = setInterval(() => {
+      ticksElapsed++;
+      this.hintOverlayProgress = Math.max(0, 100 - (ticksElapsed / totalTicks) * 100);
+    }, TICK_MS);
+
+    // Auto-dismiss after full duration
+    this.hintOverlayTimerId = setTimeout(() => {
+      this.dismissHintOverlay();
+    }, DURATION_MS);
+  }
+
+  dismissHintOverlay(): void {
+    this.showHintOverlay    = false;
+    this.clearHintOverlayTimers();
+  }
+
+  private clearHintOverlayTimers(): void {
+    if (this.hintOverlayTimerId   !== null) { clearTimeout(this.hintOverlayTimerId);    this.hintOverlayTimerId   = null; }
+    if (this.hintOverlayIntervalId !== null) { clearInterval(this.hintOverlayIntervalId); this.hintOverlayIntervalId = null; }
   }
 
   /**

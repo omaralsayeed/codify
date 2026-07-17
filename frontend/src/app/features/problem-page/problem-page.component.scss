@@ -2667,3 +2667,231 @@
     color: $teal;
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CHUNK 8: Hint button states, overlay card, editor highlight, tab count badge
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ── Toolbar hint button — loading pulsing glow ────────────────────────────────
+@keyframes hintBtnPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(29, 158, 117, 0.4); }
+  50%       { box-shadow: 0 0 0 5px rgba(29, 158, 117, 0); }
+}
+
+.toolbar-btn--hint-loading {
+  animation: hintBtnPulse 1.2s ease-in-out infinite;
+  cursor: not-allowed;
+}
+
+// Exhausted state — greyed out, no hover
+.toolbar-btn--hint-exhausted {
+  background: $ivory2 !important;
+  color: $muted !important;
+  border-color: $border !important;
+  opacity: 0.65;
+  cursor: not-allowed;
+
+  &:hover {
+    background: $ivory2 !important;
+    border-color: $border !important;
+    filter: none !important;
+  }
+}
+
+// ── Codify tab hint count badge ───────────────────────────────────────────────
+.tab-hint-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  margin-left: 6px;
+  background: $teal;
+  color: $white;
+  font-family: $ff-mono;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 20px;
+  line-height: 1;
+  animation: fadeIn 0.2s ease-out both;
+}
+
+// ── Editor textarea hint highlight ────────────────────────────────────────────
+// Copilot-style soft green flash on the whole textarea (800ms)
+
+@keyframes hintHighlight {
+  0%   { background-color: #1e1e1e; }
+  15%  { background-color: rgba(29, 158, 117, 0.14); }
+  100% { background-color: #1e1e1e; }
+}
+
+.editor-textarea--highlight {
+  animation: hintHighlight 0.8s ease-out both;
+}
+
+// ── Hint explanation overlay card ─────────────────────────────────────────────
+// Positioned at the bottom-left of .right-panel-content (which is position:relative
+// via the existing flex column layout — we need to confirm it has position context).
+
+@keyframes hintOverlaySlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hint-overlay-card {
+  position: absolute;
+  bottom: 44px;          // sits just above the status bar (44px tall)
+  left: 16px;
+  width: 300px;
+  max-width: calc(100% - 32px);
+  background: $white;
+  border: 1px solid rgba(29, 158, 117, 0.3);
+  border-radius: $r;
+  box-shadow: $shadow-lg;
+  z-index: 50;
+  overflow: hidden;
+  animation: hintOverlaySlideUp 0.2s ease-out both;
+}
+
+.hint-overlay-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px 6px;
+  gap: 8px;
+}
+
+.hint-overlay-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: $ff-body;
+  font-size: 11px;
+  font-weight: 700;
+  color: $teal;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+
+  svg { flex-shrink: 0; }
+}
+
+.hint-overlay-dismiss {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: $muted;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  margin-left: auto;
+
+  &:hover {
+    background: $ivory2;
+    color: $navy;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+}
+
+.hint-overlay-text {
+  font-family: $ff-body;
+  font-size: 13px;
+  line-height: 1.6;
+  color: $charcoal;
+  margin: 0;
+  padding: 0 12px 10px;
+  // Clamp to 4 lines — full text visible in the Codify tab
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.hint-overlay-chat-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: $ff-body;
+  font-size: 12px;
+  font-weight: 600;
+  color: $teal;
+  background: $teal-lt;
+  border: none;
+  border-top: 1px solid rgba(29, 158, 117, 0.15);
+  width: 100%;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+  text-align: left;
+
+  svg { flex-shrink: 0; margin-left: auto; }
+
+  &:hover {
+    background: darken($teal-lt, 4%);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $teal;
+    outline-offset: -2px;
+  }
+}
+
+// Countdown progress bar at bottom of overlay
+.hint-overlay-progress {
+  height: 3px;
+  background: rgba(29, 158, 117, 0.12);
+  width: 100%;
+}
+
+.hint-overlay-progress-bar {
+  height: 100%;
+  background: $teal;
+  transition: width 0.1s linear; // matches the 100ms interval tick
+}
+
+// ── Hint timeline entry animation (Codify tab) ────────────────────────────────
+// Each new entry fades in independently without re-rendering the list.
+// The @for loop in the template renders one item per history entry;
+// the newest item always has animation: fadeIn on it.
+
+.hint-item {
+  animation: fadeIn 0.15s ease-out both;
+}
+
+// ── right-panel-content needs position:relative for the overlay ───────────────
+// The existing class definition sets flex layout but not position.
+// Adding it here without touching the original definition.
+.right-panel-content {
+  position: relative;
+}
+
+// ── Responsive: hide overlay on mobile (too cramped) ─────────────────────────
+@media (max-width: $mobile) {
+  .hint-overlay-card {
+    display: none;
+  }
+}
+
+// ── prefers-reduced-motion ────────────────────────────────────────────────────
+@media (prefers-reduced-motion: reduce) {
+  .toolbar-btn--hint-loading { animation: none; }
+  .hint-overlay-card         { animation: none; }
+  .editor-textarea--highlight { animation: none; }
+  .tab-hint-count             { animation: none; }
+  .hint-item                  { animation: none; }
+}
