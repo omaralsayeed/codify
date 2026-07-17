@@ -13,6 +13,14 @@ $charcoal:  #444441;
 $muted:     #6B6B68;
 $white:     #FFFFFF;
 
+// Semantic / verdict colors
+$red:       #D32F2F;
+$red-lt:    #FFEBEE;
+$orange:    #E65100;
+$orange-lt: #FFF3E0;
+$purple:    #7B1FA2;
+$purple-lt: #F3E5F5;
+
 // Fonts
 $ff-display: 'DM Serif Display', serif;
 $ff-body:    'DM Sans', sans-serif;
@@ -48,6 +56,12 @@ $tablet: 1024px;
   --white:   #{$white};
   --border:  #{$border};
   --shadow:  #{$shadow};
+  --red:        #{$red};
+  --red-lt:     #{$red-lt};
+  --orange:     #{$orange};
+  --orange-lt:  #{$orange-lt};
+  --purple:     #{$purple};
+  --purple-lt:  #{$purple-lt};
   --ff-display: #{$ff-display};
   --ff-body:    #{$ff-body};
   --ff-mono:    #{$ff-mono};

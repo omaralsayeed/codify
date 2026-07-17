@@ -171,16 +171,33 @@ export class SubmissionService {
   }
 
   // ── Mock implementations ───────────────────────────────────────────────────
-  // Each mock simulates realistic latency so the UI loading states are visible.
-  // Replace the return statement in the public method above to switch to real API.
+  // Mock verdict is determined by what the student typed:
+  //   • Contains a real data structure (dict, map, {})  → Accepted
+  //   • Contains only pass/return/{}  (starter code)    → WrongAnswer
+  //   • Contains "error" or "throw"                     → RuntimeError
+  //   • Contains "tle" or "while True"                  → TimeLimitExceeded
+  //   • Otherwise (something typed, but not a solution) → WrongAnswer
+
+  private mockVerdict(code: string): 'Accepted' | 'WrongAnswer' | 'RuntimeError' | 'TimeLimitExceeded' {
+    const c = code.toLowerCase();
+    if (c.includes('while true') || c.includes('tle')) return 'TimeLimitExceeded';
+    if (c.includes('raise ') || c.includes('throw ') || c.includes('error(')) return 'RuntimeError';
+    // A real Two Sum solution will mention a hash map / dict
+    if (c.includes('seen') || c.includes('dict') || c.includes('hashmap') ||
+        c.includes('{}') || c.includes('map(') || c.includes('lookup')) return 'Accepted';
+    return 'WrongAnswer';
+  }
 
   private mockRun(code: string): Observable<RunCodeResponse> {
-    const passed = code.trim().length > 30;
+    const verdict = this.mockVerdict(code);
+    const passed  = verdict === 'Accepted';
     return of<RunCodeResponse>({
-      stdout:         passed ? '[0, 1]\n[1, 2]\n[0, 1]' : '',
-      stderr:         passed ? '' : 'No output produced — is your function returning a value?',
+      stdout:          passed ? '[0, 1]\n[1, 2]\n[0, 1]' : '',
+      stderr:          passed ? '' : verdict === 'RuntimeError'
+                         ? 'KeyError: complement not found'
+                         : 'No output produced — is your function returning a value?',
       executionTimeMs: 42,
-      status:         passed ? 'Accepted' : 'WrongAnswer',
+      status:          verdict,
       testResults: [
         { input: 'nums=[2,7,11,15], target=9', expectedOutput: '[0,1]', actualOutput: passed ? '[0,1]' : '[]', passed },
         { input: 'nums=[3,2,4],     target=6', expectedOutput: '[1,2]', actualOutput: passed ? '[1,2]' : '[]', passed },
@@ -190,56 +207,49 @@ export class SubmissionService {
   }
 
   private mockSubmit(code: string, lang: string): Observable<SubmissionDetailResponse> {
-    const accepted = code.trim().length > 30;
+    const verdict = this.mockVerdict(code);
     return of<SubmissionDetailResponse>(
-      accepted ? this.buildMockAccepted(lang) : this.buildMockWrong(lang)
+      this.buildMockResult(verdict, lang)
     ).pipe(delay(1500));
   }
 
-  private buildMockAccepted(lang = 'python'): SubmissionDetailResponse {
+  private buildMockResult(
+    status: 'Accepted' | 'WrongAnswer' | 'RuntimeError' | 'TimeLimitExceeded',
+    lang = 'python',
+  ): SubmissionDetailResponse {
+    const accepted = status === 'Accepted';
     return {
       submissionId:    crypto.randomUUID(),
       problemId:       '00000000-0000-0000-0000-000000000005',
       userId:          'mock-user-id',
       code:            '',
       language:        lang,
-      status:          'Accepted',
+      status,
       submittedAt:     new Date().toISOString(),
-      executionTimeMs: 38,
-      memoryUsedKb:    14200,
-      passedTestCases: 32,
+      executionTimeMs: accepted ? 38  : 22,
+      memoryUsedKb:    accepted ? 14200 : 12800,
+      passedTestCases: accepted ? 32 : status === 'RuntimeError' ? 0 : 14,
       totalTestCases:  32,
-      score:           100,
+      score:           accepted ? 100 : 0,
       result: {
-        passedTestCount: 32,
-        failedTestCount: 0,
+        passedTestCount: accepted ? 32 : 0,
+        failedTestCount: accepted ? 0  : 32,
         totalTestCount:  32,
-        outputSummary:   'All test cases passed.',
+        errorMessage: accepted ? undefined
+          : status === 'RuntimeError'    ? 'KeyError: complement not found at line 4'
+          : status === 'TimeLimitExceeded' ? 'Time limit exceeded after 2000ms'
+          : 'Expected [0,1] but got [].',
+        outputSummary: accepted ? 'All test cases passed.' : undefined,
       },
       aiFeedback: [],
     };
   }
 
+  private buildMockAccepted(lang = 'python'): SubmissionDetailResponse {
+    return this.buildMockResult('Accepted', lang);
+  }
+
   private buildMockWrong(lang = 'python'): SubmissionDetailResponse {
-    return {
-      submissionId:    crypto.randomUUID(),
-      problemId:       '00000000-0000-0000-0000-000000000005',
-      userId:          'mock-user-id',
-      code:            '',
-      language:        lang,
-      status:          'WrongAnswer',
-      submittedAt:     new Date().toISOString(),
-      executionTimeMs: 22,
-      passedTestCases: 14,
-      totalTestCases:  32,
-      score:           0,
-      result: {
-        passedTestCount: 14,
-        failedTestCount: 18,
-        totalTestCount:  32,
-        errorMessage:    'Expected [0,1] but got [].',
-      },
-      aiFeedback: [],
-    };
+    return this.buildMockResult('WrongAnswer', lang);
   }
 }
