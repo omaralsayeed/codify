@@ -31,13 +31,26 @@
         Run
       </button>
 
-      <button class="btn btn--primary toolbar-btn" (click)="onSubmit()" type="button">
-        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
-             fill="none" stroke="currentColor" stroke-width="2"
-             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <polyline points="20 6 9 17 4 12"></polyline>
-        </svg>
-        Submit
+      <button
+        class="btn btn--primary toolbar-btn"
+        [class.toolbar-btn--flash-accepted]="submitFlash === 'accepted'"
+        [class.toolbar-btn--flash-rejected]="submitFlash === 'rejected'"
+        [class.toolbar-btn--submitting]="isSubmitting"
+        (click)="onSubmit()"
+        type="button"
+        [disabled]="isSubmitting"
+        [attr.aria-label]="isSubmitting ? 'Submitting solution…' : 'Submit solution'">
+        @if (isSubmitting) {
+          <span class="btn-spinner btn-spinner--light" aria-hidden="true"></span>
+          Submitting…
+        } @else {
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          Submit
+        }
       </button>
 
       <button class="btn toolbar-btn toolbar-btn--copy" (click)="onCopy()" type="button"
@@ -661,6 +674,100 @@
     @if (isBottomPanelOpen) {
       <div class="bottom-panel-content">
 
+        <!-- ── Result Banner (above tabs, always visible after submit triggered) -->
+        @if (showResultBanner) {
+          <div
+            class="result-banner"
+            [class.result-banner--judging]="submitPhase === 'submitting'"
+            [class.result-banner--accepted]="submitPhase === 'done' && isAccepted"
+            [class.result-banner--rejected]="submitPhase === 'done' && !isAccepted"
+            [class.result-banner--error]="submitPhase === 'error'"
+            role="status"
+            [attr.aria-live]="submitPhase === 'submitting' ? 'polite' : 'assertive'">
+
+            @if (submitPhase === 'submitting') {
+              <!-- Judging state -->
+              <span class="result-banner-spinner" aria-hidden="true"></span>
+              <span class="result-banner-label">Judging your solution…</span>
+            }
+
+            @if (submitPhase === 'error') {
+              <!-- Error state -->
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+                   fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round"
+                   class="result-banner-icon" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+              <span class="result-banner-label">{{ submissionError }}</span>
+            }
+
+            @if (submitPhase === 'done' && submitResult) {
+              <!-- Verdict state -->
+              @if (isAccepted) {
+                <!-- Accepted icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="2.5"
+                     stroke-linecap="round" stroke-linejoin="round"
+                     class="result-banner-icon" aria-hidden="true">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              } @else {
+                <!-- Rejected icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="2.5"
+                     stroke-linecap="round" stroke-linejoin="round"
+                     class="result-banner-icon" aria-hidden="true">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              }
+
+              <span class="result-banner-label">{{ verdictLabel }}</span>
+
+              <span class="result-banner-divider" aria-hidden="true"></span>
+
+              <span class="result-banner-meta">
+                <span class="result-banner-chip">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24"
+                       fill="none" stroke="currentColor" stroke-width="2"
+                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                  </svg>
+                  {{ passRatio }}
+                </span>
+                <span class="result-banner-chip">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24"
+                       fill="none" stroke="currentColor" stroke-width="2"
+                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                  </svg>
+                  {{ executionTime }}
+                </span>
+                <span class="result-banner-chip">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24"
+                       fill="none" stroke="currentColor" stroke-width="2"
+                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                  </svg>
+                  {{ memoryUsed }}
+                </span>
+              </span>
+
+              <button
+                class="result-banner-detail-btn"
+                (click)="setBottomTab('result')"
+                type="button">
+                Details
+              </button>
+            }
+          </div>
+        }
+
         <!-- ── Bottom Panel Top Bar: Test Cases | Result ────────────────────── -->
         <div class="bottom-panel-top-bar">
           <!-- Test Cases group -->
@@ -912,10 +1019,10 @@
             class="btn btn--primary"
             (click)="onSubmit()"
             type="button"
-            [disabled]="submitPhase === 'submitting'">
-            @if (submitPhase === 'submitting') {
+            [disabled]="isSubmitting">
+            @if (isSubmitting) {
               <span class="btn-spinner btn-spinner--light" aria-hidden="true"></span>
-              Judging…
+              Submitting…
             } @else {
               <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
                    fill="none" stroke="currentColor" stroke-width="2"
@@ -942,13 +1049,19 @@
       </svg>
       Run
     </button>
-    <button class="mobile-action-btn mobile-action-btn--primary" (click)="onSubmit()" type="button">
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-           fill="none" stroke="currentColor" stroke-width="2"
-           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <polyline points="20 6 9 17 4 12"></polyline>
-      </svg>
-      Submit
+    <button class="mobile-action-btn mobile-action-btn--primary" (click)="onSubmit()" type="button"
+            [disabled]="isSubmitting">
+      @if (isSubmitting) {
+        <span class="btn-spinner btn-spinner--light" aria-hidden="true"></span>
+        Submitting…
+      } @else {
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        Submit
+      }
     </button>
     <button class="mobile-action-btn mobile-action-btn--test" (click)="toggleBottomPanel()" type="button">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, HostListener, signal } from '@angular/core';
+import { Component, OnInit, inject, HostListener, signal, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
@@ -28,6 +28,7 @@ export class ProblemPageComponent implements OnInit {
   protected readonly auth          = inject(AuthService);
   private  readonly submissionSvc  = inject(SubmissionService);
   private  readonly hintSvc        = inject(HintService);
+  private  readonly elRef          = inject(ElementRef);
 
   // ── Language configuration ────────────────────────────────────────────────
   languages = [
@@ -117,11 +118,21 @@ public:
   }
 
   // ── Submit state ──────────────────────────────────────────────────────────
-  submitPhase: SubmitPhase = 'idle';
-  submitResult: SubmissionDetailResponse | null = null;
-  submitError:  ServiceError             | null = null;
+  isSubmitting:    boolean = false;
+  submitPhase:     SubmitPhase = 'idle';
+  submitResult:    SubmissionDetailResponse | null = null;
+  submissionError: string | null = null;   // human-readable error for the banner
+  submitError:     ServiceError | null = null;  // typed error for internal use
+  submissionId:    string | null = null;   // stored for Chunk 7 (feedback panel)
   activeBottomTab: 'testcases' | 'result' = 'testcases';
 
+  // Flash state: 'accepted' | 'rejected' | null — drives the 200ms button flash
+  submitFlash: 'accepted' | 'rejected' | null = null;
+
+  get showResultBanner(): boolean {
+    // Banner shows as soon as submit is triggered (even while judging)
+    return this.submitPhase !== 'idle';
+  }
   get showResultTab():  boolean { return this.submitPhase !== 'idle' || this.runPhase !== 'idle'; }
   get isAccepted():     boolean { return this.submitResult?.status === 'Accepted'; }
   get verdictLabel():   string  { return this.submitResult?.status ?? ''; }
@@ -199,24 +210,39 @@ public:
   // ── Toolbar: Submit ───────────────────────────────────────────────────────
 
   onSubmit(): void {
-    this.submitPhase  = 'submitting';
-    this.submitResult = null;
-    this.submitError  = null;
+    if (this.isSubmitting) return;
+
+    this.isSubmitting    = true;
+    this.submitPhase     = 'submitting';
+    this.submitResult    = null;
+    this.submissionError = null;
+    this.submitError     = null;
+    this.submissionId    = null;
+    this.submitFlash     = null;
     if (!this.isBottomPanelOpen) this.isBottomPanelOpen = true;
     this.activeBottomTab = 'result';
 
     this.submissionSvc.submit('00000000-0000-0000-0000-000000000005', this.currentCode, this.selectedLanguage)
       .subscribe({
         next: result => {
-          this.submitResult = result;
-          this.submitPhase  = 'done';
+          this.submitResult    = result;
+          this.submissionId    = result.submissionId;   // stored for Chunk 7
+          this.isSubmitting    = false;
+          this.submitPhase     = 'done';
+          this.submissionError = null;
+
+          // 200ms flash on the toolbar Submit button
+          this.submitFlash = result.status === 'Accepted' ? 'accepted' : 'rejected';
+          setTimeout(() => { this.submitFlash = null; }, 700);
+
           if (result.status === 'Accepted') this.isSolved = true;
-          // Show submission history
           this.setActiveTab('submissions');
         },
         error: (err: ServiceError) => {
-          this.submitError = err;
-          this.submitPhase = 'error';
+          this.submitError     = err;
+          this.submissionError = err.message ?? 'Submission failed. Please try again.';
+          this.isSubmitting    = false;
+          this.submitPhase     = 'error';
         },
       });
   }
