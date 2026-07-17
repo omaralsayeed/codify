@@ -129,6 +129,9 @@ public:
   // Flash state: 'accepted' | 'rejected' | null — drives the 200ms button flash
   submitFlash: 'accepted' | 'rejected' | null = null;
 
+  // Layer 3: editor glow class toggled on accepted
+  editorGlowing = false;
+
   get showResultBanner(): boolean {
     // Banner shows as soon as submit is triggered (even while judging)
     return this.submitPhase !== 'idle';
@@ -235,7 +238,10 @@ public:
           this.submitFlash = result.status === 'Accepted' ? 'accepted' : 'rejected';
           setTimeout(() => { this.submitFlash = null; }, 700);
 
-          if (result.status === 'Accepted') this.isSolved = true;
+          if (result.status === 'Accepted') {
+            this.isSolved = true;
+            this.triggerAcceptedCelebration();
+          }
           this.setActiveTab('submissions');
         },
         error: (err: ServiceError) => {
@@ -375,5 +381,120 @@ public:
       document.body.style.cursor     = '';
       document.body.style.userSelect = '';
     }
+  }
+
+  // ── Accepted Celebration (Chunk 5) ────────────────────────────────────────
+
+  private prefersReducedMotion(): boolean {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  /**
+   * Orchestrates all three celebration layers when status === 'Accepted'.
+   * Layer 1 (banner pulse) is handled purely in CSS via the --accepted modifier.
+   * Layers 2 & 3 are skipped if the user prefers reduced motion.
+   */
+  private triggerAcceptedCelebration(): void {
+    if (this.prefersReducedMotion()) return;
+
+    // Layer 2 — confetti burst from the Submit button
+    const submitBtn = this.elRef.nativeElement.querySelector('.toolbar-btn.btn--primary') as HTMLElement | null;
+    this.launchConfetti(submitBtn);
+
+    // Layer 3 — editor glow
+    this.triggerEditorGlow();
+  }
+
+  // ── Layer 2: Confetti ──────────────────────────────────────────────────────
+
+  /** Project palette colours used for particles */
+  private readonly CONFETTI_COLORS = [
+    '#1D9E75', // $teal
+    '#C8A951', // $gold
+    '#2E86AB', // $blue
+    '#1A2B4A', // $navy
+    '#E1F5EE', // $teal-lt
+    '#FBF4E3', // $gold-lt
+    '#E6F4FB', // $blue-lt
+  ];
+
+  private launchConfetti(anchor: HTMLElement | null): void {
+    const PARTICLE_COUNT = 30;
+    const DURATION_MS    = 1500;
+
+    // Determine burst origin: centre of the Submit button, or viewport centre fallback
+    let originX = window.innerWidth  / 2;
+    let originY = window.innerHeight / 2;
+
+    if (anchor) {
+      const rect = anchor.getBoundingClientRect();
+      originX = rect.left + rect.width  / 2;
+      originY = rect.top  + rect.height / 2;
+    }
+
+    // Container that holds all particles — appended to body, removed after animation
+    const container = document.createElement('div');
+    container.setAttribute('aria-hidden', 'true');
+    container.style.cssText = `
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9999;
+      overflow: hidden;
+    `;
+    document.body.appendChild(container);
+
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      const particle = document.createElement('div');
+
+      // Random size: 6–10px
+      const size  = 6 + Math.random() * 4;
+      // Random spread angle across full 360°
+      const angle = Math.random() * Math.PI * 2;
+      // Random travel distance: 60–160px
+      const dist  = 60 + Math.random() * 100;
+      const dx    = Math.cos(angle) * dist;
+      const dy    = Math.sin(angle) * dist - 40; // slight upward bias
+
+      const color = this.CONFETTI_COLORS[Math.floor(Math.random() * this.CONFETTI_COLORS.length)];
+      // Alternate between squares and circles
+      const isCircle = Math.random() > 0.5;
+      // Random rotation spin
+      const spinDeg  = (Math.random() - 0.5) * 720;
+      // Stagger each particle slightly
+      const delay    = Math.random() * 200;
+
+      particle.style.cssText = `
+        position: fixed;
+        left: ${originX}px;
+        top:  ${originY}px;
+        width:  ${size}px;
+        height: ${size}px;
+        background: ${color};
+        border-radius: ${isCircle ? '50%' : '2px'};
+        opacity: 1;
+        transform: translate(-50%, -50%);
+        animation: confettiFall ${DURATION_MS}ms ease-out ${delay}ms forwards;
+        --dx: ${dx}px;
+        --dy: ${dy}px;
+        --spin: ${spinDeg}deg;
+      `;
+
+      container.appendChild(particle);
+    }
+
+    // Remove the entire container once the longest animation finishes
+    setTimeout(() => {
+      container.remove();
+    }, DURATION_MS + 250);
+  }
+
+  // ── Layer 3: Editor glow ───────────────────────────────────────────────────
+
+  private triggerEditorGlow(): void {
+    this.editorGlowing = true;
+    // CSS transition handles the 400ms fade; we remove the class after 900ms
+    // so the full glow-in + glow-out cycle completes naturally
+    setTimeout(() => { this.editorGlowing = false; }, 900);
   }
 }

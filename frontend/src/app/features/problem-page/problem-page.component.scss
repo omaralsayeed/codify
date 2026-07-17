@@ -2539,3 +2539,110 @@
     padding: 2px 8px;
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CHUNK 5: Accepted Celebration — three layers
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ── Layer 1a: Banner label pulse on Accepted ──────────────────────────────────
+// Fires once when .result-banner--accepted appears. Scale 1 → 1.08 → 1, 300ms.
+
+@keyframes acceptedPulse {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+// ── Layer 1b: Banner background glow fade ────────────────────────────────────
+// A brief brightening of the green background that decays to the resting tint.
+
+@keyframes bannerGlow {
+  0%   { background-color: rgba(29, 158, 117, 0.30); }
+  30%  { background-color: rgba(29, 158, 117, 0.55); }
+  100% { background-color: $teal-lt; } // resting state
+}
+
+.result-banner--accepted {
+  // Play both animations sequentially on entry
+  animation: bannerSlideDown 0.15s ease-out both,
+             bannerGlow      0.55s ease-out 0.10s both;
+
+  // The label + icon pulse together
+  .result-banner-label,
+  .result-banner-icon {
+    animation: acceptedPulse 0.30s ease-out 0.12s both;
+    display: inline-flex;  // needed for transform to apply on inline elements
+    align-items: center;
+  }
+}
+
+// ── Layer 2: Confetti particle keyframe ──────────────────────────────────────
+// Each particle reads its target dx/dy/spin from CSS custom properties set
+// via inline styles in the TypeScript launchConfetti() method.
+// Timeline: shoot outward + spin → fade out in the last 30%.
+
+@keyframes confettiFall {
+  0% {
+    transform: translate(-50%, -50%) translate(0, 0) rotate(0deg);
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) translate(var(--dx), var(--dy)) rotate(var(--spin));
+    opacity: 0;
+  }
+}
+
+// ── Layer 3: Editor body glow ─────────────────────────────────────────────────
+// A green box-shadow blooms then fades over 900ms.
+// We use two keyframe phases (in + out) driven by the class toggle in TS.
+
+@keyframes editorGlowIn {
+  0%   { box-shadow: inset 0 0 0 0 rgba(29, 158, 117, 0);    }
+  40%  { box-shadow: inset 0 0 0 3px rgba(29, 158, 117, 0.7); }
+  100% { box-shadow: inset 0 0 0 2px rgba(29, 158, 117, 0.3); }
+}
+
+@keyframes editorGlowOut {
+  0%   { box-shadow: inset 0 0 0 2px rgba(29, 158, 117, 0.3); }
+  100% { box-shadow: inset 0 0 0 0 rgba(29, 158, 117, 0);    }
+}
+
+.editor-body--glow {
+  // Bloom in over 400ms
+  animation: editorGlowIn 0.40s ease-out both;
+  // When the class is removed by TS, the element returns to its default state.
+  // For a smooth exit we rely on the CSS transition below.
+  transition: box-shadow 0.50s ease-out;
+}
+
+// Without the class, clear any lingering shadow via transition
+.editor-body {
+  transition: box-shadow 0.50s ease-out;
+}
+
+// ── prefers-reduced-motion override ──────────────────────────────────────────
+// Disable ALL animations defined in this chunk when the user opts out.
+// Layers 2 & 3 are also blocked in TS before DOM manipulation even starts.
+
+@media (prefers-reduced-motion: reduce) {
+  .result-banner--accepted {
+    animation: bannerSlideDown 0.15s ease-out both; // keep the slide, drop the glow
+    .result-banner-label,
+    .result-banner-icon {
+      animation: none;
+    }
+  }
+
+  @keyframes confettiFall { /* no-op — particles are never created under reduced motion */ }
+
+  .editor-body--glow {
+    animation: none;
+  }
+
+  .editor-body {
+    transition: none;
+  }
+}

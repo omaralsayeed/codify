@@ -591,7 +591,7 @@
           </header>
 
           <!-- Editor Body -->
-          <div class="editor-body">
+          <div class="editor-body" [class.editor-body--glow]="editorGlowing">
             <!-- Line Numbers -->
             <div class="editor-line-numbers" aria-hidden="true">
               @for (line of currentCode.split('\n'); track $index) {
