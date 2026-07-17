@@ -2,9 +2,10 @@
  * SubmissionService
  *
  * Covers two backend endpoints:
- *   POST /api/execution/run   → run code against sample cases (no persistence)
- *   POST /api/submissions     → submit code for judging (202 + poll)
- *   GET  /api/submissions/:id → poll for final verdict
+ *   POST /api/execution/run          → run code against sample cases (no persistence)
+ *   POST /api/submissions            → submit code for judging (202 + poll)
+ *   GET  /api/submissions/:id        → poll for final verdict
+ *   GET  /api/submissions/:id/feedback → AI code-quality feedback (mock until backend ships)
  *
  * Base URL: http://localhost:5237  (matches launchSettings.json http profile)
  *
@@ -31,6 +32,8 @@ import {
   SubmissionDetailResponse,
   SubmissionLanguage,
   ServiceError,
+  SubmissionFeedback,
+  FeedbackItem,
 } from '../models/submission.model';
 
 /** Shape of every response envelope from the backend: { data: T } */
@@ -170,6 +173,29 @@ export class SubmissionService {
     );
   }
 
+  // ── AI Feedback ───────────────────────────────────────────────────────────
+
+  /**
+   * GET /api/submissions/:id/feedback
+   *
+   * Fetches AI-generated code-quality feedback for a completed submission.
+   * Called automatically by the component once a submission ID is available.
+   *
+   * The endpoint does not yet exist in the backend — a typed mock is returned
+   * while the real implementation is pending.
+   *
+   * TODO: replace mock with real API call once backend endpoint ships:
+   * return this.http
+   *   .get<ApiEnvelope<SubmissionFeedback>>(
+   *     `${this.API}/submissions/${submissionId}/feedback`,
+   *     { headers: this.headers() },
+   *   )
+   *   .pipe(map(r => r.data), catchError(e => this.handleError(e)));
+   */
+  getSubmissionFeedback(submissionId: string): Observable<SubmissionFeedback> {
+    return this.mockFeedback(submissionId);
+  }
+
   // ── Mock implementations ───────────────────────────────────────────────────
   // Mock verdict is determined by what the student typed:
   //   • Contains a real data structure (dict, map, {})  → Accepted
@@ -251,5 +277,55 @@ export class SubmissionService {
 
   private buildMockWrong(lang = 'python'): SubmissionDetailResponse {
     return this.buildMockResult('WrongAnswer', lang);
+  }
+
+  /**
+   * Simulates a realistic 1.4 s network round-trip for the feedback endpoint.
+   * All three feedback types (quality, optimization, anomaly) and all three
+   * severity levels (low, medium, high) are represented so the UI can be
+   * exercised fully without a live backend.
+   *
+   * The submissionId is echoed back so the component can cross-check it
+   * against the one it supplied, guarding against stale responses.
+   */
+  private mockFeedback(submissionId: string): Observable<SubmissionFeedback> {
+    const feedbackItems: FeedbackItem[] = [
+      {
+        id:          'f1',
+        type:        'quality',
+        title:       'Good variable naming',
+        description: 'Variable names are clear and follow conventions. This makes the code easy to read and maintain.',
+        lineStart:   null,
+        lineEnd:     null,
+        severity:    'low',
+      },
+      {
+        id:          'f2',
+        type:        'optimization',
+        title:       'Nested loop detected',
+        description: 'The nested loop results in O(n²) time complexity. Consider using a hash map to look up the complement in O(1), reducing the overall solution to O(n).',
+        lineStart:   3,
+        lineEnd:     6,
+        severity:    'high',
+      },
+      {
+        id:          'f3',
+        type:        'anomaly',
+        title:       'Unused variable',
+        description: 'Variable "temp" is declared but never used. Remove it to clean up your code and avoid misleading future readers.',
+        lineStart:   2,
+        lineEnd:     2,
+        severity:    'medium',
+      },
+    ];
+
+    const mock: SubmissionFeedback = {
+      submissionId,
+      overallScore:  72,
+      summary:       'Your solution works but has room for efficiency improvements.',
+      feedbackItems,
+    };
+
+    return of(mock).pipe(delay(1400));
   }
 }

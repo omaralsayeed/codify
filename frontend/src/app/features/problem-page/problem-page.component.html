@@ -864,7 +864,7 @@
         <div class="bottom-panel-top-bar">
           <!-- Test Cases group -->
           <nav class="test-case-tabs" role="tablist" aria-label="Test cases"
-               [class.test-case-tabs--hidden]="activeBottomTab === 'result'">
+               [class.test-case-tabs--hidden]="activeBottomTab === 'result' || activeBottomTab === 'feedback'">
             @for (testCase of testCases; track testCase.id; let i = $index) {
               <button
                 class="test-case-tab"
@@ -925,6 +925,26 @@
               }
             </button>
           }
+
+          <!-- AI Feedback tab — always present, dot reflects fetch state -->
+          <button
+            class="test-case-tab test-case-tab--feedback"
+            [class.test-case-tab--active]="activeBottomTab === 'feedback'"
+            (click)="setBottomTab('feedback')"
+            type="button"
+            role="tab"
+            [attr.aria-selected]="activeBottomTab === 'feedback'"
+            aria-controls="feedback-panel">
+            <!-- Dot indicator: hidden before any submission -->
+            @if (isFeedbackLoading) {
+              <span class="feedback-tab-dot feedback-tab-dot--loading" aria-label="Loading feedback…"></span>
+            } @else if (submissionFeedback && !feedbackError) {
+              <span class="feedback-tab-dot feedback-tab-dot--ready" aria-label="Feedback ready"></span>
+            } @else if (feedbackError) {
+              <span class="feedback-tab-dot feedback-tab-dot--error" aria-label="Feedback failed"></span>
+            }
+            AI Feedback
+          </button>
         </div>
 
         <!-- ── Test Case Content ──────────────────────────────────────────────── -->
@@ -1086,6 +1106,13 @@
               </div>
             }
 
+          </div>
+        }
+
+        <!-- ── AI Feedback Panel (Chunk 5 fills in the full content) ────────── -->
+        @if (activeBottomTab === 'feedback') {
+          <div class="feedback-panel" id="feedback-panel" role="tabpanel" aria-label="AI Feedback">
+            <!-- Content rendered by Chunk 5 -->
           </div>
         }
 

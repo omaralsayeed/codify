@@ -9,6 +9,8 @@ import {
   RunCodeResponse,
   SubmissionDetailResponse,
   ServiceError,
+  SubmissionFeedback,
+  FeedbackType,
 } from '../../core/models/submission.model';
 import {
   HintResponse,
@@ -159,8 +161,14 @@ public:
   submitResult:    SubmissionDetailResponse | null = null;
   submissionError: string | null = null;   // human-readable error for the banner
   submitError:     ServiceError | null = null;  // typed error for internal use
-  submissionId:    string | null = null;   // stored for Chunk 7 (feedback panel)
-  activeBottomTab: 'testcases' | 'result' = 'testcases';
+  submissionId:    string | null = null;   // stored for AI feedback fetch
+  activeBottomTab: 'testcases' | 'result' | 'feedback' = 'testcases';
+
+  // ── AI Feedback state (Chunk 3) ───────────────────────────────────────────
+  submissionFeedback:   SubmissionFeedback | null = null;
+  isFeedbackLoading:    boolean = false;
+  feedbackError:        string | null = null;
+  activeFeedbackFilter: FeedbackType | 'all' = 'all';
 
   // Flash state: 'accepted' | 'rejected' | null — drives the 200ms button flash
   submitFlash: 'accepted' | 'rejected' | null = null;
@@ -373,6 +381,11 @@ public:
             this.triggerAcceptedCelebration();
           }
           this.setActiveTab('submissions');
+
+          // Fetch AI feedback in the background — parallel to the user reading
+          // the result banner. By the time they click the Feedback tab it will
+          // likely already be ready.
+          this.fetchFeedback(result.submissionId);
         },
         error: (err: ServiceError) => {
           this.submitError     = err;
@@ -387,6 +400,39 @@ public:
 
   onCopy(): void {
     navigator.clipboard.writeText(this.currentCode).catch(() => {/* clipboard unavailable */});
+  }
+
+  // ── AI Feedback fetch (Chunk 3) ───────────────────────────────────────────
+
+  /**
+   * Fetches AI feedback for the just-completed submission.
+   * Triggered automatically from onSubmit() — never requires a user click.
+   * Runs in parallel with the user reading the result banner so the data
+   * is likely ready by the time they switch to the Feedback tab.
+   *
+   * takeUntil(destroy$) cancels the in-flight request on component destroy,
+   * matching the same pattern used by run() and submit() above.
+   */
+  fetchFeedback(submissionId: string): void {
+    this.isFeedbackLoading  = true;
+    this.feedbackError      = null;
+    this.submissionFeedback = null;
+
+    this.submissionSvc.getSubmissionFeedback(submissionId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: feedback => {
+          this.submissionFeedback = feedback;
+          this.isFeedbackLoading  = false;
+          console.log('[FeedbackService ✓] score:', feedback.overallScore,
+                      '| items:', feedback.feedbackItems.length);
+        },
+        error: () => {
+          this.feedbackError     = 'Could not load feedback. Try again.';
+          this.isFeedbackLoading = false;
+          console.error('[FeedbackService ✗] failed to load feedback for', submissionId);
+        },
+      });
   }
 
   // ── Toolbar: AI Hint (public alias used by toolbar button) ───────────────
@@ -645,7 +691,7 @@ public:
 
   // ── Tab switching ─────────────────────────────────────────────────────────
   setActiveTab(tab: ActiveTab): void { this.activeTab = tab; }
-  setBottomTab(tab: 'testcases' | 'result'): void { this.activeBottomTab = tab; }
+  setBottomTab(tab: 'testcases' | 'result' | 'feedback'): void { this.activeBottomTab = tab; }
 
   // ── Problem actions ───────────────────────────────────────────────────────
   toggleSolved():     void { this.isSolved = !this.isSolved; }
