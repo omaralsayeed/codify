@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, HostListener, signal, ElementRef } from '@angular/core';
+import { Component, OnInit, inject, HostListener, signal, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
@@ -42,9 +42,10 @@ export interface HintApiResponse {
 
 /** One entry in the session hint log */
 export interface HintHistoryItem {
-  level:       number;
-  explanation: string;  // the hintText displayed to the user
-  appliedAt:   Date;
+  level:        number;
+  explanation:  string;  // the hintText displayed to the user
+  appliedAt:    Date;
+  codeSnapshot: string;  // code state BEFORE this hint was applied — stored for future undo UI
 }
 
 @Component({
@@ -60,6 +61,9 @@ export class ProblemPageComponent implements OnInit {
   private  readonly hintSvc        = inject(HintService);
   private  readonly elRef          = inject(ElementRef);
   private  readonly router         = inject(Router);
+
+  /** Direct reference to the code textarea for imperative value sync after hint apply */
+  @ViewChild('editorTextarea') private editorTextareaRef?: ElementRef<HTMLTextAreaElement>;
 
   // ── Language configuration ────────────────────────────────────────────────
   languages = [
@@ -336,9 +340,10 @@ public:
         this.lastHintExplanation = hint.hintText;
 
         const historyItem: HintHistoryItem = {
-          level:       hint.hintLevel,
-          explanation: hint.hintText,
-          appliedAt:   new Date(),
+          level:        hint.hintLevel,
+          explanation:  hint.hintText,
+          appliedAt:    new Date(),
+          codeSnapshot: this.currentCode,  // snapshot BEFORE applyHintToCode mutates it
         };
         this.hintHistory = [...this.hintHistory, historyItem];
 
@@ -366,28 +371,93 @@ public:
   }
 
   /**
-   * Applies code changes from a hint response into the editor.
-   * The backend currently returns narrative text only (no codeChanges array).
-   * This method is ready to accept diffs when the backend supports them.
+   * Applies code changes from a hint response directly into the editor.
    *
-   * @param hint  The raw HintResponse from the service.
+   * Current backend shape: narrative text only — no codeChanges array.
+   * When the backend starts returning diffs, pass them as the optional second argument
+   * or extend HintResponse with a codeChanges field.
+   *
+   * Algorithm (reverse-order application):
+   *   1. Split currentCode into a lines array.
+   *   2. Sort changes from highest lineStart to lowest (bottom → top).
+   *      This preserves all line numbers for earlier changes after each splice.
+   *   3. For each change, replace lines[lineStart-1..lineEnd-1] with newCode lines.
+   *   4. Join back to a string and write to currentCode AND the textarea DOM node.
+   *   5. Store the first change's explanation as lastHintExplanation.
+   *   6. Trigger the hint-applied animation (placeholder — Chunk 8 will style it).
+   *
+   * @param hint        Backend HintResponse (always present).
+   * @param codeChanges Optional diff array from HintApiResponse.codeChanges.
+   *                    Pass this when the backend or a mock supplies line-level diffs.
    */
-  private applyHintToCode(hint: HintResponse): void {
-    // No codeChanges in the current backend response — nothing to apply yet.
-    // When the backend adds diff support, map HintResponse.codeChanges here:
-    //
-    //   if (!hint.codeChanges?.length) return;
-    //   const lines = this.currentCode.split('\n');
-    //   for (const change of hint.codeChanges) {
-    //     lines.splice(change.lineStart - 1,
-    //                  change.lineEnd - change.lineStart + 1,
-    //                  ...change.newCode.split('\n'));
-    //   }
-    //   this.currentCode = lines.join('\n');
-    //
-    // For now, log what would have been applied.
-    console.log('[applyHintToCode] hint level', hint.hintLevel,
-                '— no code diff in response (narrative hint only)');
+  applyHintToCode(hint: HintResponse, codeChanges?: HintCodeChange[]): void {
+    const changes = codeChanges ?? [];
+
+    if (changes.length === 0) {
+      // Narrative-only hint — nothing to splice into the editor.
+      // Log for verification; Chunk 8 will show the explanation in the UI.
+      console.log(
+        '[applyHintToCode] level', hint.hintLevel,
+        '— narrative hint only, no code changes applied.',
+        '\nHint text:', hint.hintText,
+      );
+      return;
+    }
+
+    // ── Step 1: Split into lines ──────────────────────────────────────────────
+    const lines = this.currentCode.split('\n');
+
+    // ── Step 2: Sort highest lineStart first (bottom → top) ──────────────────
+    // Sorting descending means later lines are processed first, so each splice
+    // does not shift the indices that subsequent (earlier) changes depend on.
+    const sorted = [...changes].sort((a, b) => b.lineStart - a.lineStart);
+
+    // ── Step 3: Apply each change ─────────────────────────────────────────────
+    for (const change of sorted) {
+      // Clamp to valid range — guard against malformed API data
+      const start = Math.max(1, change.lineStart);
+      const end   = Math.min(lines.length, change.lineEnd);
+
+      // Number of original lines to remove (inclusive range)
+      const deleteCount = end - start + 1;
+
+      // newCode may itself be multi-line
+      const replacementLines = change.newCode.split('\n');
+
+      lines.splice(start - 1, deleteCount, ...replacementLines);
+    }
+
+    // ── Step 4: Commit to component state AND textarea DOM ────────────────────
+    const updatedCode = lines.join('\n');
+    this.currentCode  = updatedCode;
+
+    // [value]="currentCode" is a one-way binding — Angular won't re-render the
+    // textarea's DOM value until the next change-detection cycle that it detects
+    // as a real change. Setting the native value directly gives instant feedback.
+    if (this.editorTextareaRef?.nativeElement) {
+      this.editorTextareaRef.nativeElement.value = updatedCode;
+    }
+
+    // ── Step 5: Surface the explanation ──────────────────────────────────────
+    // Use the first change's explanation (most contextually relevant).
+    this.lastHintExplanation = sorted[sorted.length - 1].explanation; // first in original order
+
+    // ── Step 6: Trigger hint-applied animation (Chunk 8) ─────────────────────
+    this.triggerHintAppliedAnimation();
+
+    console.log(
+      '[applyHintToCode] applied', changes.length, 'change(s) at level', hint.hintLevel,
+      '\nlines affected:', sorted.map(c => `${c.lineStart}-${c.lineEnd}`).join(', '),
+    );
+  }
+
+  /**
+   * Placeholder — Chunk 8 will implement the full highlight animation.
+   * For now, triggers the existing editor glow so there's immediate visual feedback.
+   */
+  private triggerHintAppliedAnimation(): void {
+    if (this.prefersReducedMotion()) return;
+    this.triggerEditorGlow();
   }
 
   /**
