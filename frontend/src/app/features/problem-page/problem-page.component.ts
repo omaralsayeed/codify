@@ -170,6 +170,13 @@ public:
   feedbackError:        string | null = null;
   activeFeedbackFilter: FeedbackType | 'all' = 'all';
 
+  // ── AI Feedback animation state (Chunk 6) ─────────────────────────────────
+  // scoreAnimationPlayed: true after the count-up fires once per submission.
+  // displayedScore: the value shown in the template (ticks from 0 → real score).
+  scoreAnimationPlayed: boolean = false;
+  displayedScore:       number  = 0;
+  private scoreCounterId: ReturnType<typeof setInterval> | null = null;
+
   // Flash state: 'accepted' | 'rejected' | null — drives the 200ms button flash
   submitFlash: 'accepted' | 'rejected' | null = null;
 
@@ -197,6 +204,53 @@ public:
   get memoryUsed(): string {
     return this.submitResult?.memoryUsedKb != null
       ? `${(this.submitResult.memoryUsedKb / 1024).toFixed(1)} MB` : '—';
+  }
+
+  // ── AI Feedback derived getters (Chunk 5 & 6) ────────────────────────────
+
+  /**
+   * Items after applying activeFeedbackFilter.
+   * Returns the full list when filter is 'all', otherwise filters by type.
+   */
+  get filteredFeedbackItems() {
+    if (!this.submissionFeedback) return [];
+    if (this.activeFeedbackFilter === 'all') return this.submissionFeedback.feedbackItems;
+    return this.submissionFeedback.feedbackItems.filter(
+      item => item.type === this.activeFeedbackFilter,
+    );
+  }
+
+  /** Count per type — used by filter pill labels. */
+  feedbackCountOf(type: FeedbackType): number {
+    return this.submissionFeedback?.feedbackItems.filter(i => i.type === type).length ?? 0;
+  }
+
+  /** Number of high-severity items — drives the warning strip. */
+  get highSeverityCount(): number {
+    return this.submissionFeedback?.feedbackItems.filter(i => i.severity === 'high').length ?? 0;
+  }
+
+  /** True when overallScore === 100 — adds the ✨ decoration. */
+  get hasPerfectScore(): boolean {
+    return (this.submissionFeedback?.overallScore ?? 0) === 100;
+  }
+
+  /**
+   * CSS class for the score number based on the 0–49 / 50–74 / 75–100 scale.
+   * Uses displayedScore so the color updates as the counter ticks up.
+   */
+  get scoreColorClass(): string {
+    if (this.displayedScore >= 75) return 'score--high';
+    if (this.displayedScore >= 50) return 'score--mid';
+    return 'score--low';
+  }
+
+  /**
+   * True when the loaded feedback has zero items (API returned an empty array).
+   * Shows a "your code looks clean!" message instead of the filter + list.
+   */
+  get feedbackIsEmpty(): boolean {
+    return !!this.submissionFeedback && this.submissionFeedback.feedbackItems.length === 0;
   }
 
   // ── AI Hint state (Chunks 2 + 6) ─────────────────────────────────────────
@@ -292,6 +346,7 @@ public:
     this.destroy$.next();
     this.destroy$.complete();
     this.clearHintOverlayTimers();
+    this.clearScoreCounter();
     if (this.toastTimerId !== null) { clearTimeout(this.toastTimerId); }
   }
 
@@ -414,9 +469,13 @@ public:
    * matching the same pattern used by run() and submit() above.
    */
   fetchFeedback(submissionId: string): void {
-    this.isFeedbackLoading  = true;
-    this.feedbackError      = null;
-    this.submissionFeedback = null;
+    this.isFeedbackLoading    = true;
+    this.feedbackError        = null;
+    this.submissionFeedback   = null;
+    // Reset animation state so each new submission gets a fresh count-up
+    this.scoreAnimationPlayed = false;
+    this.displayedScore       = 0;
+    this.clearScoreCounter();
 
     this.submissionSvc.getSubmissionFeedback(submissionId)
       .pipe(takeUntil(this.destroy$))
@@ -424,6 +483,13 @@ public:
         next: feedback => {
           this.submissionFeedback = feedback;
           this.isFeedbackLoading  = false;
+
+          // If the user is already on the Feedback tab when data arrives,
+          // start the count-up immediately; otherwise it starts on first tab switch.
+          if (this.activeBottomTab === 'feedback' && !this.scoreAnimationPlayed) {
+            this.startScoreCountUp(feedback.overallScore);
+          }
+
           console.log('[FeedbackService ✓] score:', feedback.overallScore,
                       '| items:', feedback.feedbackItems.length);
         },
@@ -691,7 +757,104 @@ public:
 
   // ── Tab switching ─────────────────────────────────────────────────────────
   setActiveTab(tab: ActiveTab): void { this.activeTab = tab; }
-  setBottomTab(tab: 'testcases' | 'result' | 'feedback'): void { this.activeBottomTab = tab; }
+
+  setBottomTab(tab: 'testcases' | 'result' | 'feedback'): void {
+    this.activeBottomTab = tab;
+    // Start score count-up on first switch to the Feedback tab after data arrives
+    if (tab === 'feedback'
+        && this.submissionFeedback
+        && !this.scoreAnimationPlayed) {
+      this.startScoreCountUp(this.submissionFeedback.overallScore);
+    }
+  }
+
+  /**
+   * Counts displayedScore from 0 → target over ~800 ms using a setInterval.
+   * Fires once per submission (scoreAnimationPlayed guards re-entry).
+   * Skipped entirely under prefers-reduced-motion — displayedScore jumps to target.
+   */
+  private startScoreCountUp(target: number): void {
+    if (this.scoreAnimationPlayed) return;
+    this.scoreAnimationPlayed = true;
+
+    if (this.prefersReducedMotion() || target === 0) {
+      this.displayedScore = target;
+      return;
+    }
+
+    const DURATION_MS = 800;
+    const TICK_MS     = 16;           // ~60 fps
+    const totalTicks  = Math.ceil(DURATION_MS / TICK_MS);
+    let   tick        = 0;
+
+    this.clearScoreCounter();
+    this.displayedScore = 0;
+
+    this.scoreCounterId = setInterval(() => {
+      tick++;
+      // Ease-out: progress² gives a fast start, gentle finish
+      const progress      = tick / totalTicks;
+      const eased         = 1 - Math.pow(1 - progress, 2);
+      this.displayedScore = Math.min(target, Math.round(eased * target));
+
+      if (tick >= totalTicks) {
+        this.displayedScore = target;  // guarantee exact final value
+        this.clearScoreCounter();
+      }
+    }, TICK_MS);
+  }
+
+  private clearScoreCounter(): void {
+    if (this.scoreCounterId !== null) {
+      clearInterval(this.scoreCounterId);
+      this.scoreCounterId = null;
+    }
+  }
+
+  /**
+   * Scrolls the code textarea to the given 1-based line number and briefly
+   * flashes the editor highlight animation so the user can see where to look.
+   *
+   * The editor is a plain <textarea> (no Monaco/CodeMirror), so we compute
+   * the character offset of the target line by splitting on '\n', then use
+   * the browser's native scrollTop API after setting the selection range.
+   *
+   * If the editor is not visible (e.g., mobile problem-view is active), we
+   * switch to the editor view first so the scroll lands on screen.
+   */
+  jumpToLine(lineNumber: number): void {
+    if (!this.editorTextareaRef?.nativeElement) return;
+
+    // On mobile the editor panel may be hidden — switch to it first
+    if (this.activeView !== 'editor') {
+      this.activeView = 'editor';
+    }
+
+    const textarea = this.editorTextareaRef.nativeElement;
+    const lines    = textarea.value.split('\n');
+
+    // Clamp to valid range
+    const targetLine  = Math.max(1, Math.min(lineNumber, lines.length));
+    // Character offset = sum of lengths of all lines before the target + newline chars
+    const charOffset  = lines.slice(0, targetLine - 1).reduce((sum, l) => sum + l.length + 1, 0);
+
+    // Move cursor to the line and scroll it into view
+    textarea.focus();
+    textarea.setSelectionRange(charOffset, charOffset);
+
+    // scrollTop: approximate line height is 20px (matches .editor-textarea line-height)
+    const LINE_HEIGHT_PX = 20;
+    const visibleLines   = Math.floor(textarea.clientHeight / LINE_HEIGHT_PX);
+    textarea.scrollTop   = Math.max(0, (targetLine - Math.floor(visibleLines / 2)) * LINE_HEIGHT_PX);
+
+    // Reuse the existing green highlight animation from the hint system
+    if (!this.prefersReducedMotion()) {
+      this.editorHighlighting = true;
+      setTimeout(() => { this.editorHighlighting = false; }, 800);
+    }
+
+    console.log('[jumpToLine] scrolled to line', targetLine);
+  }
 
   // ── Problem actions ───────────────────────────────────────────────────────
   toggleSolved():     void { this.isSolved = !this.isSolved; }

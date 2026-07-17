@@ -3133,3 +3133,513 @@
 @media (prefers-reduced-motion: reduce) {
   .feedback-tab-dot--loading { animation: none; }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CHUNK 5: Feedback panel content area
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ── Shimmer skeleton ──────────────────────────────────────────────────────────
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.skeleton {
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    $ivory  25%,
+    $ivory2 50%,
+    $ivory  75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.feedback-skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.feedback-skeleton-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid $border;
+  border-radius: $r;
+}
+
+.skeleton--badge  { height: 20px; width: 72px; border-radius: 20px; }
+.skeleton--title  { height: 14px; width: 55%; }
+.skeleton--body   { height: 12px; width: 100%; }
+.skeleton--body-short { width: 70%; }
+
+// ── Empty state ───────────────────────────────────────────────────────────────
+
+.feedback-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex: 1;
+  padding: 28px 20px;
+  text-align: center;
+}
+
+.feedback-empty-icon {
+  color: $muted;
+  opacity: 0.5;
+}
+
+.feedback-empty-title {
+  font-family: $ff-body;
+  font-size: 14px;
+  font-weight: 600;
+  color: $navy2;
+  margin: 0;
+}
+
+.feedback-empty-sub {
+  font-family: $ff-body;
+  font-size: 13px;
+  color: $muted;
+  line-height: 1.6;
+  margin: 0;
+}
+
+// ── Error state ───────────────────────────────────────────────────────────────
+
+.feedback-error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex: 1;
+  padding: 28px 20px;
+  text-align: center;
+}
+
+.feedback-error-icon {
+  color: $orange;
+  opacity: 0.8;
+}
+
+.feedback-error-msg {
+  font-family: $ff-body;
+  font-size: 14px;
+  font-weight: 600;
+  color: $navy2;
+  margin: 0;
+}
+
+.feedback-retry-btn {
+  font-size: 13px;
+  padding: 6px 16px;
+  margin-top: 4px;
+}
+
+// ── Score header ──────────────────────────────────────────────────────────────
+
+.feedback-score-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-bottom: 10px;
+  border-bottom: 1px solid $border;
+}
+
+.feedback-score-left {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.feedback-score-number {
+  font-family: $ff-mono;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+
+  &.score--high { color: $teal; }
+  &.score--mid  { color: $orange; }
+  &.score--low  { color: $red; }
+}
+
+.feedback-score-denom {
+  font-family: $ff-mono;
+  font-size: 14px;
+  color: $muted;
+}
+
+.feedback-score-label {
+  font-family: $ff-body;
+  font-size: 12px;
+  font-weight: 600;
+  color: $muted;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-left: 4px;
+}
+
+// Type count chips next to the score
+.feedback-type-counts {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.feedback-type-chip {
+  display: inline-flex;
+  align-items: center;
+  font-family: $ff-mono;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+
+  &--quality      { background: $blue-lt;   color: $blue; }
+  &--optimization { background: $gold-lt;   color: darken($gold, 10%); }
+  &--anomaly      { background: $red-lt;    color: $red; }
+}
+
+// ── Summary line ──────────────────────────────────────────────────────────────
+
+.feedback-summary {
+  font-family: $ff-body;
+  font-size: 13px;
+  color: $muted;
+  line-height: 1.6;
+  margin: 8px 0 0;
+}
+
+// ── Filter pills ──────────────────────────────────────────────────────────────
+
+.feedback-filters {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.feedback-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  font-family: $ff-body;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid $border;
+  background: $ivory;
+  color: $navy2;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+
+  &:hover {
+    background: $ivory2;
+    border-color: $navy2;
+    color: $navy;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+
+  // Active base (All pill)
+  &--active {
+    background: $navy;
+    border-color: $navy;
+    color: $white;
+
+    &:hover {
+      background: darken($navy, 6%);
+      border-color: darken($navy, 6%);
+      color: $white;
+    }
+  }
+
+  // Typed active states override color
+  &--quality#{&}--active {
+    background: $blue;
+    border-color: $blue;
+  }
+
+  &--optimization#{&}--active {
+    background: darken($gold, 8%);
+    border-color: darken($gold, 8%);
+  }
+
+  &--anomaly#{&}--active {
+    background: $red;
+    border-color: $red;
+  }
+}
+
+// ── Feedback item cards ───────────────────────────────────────────────────────
+
+.feedback-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.feedback-item-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid $border;
+  border-radius: $r;
+  background: $white;
+  transition: box-shadow 0.15s;
+
+  &:hover {
+    box-shadow: $shadow;
+  }
+}
+
+// Top row: type badge + severity badge + line range
+.feedback-item-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+// Shared badge base
+.feedback-badge {
+  display: inline-flex;
+  align-items: center;
+  font-family: $ff-mono;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+// Type badge colors
+.feedback-badge--quality      { background: $blue-lt;   color: $blue;              }
+.feedback-badge--optimization { background: $gold-lt;   color: darken($gold, 10%); }
+.feedback-badge--anomaly      { background: $red-lt;    color: $red;               }
+
+// Severity badge colors
+.feedback-badge--low    { background: $ivory2; color: $muted;              }
+.feedback-badge--medium { background: $gold-lt; color: darken($gold, 10%); }
+.feedback-badge--high   { background: $red-lt;  color: $red;               }
+
+// Line range label
+.feedback-item-line {
+  font-family: $ff-mono;
+  font-size: 11px;
+  color: $muted;
+  margin-left: auto;   // push to right end of the row
+}
+
+// Title
+.feedback-item-title {
+  font-family: $ff-body;
+  font-size: 13px;
+  font-weight: 600;
+  color: $navy;
+  margin: 0;
+  line-height: 1.4;
+}
+
+// Description
+.feedback-item-desc {
+  font-family: $ff-body;
+  font-size: 13px;
+  color: $charcoal;
+  line-height: 1.6;
+  margin: 0;
+}
+
+// Jump to line button
+.feedback-jump-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  align-self: flex-start;
+  font-family: $ff-body;
+  font-size: 12px;
+  font-weight: 600;
+  color: $blue;
+  background: $blue-lt;
+  border: none;
+  border-radius: $r;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  margin-top: 2px;
+
+  svg { flex-shrink: 0; }
+
+  &:hover {
+    background: darken($blue-lt, 6%);
+    color: darken($blue, 8%);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+}
+
+// Empty filter result message
+.feedback-filter-empty {
+  font-family: $ff-body;
+  font-size: 13px;
+  color: $muted;
+  font-style: italic;
+  text-align: center;
+  padding: 20px 0;
+  margin: 0;
+}
+
+// ── Responsive: compact on mobile ─────────────────────────────────────────────
+@media (max-width: $mobile) {
+  .feedback-score-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .feedback-filter-pill {
+    font-size: 11px;
+    padding: 3px 10px;
+  }
+
+  .feedback-item-line {
+    margin-left: 0;  // wrap naturally on small screens
+  }
+}
+
+// ── prefers-reduced-motion ────────────────────────────────────────────────────
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CHUNK 6 & 7: Feedback panel polish — animations, high-severity strip,
+//              zero-items clean state, zero-count pill dimming, dot transition
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ── Perfect score decoration ──────────────────────────────────────────────────
+.feedback-score-perfect {
+  font-size: 18px;
+  line-height: 1;
+  margin-left: 2px;
+  animation: perfectScorePop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+
+@keyframes perfectScorePop {
+  0%   { transform: scale(0) rotate(-20deg); opacity: 0; }
+  100% { transform: scale(1) rotate(0deg);   opacity: 1; }
+}
+
+// ── High severity warning strip ───────────────────────────────────────────────
+// Amber background, amber text — no hex values.
+.feedback-severity-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: $gold-lt;
+  border: 1px solid rgba(200, 169, 81, 0.35);
+  border-radius: $r;
+  font-family: $ff-body;
+  font-size: 12px;
+  font-weight: 600;
+  color: darken($gold, 14%);
+  margin-top: 8px;
+  animation: fadeIn 0.2s ease-out both;
+
+  svg {
+    flex-shrink: 0;
+    color: darken($gold, 14%);
+  }
+}
+
+// ── Zero-items clean state ────────────────────────────────────────────────────
+.feedback-clean-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  background: $teal-lt;
+  border: 1px solid rgba(29, 158, 117, 0.25);
+  border-radius: $r;
+  font-family: $ff-body;
+  font-size: 13px;
+  font-weight: 600;
+  color: $teal;
+  margin-top: 8px;
+
+  svg {
+    flex-shrink: 0;
+  }
+}
+
+// ── Zero-count filter pills — visually dimmed, still rendered ─────────────────
+.feedback-filter-pill--zero {
+  opacity: 0.45;
+  cursor: default;
+
+  &:hover {
+    background: $ivory;
+    border-color: $border;
+    color: $navy2;
+    transform: none;
+  }
+}
+
+// ── Feedback item card stagger entrance ───────────────────────────────────────
+// Each card uses animation-delay set via [style.animation-delay] in the template.
+// fill-mode: both means the card stays hidden before its delay fires.
+
+@keyframes feedbackItemIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.feedback-item-card {
+  animation: feedbackItemIn 0.22s ease-out both;
+}
+
+// ── Feedback tab dot smooth color transition ──────────────────────────────────
+// The dot already has modifier classes (--loading → --ready/--error).
+// We add a background-color transition so the swap from orange to green/red
+// is a smooth fade rather than an instant swap.
+.feedback-tab-dot {
+  transition: background-color 0.35s ease, opacity 0.35s ease;
+}
+
+// ── prefers-reduced-motion overrides ─────────────────────────────────────────
+@media (prefers-reduced-motion: reduce) {
+  .feedback-item-card   { animation: none; }
+  .feedback-score-perfect { animation: none; }
+  .feedback-severity-strip { animation: none; }
+  .feedback-tab-dot     { transition: none; }
+}
