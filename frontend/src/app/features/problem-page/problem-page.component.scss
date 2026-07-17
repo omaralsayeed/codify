@@ -2895,3 +2895,161 @@
   .tab-hint-count             { animation: none; }
   .hint-item                  { animation: none; }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CHUNK 9: Validation, toast, verdict badge colors, a11y polish
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ── Inline submit validation message ─────────────────────────────────────────
+// Sits in the toolbar-center flex row, immediately after the Submit button.
+
+@keyframes validationSlideIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.submit-validation-msg {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: $ff-body;
+  font-size: 12px;
+  font-weight: 500;
+  color: #C62828;
+  background: #FFEBEE;
+  border: 1px solid rgba(198, 40, 40, 0.2);
+  border-radius: $r;
+  padding: 4px 10px;
+  white-space: nowrap;
+  animation: validationSlideIn 0.15s ease-out both;
+
+  svg { flex-shrink: 0; }
+}
+
+@media (max-width: $mobile) {
+  // Hide on mobile — toolbar-center is hidden anyway
+  .submit-validation-msg { display: none; }
+}
+
+// ── Verdict banner badge — full status color set ──────────────────────────────
+// Wrong Answer and error cases must feel distinct from Accepted.
+
+.result-banner--rejected {
+  // RuntimeError / TimeLimitExceeded — amber
+  &[data-status="RuntimeError"],
+  &[data-status="TimeLimitExceeded"] {
+    background: #FFF3E0;
+    border-bottom-color: rgba(230, 126, 34, 0.25);
+
+    .result-banner-label { color: #E65100; }
+    .result-banner-icon  { color: #E65100; }
+  }
+
+  // CompileError — purple tint
+  &[data-status="CompileError"] {
+    background: #F3E5F5;
+    border-bottom-color: rgba(142, 36, 170, 0.2);
+
+    .result-banner-label { color: #7B1FA2; }
+    .result-banner-icon  { color: #7B1FA2; }
+  }
+}
+
+// Verdict card — same extended color set
+.result-verdict--rejected {
+  &[data-status="RuntimeError"],
+  &[data-status="TimeLimitExceeded"] {
+    border-color: rgba(230, 126, 34, 0.35);
+    background: #FFF3E0;
+
+    .result-verdict-header,
+    .result-verdict-label { color: #E65100; }
+  }
+
+  &[data-status="CompileError"] {
+    border-color: rgba(142, 36, 170, 0.25);
+    background: #F3E5F5;
+
+    .result-verdict-header,
+    .result-verdict-label { color: #7B1FA2; }
+  }
+}
+
+// ── Toast notification ────────────────────────────────────────────────────────
+
+@keyframes toastSlideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: $navy;
+  color: $white;
+  font-family: $ff-body;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: $r;
+  box-shadow: $shadow-lg;
+  max-width: calc(100vw - 32px);
+  animation: toastSlideUp 0.2s ease-out both;
+  pointer-events: all;
+}
+
+.toast-text {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toast-dismiss {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+  padding: 0;
+
+  &:hover {
+    color: $white;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $white;
+    outline-offset: 2px;
+  }
+}
+
+// Mobile: full-width, above action bar
+@media (max-width: $mobile) {
+  .toast {
+    bottom: calc(64px + env(safe-area-inset-bottom) + 8px);
+    left: 16px;
+    right: 16px;
+    transform: none;
+    max-width: none;
+  }
+}
+
+// ── prefers-reduced-motion: strip new animations ──────────────────────────────
+@media (prefers-reduced-motion: reduce) {
+  .submit-validation-msg { animation: none; }
+  .toast                 { animation: none; }
+}

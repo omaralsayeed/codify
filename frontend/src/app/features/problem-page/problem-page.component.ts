@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, inject, HostListener, signal, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
+import { Subject, takeUntil } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { SubmissionService } from '../../core/services/submission.service';
 import { HintService } from '../../core/services/hint.service';
@@ -246,6 +247,27 @@ public:
   private readonly MAX_PANEL_WIDTH = 80;
   private originalStarterCode = '';
 
+  /** Completes on ngOnDestroy — all HTTP subscriptions use takeUntil(destroy$) */
+  private readonly destroy$ = new Subject<void>();
+
+  // ── Validation & toast state (Chunk 9) ───────────────────────────────────
+  submitValidationError: string | null = null;  // inline message near Submit button
+  toastMessage:          string | null = null;  // brief dismissible toast
+  private toastTimerId:  ReturnType<typeof setTimeout> | null = null;
+
+  // ── title attribute getters for accessibility ────────────────────────────
+  get submitBtnTitle(): string {
+    if (this.isSubmitting)            return 'Submitting your solution…';
+    if (this.submitValidationError)   return this.submitValidationError;
+    return 'Submit your solution';
+  }
+
+  get hintBtnTitle(): string {
+    if (this.isHintLoading)           return 'Fetching hint…';
+    if (!this.canRequestMoreHints)    return 'No more hints available';
+    return `Request hint ${this.nextHintLevel} of ${this.totalHintsAvailable || 3}`;
+  }
+
   constructor() {
     const python = this.languages.find(l => l.value === 'python')!;
     this.currentCode         = python.starterCode;
@@ -259,7 +281,26 @@ public:
   }
 
   ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
     this.clearHintOverlayTimers();
+    if (this.toastTimerId !== null) { clearTimeout(this.toastTimerId); }
+  }
+
+  // ── Toast helper ─────────────────────────────────────────────────────────
+
+  showToast(message: string, durationMs = 3500): void {
+    if (this.toastTimerId !== null) { clearTimeout(this.toastTimerId); }
+    this.toastMessage  = message;
+    this.toastTimerId  = setTimeout(() => {
+      this.toastMessage = null;
+      this.toastTimerId = null;
+    }, durationMs);
+  }
+
+  dismissToast(): void {
+    this.toastMessage = null;
+    if (this.toastTimerId !== null) { clearTimeout(this.toastTimerId); this.toastTimerId = null; }
   }
 
   // ── Toolbar: Run ──────────────────────────────────────────────────────────
@@ -273,6 +314,7 @@ public:
 
     // TODO: derive problemId from ActivatedRoute once multi-problem support lands
     this.submissionSvc.run('00000000-0000-0000-0000-000000000005', this.currentCode, this.selectedLanguage)
+      .pipe(takeUntil(this.destroy$))
       .subscribe({
         next:  result => { this.runResult = result; this.runPhase = 'done'; },
         error: (err: ServiceError) => { this.runError = err; this.runPhase = 'error'; },
@@ -282,6 +324,16 @@ public:
   // ── Toolbar: Submit ───────────────────────────────────────────────────────
 
   onSubmit(): void {
+    // ── Edge case: empty editor ───────────────────────────────────────────
+    if (!this.currentCode.trim()) {
+      this.submitValidationError = 'Please write some code before submitting.';
+      // Auto-clear after 4 s so it doesn't linger
+      setTimeout(() => { this.submitValidationError = null; }, 4000);
+      return;
+    }
+    this.submitValidationError = null;
+
+    // ── Guard: already submitting (button disabled, but belt-and-suspenders) ─
     if (this.isSubmitting) return;
 
     this.isSubmitting    = true;
@@ -295,15 +347,24 @@ public:
     this.activeBottomTab = 'result';
 
     this.submissionSvc.submit('00000000-0000-0000-0000-000000000005', this.currentCode, this.selectedLanguage)
+      .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: result => {
           this.submitResult    = result;
-          this.submissionId    = result.submissionId;   // stored for Chunk 7
+          this.submissionId    = result.submissionId;
           this.isSubmitting    = false;
           this.submitPhase     = 'done';
           this.submissionError = null;
 
-          // 200ms flash on the toolbar Submit button
+          // ── Unexpected / unknown status guard ─────────────────────────
+          const knownStatuses = ['Accepted','WrongAnswer','RuntimeError','TimeLimitExceeded','CompileError'];
+          if (!knownStatuses.includes(result.status)) {
+            this.submissionError = 'Something went wrong. Try again.';
+            this.submitPhase     = 'error';
+            this.isSubmitting    = false;
+            return;
+          }
+
           this.submitFlash = result.status === 'Accepted' ? 'accepted' : 'rejected';
           setTimeout(() => { this.submitFlash = null; }, 700);
 
@@ -315,7 +376,7 @@ public:
         },
         error: (err: ServiceError) => {
           this.submitError     = err;
-          this.submissionError = err.message ?? 'Submission failed. Please try again.';
+          this.submissionError = err.message ?? 'Something went wrong. Try again.';
           this.isSubmitting    = false;
           this.submitPhase     = 'error';
         },
@@ -352,9 +413,10 @@ public:
       studentCode:           this.currentCode,
       hintLevel:             requestLevel,
       previousHints:         this.previousHintTexts,
-      attemptCount:          this.hintLevel,          // how many hints already used
+      attemptCount:          this.hintLevel,
       lastSubmissionStatus:  this.submitResult?.status ?? undefined,
-    }).subscribe({
+    }).pipe(takeUntil(this.destroy$))
+    .subscribe({
       next: (hint: HintResponse) => {
         // ── Update plain state (spec contract) ────────────────────────────
         this.hintLevel           = hint.hintLevel;
@@ -418,7 +480,11 @@ public:
 
     if (changes.length === 0) {
       // Narrative-only hint — nothing to splice into the editor.
-      // Log for verification; Chunk 8 will show the explanation in the UI.
+      // Per spec: if codeChanges is explicitly empty (not just absent), show a brief toast.
+      // In practice the backend never sends an empty array — guard for robustness.
+      if (codeChanges !== undefined) {
+        this.showToast('No code changes for this hint level.');
+      }
       console.log(
         '[applyHintToCode] level', hint.hintLevel,
         '— narrative hint only, no code changes applied.',
@@ -556,11 +622,23 @@ public:
       code:      encodeURIComponent(this.currentCode),
     };
 
-    console.log('[navigateToCodifyChat] params:', queryParams);
+    // Check whether the /codify/chat route is registered before navigating.
+    // The router.navigate call will succeed silently on unknown routes, so
+    // we inspect the config explicitly.
+    const chatRouteExists = this.router.config.some(
+      r => r.path === 'codify' || r.path?.startsWith('codify/chat'),
+    );
 
-    // TODO: replace with router.navigate once /codify/chat route is registered
-    // this.router.navigate(['/codify/chat'], { queryParams });
-    this.setActiveTab('codify');
+    if (chatRouteExists) {
+      this.router.navigate(['/codify/chat'], { queryParams });
+    } else {
+      // Route not registered yet — show a friendly toast instead of silent no-op
+      this.showToast('Codify Chat coming soon.');
+      console.log('[navigateToCodifyChat] route not yet registered. Params ready:', queryParams);
+      this.setActiveTab('codify');   // fall back to the hints tab
+    }
+
+    this.dismissHintOverlay();
   }
 
   onSettings(): void {}
