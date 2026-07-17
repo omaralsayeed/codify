@@ -1082,13 +1082,42 @@
   flex-shrink: 0;
   background: $white;
   border-top: 1px solid $border;
-  transition: max-height 0.3s ease;
-  max-height: 40px; // collapsed: just the toggle button visible
   overflow: hidden;
+  // Height is driven entirely by [style.height.px] binding — no CSS max-height needed
+}
 
-  &--open {
-    max-height: 280px; // expanded: full panel height
+// ── Bottom Panel Resizer Handle ───────────────────────────────────────────────
+.bottom-panel-resizer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  cursor: row-resize;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  transition: background 0.15s;
+
+  &:hover,
+  &:active {
+    background: rgba($blue, 0.08);
+
+    .bottom-panel-resizer-dots {
+      background: $blue;
+    }
   }
+}
+
+.bottom-panel-resizer-dots {
+  width: 32px;
+  height: 3px;
+  border-radius: 2px;
+  background: $border;
+  pointer-events: none;
+  transition: background 0.15s;
 }
 
 .bottom-panel-toggle {
@@ -1125,8 +1154,8 @@
 .bottom-panel-content {
   display: flex;
   flex-direction: column;
-  height: 240px; // total height minus toggle button
   overflow: hidden;
+  // Height set via [style.height.px] binding
 }
 
 // ── Test Case Tabs ────────────────────────────────────────────────────────────

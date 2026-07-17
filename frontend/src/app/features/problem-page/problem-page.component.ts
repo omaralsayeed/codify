@@ -307,6 +307,12 @@ public:
   private isDragging = false;
   private readonly MIN_PANEL_WIDTH = 20;
   private readonly MAX_PANEL_WIDTH = 80;
+
+  // ── Bottom panel resize state ─────────────────────────────────────────────
+  testPanelHeight = 240;
+  private readonly MIN_PANEL_HEIGHT = 120;
+  private readonly MAX_PANEL_HEIGHT = 600;
+  private isBottomDragging = false;
   private originalStarterCode = '';
 
   /** Completes on ngOnDestroy — all HTTP subscriptions use takeUntil(destroy$) */
@@ -926,20 +932,45 @@ public:
     document.body.style.userSelect = 'none';
   }
 
+  onBottomResizerMouseDown(event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isBottomDragging = true;
+    document.body.style.cursor     = 'row-resize';
+    document.body.style.userSelect = 'none';
+    if (!this.isBottomPanelOpen) {
+      this.isBottomPanelOpen = true;
+    }
+  }
+
   @HostListener('document:mousemove', ['$event'])
   onMouseMove(event: MouseEvent): void {
-    if (!this.isDragging) return;
-    const container = document.querySelector('.split-container') as HTMLElement;
-    if (!container) return;
-    const rect = container.getBoundingClientRect();
-    const pct  = ((event.clientX - rect.left) / rect.width) * 100;
-    this.splitPosition = Math.max(this.MIN_PANEL_WIDTH, Math.min(this.MAX_PANEL_WIDTH, pct));
+    if (this.isDragging) {
+      const container = document.querySelector('.split-container') as HTMLElement;
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      const pct  = ((event.clientX - rect.left) / rect.width) * 100;
+      this.splitPosition = Math.max(this.MIN_PANEL_WIDTH, Math.min(this.MAX_PANEL_WIDTH, pct));
+    }
+    if (this.isBottomDragging) {
+      const container = document.querySelector('.right-panel-content') as HTMLElement;
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      // Distance from cursor up to the bottom of the container = desired panel height
+      const newHeight = rect.bottom - event.clientY;
+      this.testPanelHeight = Math.max(this.MIN_PANEL_HEIGHT, Math.min(this.MAX_PANEL_HEIGHT, newHeight));
+    }
   }
 
   @HostListener('document:mouseup')
   onMouseUp(): void {
     if (this.isDragging) {
       this.isDragging = false;
+      document.body.style.cursor     = '';
+      document.body.style.userSelect = '';
+    }
+    if (this.isBottomDragging) {
+      this.isBottomDragging = false;
       document.body.style.cursor     = '';
       document.body.style.userSelect = '';
     }

@@ -743,9 +743,15 @@
   </div>
 
   <!-- ── Bottom Test Case Panel ───────────────────────────────────────────── -->
-  <div class="bottom-panel-container" [class.bottom-panel-container--open]="isBottomPanelOpen">
+  <div class="bottom-panel-container"
+       [class.bottom-panel-container--open]="isBottomPanelOpen"
+       [style.height.px]="isBottomPanelOpen ? testPanelHeight + 40 : 40">
     
-    <!-- Toggle Handle -->
+    <!-- Drag Handle + Toggle (combined row) -->
+    <div class="bottom-panel-resizer"
+         (mousedown)="onBottomResizerMouseDown($event)">
+      <div class="bottom-panel-resizer-dots" aria-hidden="true"></div>
+    </div>
     <button 
       class="bottom-panel-toggle"
       (click)="toggleBottomPanel()"
@@ -763,7 +769,7 @@
 
     <!-- Panel Content -->
     @if (isBottomPanelOpen) {
-      <div class="bottom-panel-content">
+      <div class="bottom-panel-content" [style.height.px]="testPanelHeight">
 
         <!-- ── Result Banner (above tabs, always visible after submit triggered) -->
         @if (showResultBanner) {
