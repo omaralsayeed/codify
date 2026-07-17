@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, HostListener, signal, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { SubmissionService } from '../../core/services/submission.service';
 import { HintService } from '../../core/services/hint.service';
@@ -9,13 +9,43 @@ import {
   SubmissionDetailResponse,
   ServiceError,
 } from '../../core/models/submission.model';
-import { HintResponse } from '../../core/models/hint.model';
+import {
+  HintResponse,
+  HintLevel,
+} from '../../core/models/hint.model';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type ActiveTab    = 'description' | 'editorial' | 'solutions' | 'submissions' | 'codify';
 type SubmitPhase  = 'idle' | 'submitting' | 'done' | 'error';
 type RunPhase     = 'idle' | 'running'    | 'done' | 'error';
+
+// ── Chunk 6: Hint-specific interfaces ────────────────────────────────────────
+// HintCodeChange / spec-contract HintResponse kept here for future codeChange
+// support; the backend currently returns narrative hints (hintText) only.
+
+/** A single line-range replacement — populated when the backend supports diffs */
+export interface HintCodeChange {
+  lineStart:   number;
+  lineEnd:     number;
+  newCode:     string;
+  explanation: string;
+}
+
+/** Spec-contract shape — superset of backend HintResponse */
+export interface HintApiResponse {
+  hintLevel:   number;
+  totalHints:  number;      // backend: hasMoreHints → derive totalHints as 3
+  codeChanges: HintCodeChange[];  // empty until backend returns diffs
+  canAskMore:  boolean;
+}
+
+/** One entry in the session hint log */
+export interface HintHistoryItem {
+  level:       number;
+  explanation: string;  // the hintText displayed to the user
+  appliedAt:   Date;
+}
 
 @Component({
   selector: 'app-problem-page',
@@ -29,6 +59,7 @@ export class ProblemPageComponent implements OnInit {
   private  readonly submissionSvc  = inject(SubmissionService);
   private  readonly hintSvc        = inject(HintService);
   private  readonly elRef          = inject(ElementRef);
+  private  readonly router         = inject(Router);
 
   // ── Language configuration ────────────────────────────────────────────────
   languages = [
@@ -155,24 +186,35 @@ public:
       ? `${(this.submitResult.memoryUsedKb / 1024).toFixed(1)} MB` : '—';
   }
 
-  // ── AI Hint state ─────────────────────────────────────────────────────────
-  hintHistory   = signal<HintResponse[]>([]);
-  nextHintLevel = signal<number>(1);
-  isLoadingHint = signal<boolean>(false);
-  hintError     = signal<ServiceError | null>(null);
+  // ── AI Hint state (Chunks 2 + 6) ─────────────────────────────────────────
+  // Plain fields — spec contract (Chunk 6)
+  hintLevel:            number  = 0;     // 0 = no hints used yet; increments on each successful fetch
+  totalHintsAvailable:  number  = 0;     // derived from backend hasMoreHints (max 3)
+  isHintLoading:        boolean = false;
+  canRequestMoreHints:  boolean = true;
+  lastHintExplanation:  string  = '';    // hintText of the most recently fetched hint
+  hintHistory:          HintHistoryItem[] = [];  // full session log
 
-  private get previousHintTexts(): string[] {
-    return this.hintHistory().map(h => h.hintText);
-  }
+  // Signal wrappers — used by the existing Codify-tab template (Chunks 2–5)
+  // Keep in sync with the plain fields above inside onHintRequested()
+  readonly hintHistorySignal = signal<HintResponse[]>([]);
+  readonly hintError         = signal<ServiceError | null>(null);
+
+  // Derived getters consumed by the toolbar button (carry-forward from Chunk 2)
+  get nextHintLevel(): number { return this.hintLevel + 1; }
 
   get hintButtonDisabled(): boolean {
-    return this.isLoadingHint() || this.nextHintLevel() > 3;
+    return this.isHintLoading || !this.canRequestMoreHints;
   }
 
   get hintButtonLabel(): string {
-    if (this.isLoadingHint()) return 'Loading…';
-    if (this.nextHintLevel() > 3) return 'No more hints';
-    return this.nextHintLevel() === 1 ? 'AI Hint' : `Hint ${this.nextHintLevel()}/3`;
+    if (this.isHintLoading) return 'Loading…';
+    if (!this.canRequestMoreHints) return 'No more hints';
+    return this.hintLevel === 0 ? 'AI Hint' : `Hint ${this.nextHintLevel}/3`;
+  }
+
+  private get previousHintTexts(): string[] {
+    return this.hintHistory.map(h => h.explanation);
   }
 
   // ── Private drag state ────────────────────────────────────────────────────
@@ -259,33 +301,120 @@ public:
     navigator.clipboard.writeText(this.currentCode).catch(() => {/* clipboard unavailable */});
   }
 
-  // ── Toolbar: AI Hint ──────────────────────────────────────────────────────
+  // ── Toolbar: AI Hint (public alias used by toolbar button) ───────────────
+  onAiHint(): void { this.onHintRequested(); }
 
-  onAiHint(): void {
-    const level = this.nextHintLevel();
-    if (level > 3 || this.isLoadingHint()) return;
+  // ── Hint: core handler (Chunk 6) ─────────────────────────────────────────
 
-    this.isLoadingHint.set(true);
+  /**
+   * Requests the next progressive hint from HintService.
+   * Guards:  isHintLoading OR !canRequestMoreHints → early return.
+   * Updates: all plain state fields + signal wrappers in sync.
+   * Side effects: calls applyHintToCode(), navigates to Codify tab.
+   */
+  onHintRequested(): void {
+    if (this.isHintLoading || !this.canRequestMoreHints) return;
+
+    const requestLevel = (this.hintLevel + 1) as HintLevel;
+
+    this.isHintLoading = true;
     this.hintError.set(null);
 
     this.hintSvc.getHint({
-      problemId:            '00000000-0000-0000-0000-000000000005',
-      studentCode:          this.currentCode,
-      hintLevel:            level as 1 | 2 | 3,
-      previousHints:        this.previousHintTexts,
-      lastSubmissionStatus: this.submitResult?.status ?? undefined,
+      problemId:             '00000000-0000-0000-0000-000000000005',
+      studentCode:           this.currentCode,
+      hintLevel:             requestLevel,
+      previousHints:         this.previousHintTexts,
+      attemptCount:          this.hintLevel,          // how many hints already used
+      lastSubmissionStatus:  this.submitResult?.status ?? undefined,
     }).subscribe({
-      next: hint => {
-        this.hintHistory.update(h => [...h, hint]);
-        this.nextHintLevel.update(l => hint.hasMoreHints ? Math.min(l + 1, 3) : 4);
-        this.isLoadingHint.set(false);
+      next: (hint: HintResponse) => {
+        // ── Update plain state (spec contract) ────────────────────────────
+        this.hintLevel           = hint.hintLevel;
+        this.totalHintsAvailable = 3;                // backend max; hasMoreHints drives canAskMore
+        this.canRequestMoreHints = hint.hasMoreHints && hint.hintLevel < 3;
+        this.lastHintExplanation = hint.hintText;
+
+        const historyItem: HintHistoryItem = {
+          level:       hint.hintLevel,
+          explanation: hint.hintText,
+          appliedAt:   new Date(),
+        };
+        this.hintHistory = [...this.hintHistory, historyItem];
+
+        // ── Keep signal wrapper in sync (for Codify-tab template) ─────────
+        this.hintHistorySignal.update(h => [...h, hint]);
+
+        // ── Apply hint to code if diff data present ────────────────────────
+        this.applyHintToCode(hint);
+
+        this.isHintLoading = false;
+
+        // Navigate to Codify tab to surface the hint
         this.setActiveTab('codify');
+
+        console.log('[HintService ✓] level:', hint.hintLevel,
+                    '| canAskMore:', this.canRequestMoreHints,
+                    '| history length:', this.hintHistory.length);
       },
       error: (err: ServiceError) => {
         this.hintError.set(err);
-        this.isLoadingHint.set(false);
+        this.isHintLoading = false;
+        console.error('[HintService ✗]', err);
       },
     });
+  }
+
+  /**
+   * Applies code changes from a hint response into the editor.
+   * The backend currently returns narrative text only (no codeChanges array).
+   * This method is ready to accept diffs when the backend supports them.
+   *
+   * @param hint  The raw HintResponse from the service.
+   */
+  private applyHintToCode(hint: HintResponse): void {
+    // No codeChanges in the current backend response — nothing to apply yet.
+    // When the backend adds diff support, map HintResponse.codeChanges here:
+    //
+    //   if (!hint.codeChanges?.length) return;
+    //   const lines = this.currentCode.split('\n');
+    //   for (const change of hint.codeChanges) {
+    //     lines.splice(change.lineStart - 1,
+    //                  change.lineEnd - change.lineStart + 1,
+    //                  ...change.newCode.split('\n'));
+    //   }
+    //   this.currentCode = lines.join('\n');
+    //
+    // For now, log what would have been applied.
+    console.log('[applyHintToCode] hint level', hint.hintLevel,
+                '— no code diff in response (narrative hint only)');
+  }
+
+  /**
+   * Navigates to the Codify AI chat context for the current problem + hint state.
+   *
+   * There is no dedicated /codify/chat route in app.routes.ts yet.
+   * Until that route is registered, this opens the Codify tab on the left panel
+   * within the problem page and logs the params that will become query params.
+   *
+   * When the chat route is added, replace the body with:
+   *   this.router.navigate(['/codify/chat'], { queryParams });
+   * or for a new tab:
+   *   window.open('/codify/chat?' + new URLSearchParams(queryParams).toString(), '_blank');
+   */
+  navigateToCodifyChat(): void {
+    const queryParams = {
+      problemId: '00000000-0000-0000-0000-000000000005',
+      context:   'hint',
+      hintLevel: this.hintLevel,
+      code:      encodeURIComponent(this.currentCode),
+    };
+
+    console.log('[navigateToCodifyChat] params:', queryParams);
+
+    // TODO: replace with router.navigate once /codify/chat route is registered
+    // this.router.navigate(['/codify/chat'], { queryParams });
+    this.setActiveTab('codify');
   }
 
   onSettings(): void {}
@@ -298,7 +427,7 @@ public:
   toggleSolved():     void { this.isSolved = !this.isSolved; }
   onTopicsClick():    void {}
   onCompaniesClick(): void {}
-  onHintClick():      void { this.onAiHint(); }
+  onHintClick(): void { this.onHintRequested(); }
 
   // ── Editor actions ────────────────────────────────────────────────────────
 

@@ -2646,3 +2646,24 @@
     transition: none;
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CHUNK 6: Hint chat hand-off button
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.hint-cta {
+  // Allow multiple buttons to sit side-by-side
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hint-cta-btn--chat {
+  color: $teal;
+  border-color: rgba(29, 158, 117, 0.35);
+
+  &:hover {
+    background: $teal-lt;
+    border-color: $teal;
+    color: $teal;
+  }
+}

@@ -70,7 +70,7 @@
         type="button"
         [disabled]="hintButtonDisabled"
         [attr.aria-label]="hintButtonLabel">
-        @if (isLoadingHint()) {
+        @if (isHintLoading) {
           <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
                fill="none" stroke="currentColor" stroke-width="2"
                stroke-linecap="round" stroke-linejoin="round"
@@ -388,7 +388,7 @@
             @if (activeTab === 'codify') {
               <div id="codify-panel" role="tabpanel" aria-labelledby="codify-tab">
 
-                @if (hintHistory().length === 0 && !isLoadingHint()) {
+                @if (hintHistory.length === 0 && !isHintLoading) {
                   <div class="empty-state">
                     <div class="empty-state-inner">
                       <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24"
@@ -405,40 +405,29 @@
                   </div>
                 }
 
-                @if (isLoadingHint() && hintHistory().length === 0) {
+                @if (isHintLoading && hintHistory.length === 0) {
                   <div class="empty-state">
                     <p class="hint-loading-text">Generating hint…</p>
                   </div>
                 }
 
                 <!-- Hint timeline -->
-                @if (hintHistory().length > 0) {
+                @if (hintHistory.length > 0) {
                   <div class="hints-timeline">
-                    @for (hint of hintHistory(); track hint.hintLevel) {
+                    @for (item of hintHistory; track item.level) {
                       <div class="hint-item">
                         <div class="hint-level">
-                          <span class="hint-level-badge">Hint {{ hint.hintLevel }}/3</span>
+                          <span class="hint-level-badge">Hint {{ item.level }}/3</span>
                         </div>
                         <div class="hint-content">
-                          <p class="hint-text" style="white-space: pre-line;">{{ hint.hintText }}</p>
-                          @if (hint.followUpQuestion) {
-                            <p class="hint-follow-up">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
-                                   fill="none" stroke="currentColor" stroke-width="2"
-                                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-                                <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                              </svg>
-                              {{ hint.followUpQuestion }}
-                            </p>
-                          }
+                          <p class="hint-text" style="white-space: pre-line;">{{ item.explanation }}</p>
+                          <p class="hint-time">{{ item.appliedAt | date:'h:mm a' }}</p>
                         </div>
                       </div>
                     }
 
                     <!-- Loading next hint -->
-                    @if (isLoadingHint()) {
+                    @if (isHintLoading) {
                       <div class="hint-item hint-item--loading">
                         <div class="hint-level">
                           <span class="hint-level-badge hint-level-badge--loading">…</span>
@@ -449,13 +438,13 @@
                       </div>
                     }
 
-                    <!-- CTA for next hint or exhausted message -->
-                    @if (!isLoadingHint()) {
+                    <!-- CTA: next hint or hand-off to Codify chat -->
+                    @if (!isHintLoading) {
                       <div class="hint-cta">
-                        @if (nextHintLevel() <= 3) {
+                        @if (canRequestMoreHints) {
                           <button
                             class="btn btn--ghost hint-cta-btn"
-                            (click)="onAiHint()"
+                            (click)="onHintRequested()"
                             type="button">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
                                  fill="none" stroke="currentColor" stroke-width="2"
@@ -464,9 +453,22 @@
                               <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
                               <line x1="12" y1="17" x2="12.01" y2="17"></line>
                             </svg>
-                            Get Hint {{ nextHintLevel() }}/3
+                            Get Hint {{ nextHintLevel }}/3
                           </button>
-                        } @else {
+                        }
+                        <!-- Always show chat hand-off once at least one hint used -->
+                        <button
+                          class="btn btn--ghost hint-cta-btn hint-cta-btn--chat"
+                          (click)="navigateToCodifyChat()"
+                          type="button">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                               fill="none" stroke="currentColor" stroke-width="2"
+                               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                          </svg>
+                          Ask Codify
+                        </button>
+                        @if (!canRequestMoreHints) {
                           <p class="hints-exhausted">All hints revealed. Time to code it up!</p>
                         }
                       </div>
