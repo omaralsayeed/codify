@@ -51,15 +51,29 @@
         Copy
       </button>
 
-      <button class="btn toolbar-btn toolbar-btn--hint" (click)="onAiHint()" type="button">
-        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
-             fill="none" stroke="currentColor" stroke-width="2"
-             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <circle cx="12" cy="12" r="10"></circle>
-          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-          <line x1="12" y1="17" x2="12.01" y2="17"></line>
-        </svg>
-        AI Hint
+      <button
+        class="btn toolbar-btn toolbar-btn--hint"
+        (click)="onAiHint()"
+        type="button"
+        [disabled]="hintButtonDisabled"
+        [attr.aria-label]="hintButtonLabel">
+        @if (isLoadingHint()) {
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round"
+               class="spin" aria-hidden="true">
+            <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+          </svg>
+        } @else {
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+        }
+        {{ hintButtonLabel }}
       </button>
     </div>
 
@@ -357,10 +371,96 @@
               </div>
             }
 
-            <!-- Codify Tab -->
+            <!-- Codify Tab — AI Hint History -->
             @if (activeTab === 'codify') {
-              <div id="codify-panel" role="tabpanel" aria-labelledby="codify-tab" class="tab-placeholder">
-                <p>AI-powered code assistance and explanations will appear here.</p>
+              <div id="codify-panel" role="tabpanel" aria-labelledby="codify-tab">
+
+                @if (hintHistory().length === 0 && !isLoadingHint()) {
+                  <div class="empty-state">
+                    <div class="empty-state-inner">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24"
+                           fill="none" stroke="currentColor" stroke-width="1.5"
+                           stroke-linecap="round" stroke-linejoin="round"
+                           class="empty-state-icon" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                      </svg>
+                      <p>Click <strong>AI Hint</strong> in the toolbar to get a progressive hint for your current code.</p>
+                      <p class="empty-state-sub">Up to 3 levels — each one goes deeper.</p>
+                    </div>
+                  </div>
+                }
+
+                @if (isLoadingHint() && hintHistory().length === 0) {
+                  <div class="empty-state">
+                    <p class="hint-loading-text">Generating hint…</p>
+                  </div>
+                }
+
+                <!-- Hint timeline -->
+                @if (hintHistory().length > 0) {
+                  <div class="hints-timeline">
+                    @for (hint of hintHistory(); track hint.hintLevel) {
+                      <div class="hint-item">
+                        <div class="hint-level">
+                          <span class="hint-level-badge">Hint {{ hint.hintLevel }}/3</span>
+                        </div>
+                        <div class="hint-content">
+                          <p class="hint-text" style="white-space: pre-line;">{{ hint.hintText }}</p>
+                          @if (hint.followUpQuestion) {
+                            <p class="hint-follow-up">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+                                   fill="none" stroke="currentColor" stroke-width="2"
+                                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                              </svg>
+                              {{ hint.followUpQuestion }}
+                            </p>
+                          }
+                        </div>
+                      </div>
+                    }
+
+                    <!-- Loading next hint -->
+                    @if (isLoadingHint()) {
+                      <div class="hint-item hint-item--loading">
+                        <div class="hint-level">
+                          <span class="hint-level-badge hint-level-badge--loading">…</span>
+                        </div>
+                        <div class="hint-content">
+                          <p class="hint-text hint-loading-text">Generating next hint…</p>
+                        </div>
+                      </div>
+                    }
+
+                    <!-- CTA for next hint or exhausted message -->
+                    @if (!isLoadingHint()) {
+                      <div class="hint-cta">
+                        @if (nextHintLevel() <= 3) {
+                          <button
+                            class="btn btn--ghost hint-cta-btn"
+                            (click)="onAiHint()"
+                            type="button">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                 fill="none" stroke="currentColor" stroke-width="2"
+                                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                              <circle cx="12" cy="12" r="10"></circle>
+                              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                            </svg>
+                            Get Hint {{ nextHintLevel() }}/3
+                          </button>
+                        } @else {
+                          <p class="hints-exhausted">All hints revealed. Time to code it up!</p>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+
               </div>
             }
 
@@ -561,112 +661,269 @@
     @if (isBottomPanelOpen) {
       <div class="bottom-panel-content">
 
-        <!-- Test Case Tabs -->
-        <nav class="test-case-tabs" role="tablist" aria-label="Test cases">
-          @for (testCase of testCases; track testCase.id; let i = $index) {
-            <button 
-              class="test-case-tab"
-              [class.test-case-tab--active]="activeTestCase === i"
-              (click)="setActiveTestCase(i)"
+        <!-- ── Bottom Panel Top Bar: Test Cases | Result ────────────────────── -->
+        <div class="bottom-panel-top-bar">
+          <!-- Test Cases group -->
+          <nav class="test-case-tabs" role="tablist" aria-label="Test cases"
+               [class.test-case-tabs--hidden]="activeBottomTab === 'result'">
+            @for (testCase of testCases; track testCase.id; let i = $index) {
+              <button
+                class="test-case-tab"
+                [class.test-case-tab--active]="activeTestCase === i && activeBottomTab === 'testcases'"
+                (click)="setBottomTab('testcases'); setActiveTestCase(i)"
+                type="button"
+                role="tab"
+                [attr.aria-selected]="activeTestCase === i && activeBottomTab === 'testcases'"
+                [attr.aria-controls]="'testcase-panel-' + i">
+                <!-- Run-pass indicator dot -->
+                @if (runResult && runResult.testResults[i]) {
+                  <span
+                    class="case-dot"
+                    [class.case-dot--pass]="runResult.testResults[i].passed"
+                    [class.case-dot--fail]="!runResult.testResults[i].passed"
+                    aria-hidden="true">
+                  </span>
+                }
+                {{ testCase.label }}
+              </button>
+            }
+            <button
+              class="test-case-tab test-case-tab--add"
+              (click)="setBottomTab('testcases'); addTestCase()"
+              type="button"
+              aria-label="Add test case">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                   fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+          </nav>
+
+          <!-- Result tab (only shown after submit / run) -->
+          @if (showResultTab) {
+            <button
+              class="test-case-tab test-case-tab--result"
+              [class.test-case-tab--active]="activeBottomTab === 'result'"
+              (click)="setBottomTab('result')"
               type="button"
               role="tab"
-              [attr.aria-selected]="activeTestCase === i"
-              [attr.aria-controls]="'testcase-panel-' + i">
-              {{ testCase.label }}
+              [attr.aria-selected]="activeBottomTab === 'result'">
+              @if (submitPhase === 'submitting') {
+                <span class="result-tab-spinner" aria-hidden="true"></span>
+                Judging…
+              } @else if (submitResult) {
+                <span
+                  class="result-tab-dot"
+                  [class.result-tab-dot--accepted]="isAccepted"
+                  [class.result-tab-dot--rejected]="!isAccepted"
+                  aria-hidden="true">
+                </span>
+                {{ isAccepted ? 'Accepted' : submitResult.status }}
+              } @else {
+                Result
+              }
             </button>
           }
-          <button 
-            class="test-case-tab test-case-tab--add"
-            (click)="addTestCase()"
-            type="button"
-            aria-label="Add test case">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
-                 fill="none" stroke="currentColor" stroke-width="2"
-                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-          </button>
-        </nav>
-
-        <!-- Test Case Content -->
-        <div class="test-case-content">
-
-          <!-- Left: Inputs -->
-          <div class="test-case-inputs">
-            <h3 class="test-section-heading">Input</h3>
-            
-            <div class="input-field">
-              <label class="input-label" for="input-nums">nums</label>
-              <input 
-                id="input-nums"
-                type="text"
-                class="input-box"
-                [value]="currentTestCase.nums"
-                readonly
-                placeholder="[2,7,11,15]" />
-            </div>
-
-            <div class="input-field">
-              <label class="input-label" for="input-target">target</label>
-              <input 
-                id="input-target"
-                type="text"
-                class="input-box"
-                [value]="currentTestCase.target"
-                readonly
-                placeholder="9" />
-            </div>
-          </div>
-
-          <!-- Right: Outputs -->
-          <div class="test-case-outputs">
-            
-            <!-- Expected Output -->
-            <div class="output-section">
-              <h3 class="test-section-heading">Expected Output</h3>
-              <div class="output-box">
-                <code>{{ currentTestCase.expected }}</code>
-              </div>
-            </div>
-
-            <!-- Actual Output -->
-            <div class="output-section">
-              <h3 class="test-section-heading">Actual Output</h3>
-              <div class="output-box output-box--empty">
-                <span class="output-placeholder">Run your code to see output</span>
-              </div>
-            </div>
-
-            <!-- Run Output (Console) -->
-            <div class="output-section">
-              <h3 class="test-section-heading">Console</h3>
-              <div class="output-box output-box--empty">
-                <span class="output-placeholder">No output yet</span>
-              </div>
-            </div>
-
-          </div>
-
         </div>
+
+        <!-- ── Test Case Content ──────────────────────────────────────────────── -->
+        @if (activeBottomTab === 'testcases') {
+          <div class="test-case-content" [id]="'testcase-panel-' + activeTestCase">
+
+            <!-- Left: Inputs -->
+            <div class="test-case-inputs">
+              <h3 class="test-section-heading">Input</h3>
+
+              <div class="input-field">
+                <label class="input-label" for="input-nums">nums</label>
+                <input
+                  id="input-nums"
+                  type="text"
+                  class="input-box"
+                  [value]="currentTestCase.nums"
+                  readonly
+                  placeholder="[2,7,11,15]" />
+              </div>
+
+              <div class="input-field">
+                <label class="input-label" for="input-target">target</label>
+                <input
+                  id="input-target"
+                  type="text"
+                  class="input-box"
+                  [value]="currentTestCase.target"
+                  readonly
+                  placeholder="9" />
+              </div>
+            </div>
+
+            <!-- Right: Outputs -->
+            <div class="test-case-outputs">
+
+              <!-- Expected Output -->
+              <div class="output-section">
+                <h3 class="test-section-heading">Expected Output</h3>
+                <div class="output-box">
+                  <code>{{ currentTestCase.expected }}</code>
+                </div>
+              </div>
+
+              <!-- Actual Output -->
+              <div class="output-section">
+                <h3 class="test-section-heading">Actual Output</h3>
+                @if (runPhase === 'running') {
+                  <div class="output-box output-box--empty">
+                    <span class="output-placeholder">Running…</span>
+                  </div>
+                } @else if (runPhase === 'done' && currentActualOutput) {
+                  <div class="output-box"
+                       [class.output-box--pass]="runResult?.testResults?.[activeTestCase]?.passed"
+                       [class.output-box--fail]="!runResult?.testResults?.[activeTestCase]?.passed">
+                    <code>{{ currentActualOutput }}</code>
+                  </div>
+                } @else {
+                  <div class="output-box output-box--empty">
+                    <span class="output-placeholder">Run your code to see output</span>
+                  </div>
+                }
+              </div>
+
+              <!-- Console -->
+              <div class="output-section">
+                <h3 class="test-section-heading">Console</h3>
+                @if (runPhase === 'running') {
+                  <div class="output-box output-box--empty">
+                    <span class="output-placeholder">Running…</span>
+                  </div>
+                } @else if (runPhase === 'done') {
+                  <div class="output-box">
+                    <code>{{ currentConsoleOutput || '(no output)' }}</code>
+                  </div>
+                } @else {
+                  <div class="output-box output-box--empty">
+                    <span class="output-placeholder">No output yet</span>
+                  </div>
+                }
+              </div>
+
+            </div>
+
+          </div>
+        }
+
+        <!-- ── Submit Result Panel ───────────────────────────────────────────── -->
+        @if (activeBottomTab === 'result') {
+          <div class="result-panel">
+
+            <!-- Judging spinner -->
+            @if (submitPhase === 'submitting') {
+              <div class="result-judging">
+                <span class="result-judging-spinner" aria-hidden="true"></span>
+                <span>Judging your solution…</span>
+              </div>
+            }
+
+            <!-- Final verdict -->
+            @if (submitPhase === 'done' && submitResult) {
+              <div class="result-verdict"
+                   [class.result-verdict--accepted]="isAccepted"
+                   [class.result-verdict--rejected]="!isAccepted">
+
+                <!-- Verdict header -->
+                <div class="result-verdict-header">
+                  @if (isAccepted) {
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                         fill="none" stroke="currentColor" stroke-width="2.5"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  } @else {
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                         fill="none" stroke="currentColor" stroke-width="2.5"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  }
+                  <span class="result-verdict-label">{{ verdictLabel }}</span>
+                </div>
+
+                <!-- Stats row -->
+                <div class="result-stats">
+                  <div class="result-stat">
+                    <span class="result-stat-label">Test Cases</span>
+                    <span class="result-stat-value">{{ passRatio }}</span>
+                  </div>
+                  <div class="result-stat">
+                    <span class="result-stat-label">Runtime</span>
+                    <span class="result-stat-value">{{ executionTime }}</span>
+                  </div>
+                  <div class="result-stat">
+                    <span class="result-stat-label">Memory</span>
+                    <span class="result-stat-value">{{ memoryUsed }}</span>
+                  </div>
+                </div>
+
+                <!-- Error message (if any) -->
+                @if (submitResult.result?.errorMessage) {
+                  <div class="result-error-msg">
+                    <code>{{ submitResult.result!.errorMessage }}</code>
+                  </div>
+                }
+
+                <!-- AI feedback items (if any) -->
+                @if (submitResult.aiFeedback.length) {
+                  <div class="result-ai-feedback">
+                    <p class="result-ai-feedback-label">AI Feedback</p>
+                    @for (fb of submitResult.aiFeedback; track fb.type) {
+                      <p class="result-ai-feedback-item">{{ fb.message }}</p>
+                    }
+                  </div>
+                }
+
+              </div>
+            }
+
+          </div>
+        }
 
         <!-- Bottom Action Row -->
         <div class="bottom-panel-actions">
-          <button class="btn btn--ghost" (click)="onRun()" type="button">
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
-                 fill="none" stroke="currentColor" stroke-width="2"
-                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <polygon points="5 3 19 12 5 21 5 3"></polygon>
-            </svg>
-            Run Code
+          <button
+            class="btn btn--ghost"
+            (click)="onRun()"
+            type="button"
+            [disabled]="runPhase === 'running'">
+            @if (runPhase === 'running') {
+              <span class="btn-spinner" aria-hidden="true"></span>
+              Running…
+            } @else {
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+                   fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
+              Run Code
+            }
           </button>
-          <button class="btn btn--primary" (click)="onSubmit()" type="button">
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
-                 fill="none" stroke="currentColor" stroke-width="2"
-                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
-            Submit Solution
+          <button
+            class="btn btn--primary"
+            (click)="onSubmit()"
+            type="button"
+            [disabled]="submitPhase === 'submitting'">
+            @if (submitPhase === 'submitting') {
+              <span class="btn-spinner btn-spinner--light" aria-hidden="true"></span>
+              Judging…
+            } @else {
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+                   fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              Submit Solution
+            }
           </button>
         </div>
 
