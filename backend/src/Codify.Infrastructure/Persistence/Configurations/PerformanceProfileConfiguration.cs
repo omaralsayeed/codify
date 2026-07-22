@@ -1,4 +1,4 @@
-﻿using Codify.Domain.Entities;
+using Codify.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -11,9 +11,5 @@ public class PerformanceProfileConfiguration : IEntityTypeConfiguration<Performa
         builder.HasKey(p => p.UserId);
         builder.Property(p => p.WeakTopicsJson).IsRequired().HasColumnType("nvarchar(max)");
         builder.Property(p => p.StrongTopicsJson).IsRequired().HasColumnType("nvarchar(max)");
-        builder.Property(p => p.LearningStage).IsRequired().HasMaxLength(50).HasDefaultValue("Beginner");
-        builder.Property(p => p.Consistency).IsRequired().HasMaxLength(20).HasDefaultValue("Low");
-        builder.Property(p => p.RecommendedDifficulty).IsRequired().HasMaxLength(20).HasDefaultValue("Easy");
-        builder.Property(p => p.AnalyticsJson).IsRequired().HasColumnType("nvarchar(max)").HasDefaultValue("{}");
     }
 }

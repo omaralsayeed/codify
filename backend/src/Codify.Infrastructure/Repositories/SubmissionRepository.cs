@@ -28,18 +28,20 @@ public class SubmissionRepository(CodifyDbContext db) : ISubmissionRepository
             .Include(s => s.FeedbackRecords)
             .FirstOrDefaultAsync(s => s.Id == id);
 
-    public async Task<IEnumerable<Submission>> GetAllByUserWithDetailsAsync(Guid userId)
-    {
-        return await db.Submissions
+    public async Task<IEnumerable<Submission>> GetAllByUserAsync(Guid userId) =>
+        await db.Submissions
             .Include(s => s.Problem)
                 .ThenInclude(p => p.ProblemTags)
                     .ThenInclude(pt => pt.ConceptTag)
-            .Include(s => s.Result)
-            .Include(s => s.FeedbackRecords)
-            .Where(s => s.UserId == userId && !s.IsDeleted)
-            .OrderBy(s => s.SubmittedAt)
+            .Where(s => s.UserId == userId)
             .ToListAsync();
-    }
+
+    public async Task<bool> HasPreviousAcceptedAsync(Guid userId, Guid problemId, Guid excludeSubmissionId) =>
+        await db.Submissions
+            .AnyAsync(s => s.UserId == userId
+                        && s.ProblemId == problemId
+                        && s.Status == SubmissionStatus.Accepted
+                        && s.Id != excludeSubmissionId);
 
     public async Task AddAsync(Submission submission) =>
         await db.Submissions.AddAsync(submission);

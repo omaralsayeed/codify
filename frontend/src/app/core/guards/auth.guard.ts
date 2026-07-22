@@ -1,41 +1,35 @@
 import { inject } from '@angular/core';
-import { CanActivateFn, Router, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
+import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 
 /**
- * Auth Guard - Protects routes that require authentication.
- * Redirects unauthenticated users to /auth/login, preserving the
- * intended URL in a `returnUrl` query param so login can redirect back.
+ * Auth Guard - Protects routes that require authentication
+ * Redirects unauthenticated users to /auth/login
  */
-export const authGuard: CanActivateFn = (
-  route: ActivatedRouteSnapshot,
-  state: RouterStateSnapshot,
-) => {
+export const authGuard: CanActivateFn = (route, state) => {
   const authService = inject(AuthService);
-  const router      = inject(Router);
-
+  const router = inject(Router);
+  
   if (authService.isLoggedIn()) {
     return true;
   }
-
-  // Preserve the attempted URL so login can redirect back after success
-  router.navigate(['/auth/login'], {
-    queryParams: { returnUrl: state.url },
-  });
+  
+  router.navigate(['/auth/login']);
   return false;
 };
 
 /**
- * Guest Guard - Redirects authenticated users away from auth pages.
+ * Guest Guard - Redirects authenticated users away from auth pages
+ * Redirects authenticated users to /
  */
-export const guestGuard: CanActivateFn = () => {
+export const guestGuard: CanActivateFn = (route, state) => {
   const authService = inject(AuthService);
-  const router      = inject(Router);
-
+  const router = inject(Router);
+  
   if (!authService.isLoggedIn()) {
     return true;
   }
-
+  
   router.navigate(['/']);
   return false;
 };

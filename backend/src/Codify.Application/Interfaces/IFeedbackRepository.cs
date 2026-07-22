@@ -6,5 +6,6 @@ public interface IFeedbackRepository
 {
     Task AddRangeAsync(IEnumerable<FeedbackRecord> records);
     Task<IEnumerable<FeedbackRecord>> GetBySubmissionAsync(Guid submissionId);
+    Task<List<FeedbackRecord>> GetBySubmissionIdAsync(Guid submissionId);
     Task SaveChangesAsync();
 }

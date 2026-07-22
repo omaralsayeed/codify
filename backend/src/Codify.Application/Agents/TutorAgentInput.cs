@@ -14,8 +14,4 @@ public class TutorAgentInput
     public int AttemptCount { get; set; }
     public string RetrievedContext { get; set; } = string.Empty;
     public string? StudentCode { get; set; }
-
-    // The agentic tools need the user id to query attempt history and previous hints.
-    public Guid UserId { get; set; }
-    public string? Language { get; set; }
 }

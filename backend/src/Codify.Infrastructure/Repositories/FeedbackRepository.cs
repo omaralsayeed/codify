@@ -16,6 +16,12 @@ public class FeedbackRepository(CodifyDbContext db) : IFeedbackRepository
             .OrderBy(f => f.CreatedAt)
             .ToListAsync();
 
+    public async Task<List<FeedbackRecord>> GetBySubmissionIdAsync(Guid submissionId) =>
+        await db.FeedbackRecords
+            .Where(f => f.SubmissionId == submissionId)
+            .OrderBy(f => f.CreatedAt)
+            .ToListAsync();
+
     public async Task SaveChangesAsync() =>
         await db.SaveChangesAsync();
 }

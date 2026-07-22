@@ -6,7 +6,6 @@ namespace Codify.Application.Interfaces;
 public interface IProblemRepository
 {
     Task<(IEnumerable<Problem> Items, int TotalCount)> GetAllAsync(ProblemFilterRequest filter, bool isInstructor);
-    Task<IEnumerable<Problem>> GetAllAsync();
     Task<Problem?> GetByIdWithDetailsAsync(Guid id);
     Task<Problem?> GetByIdWithTestCasesAsync(Guid id);
     Task AddAsync(Problem problem);

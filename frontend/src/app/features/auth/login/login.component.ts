@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormGroup, FormControl, Validators } from '@angular/forms';
-import { Router, RouterModule, ActivatedRoute } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
@@ -13,16 +13,15 @@ import { AuthService } from '../../../core/services/auth.service';
 })
 export class LoginComponent {
   private authService = inject(AuthService);
-  private router      = inject(Router);
-  private route       = inject(ActivatedRoute);
+  private router = inject(Router);
 
   showPassword = false;
-  loginError   = '';
+  loginError = '';
 
   loginForm = new FormGroup({
-    email:      new FormControl('', [Validators.required, Validators.email]),
-    password:   new FormControl('', [Validators.required]),
-    rememberMe: new FormControl(false),
+    email: new FormControl('', [Validators.required, Validators.email]),
+    password: new FormControl('', [Validators.required]),
+    rememberMe: new FormControl(false)
   });
 
   togglePasswordVisibility(): void {
@@ -31,11 +30,19 @@ export class LoginComponent {
 
   getErrorMessage(field: string): string {
     const control = this.loginForm.get(field);
-    if (!control || !control.touched || !control.errors) return '';
+    
+    if (!control || !control.touched || !control.errors) {
+      return '';
+    }
+
     if (control.errors['required']) {
       return field === 'email' ? 'Email is required' : 'Password is required';
     }
-    if (control.errors['email']) return 'Please enter a valid email address';
+
+    if (control.errors['email']) {
+      return 'Please enter a valid email address';
+    }
+
     return '';
   }
 
@@ -46,12 +53,10 @@ export class LoginComponent {
     }
 
     const { email, password } = this.loginForm.value;
-
+    
     this.authService.login(email!, password!).subscribe(result => {
       if (result.success) {
-        // Return to the originally-requested URL, or home if none
-        const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') ?? '/';
-        this.router.navigateByUrl(returnUrl);
+        this.router.navigate(['/']);
       } else {
         this.loginError = result.error || 'Invalid email or password';
       }

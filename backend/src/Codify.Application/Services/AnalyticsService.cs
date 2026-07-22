@@ -1,144 +1,180 @@
 using System.Text.Json;
-using Codify.Application.Agents;
-using Codify.Application.DTOs.AI;
+using Codify.Application.DTOs.Analytics;
 using Codify.Application.Interfaces;
-using Codify.Domain.Entities;
-using Microsoft.Extensions.Logging;
+using Codify.Domain.Enums;
+using Codify.Domain.Exceptions;
 
 namespace Codify.Application.Services;
 
-/// <summary>
-/// Orchestrates the Analytics / Tagging Agent: loads available topics, delegates
-/// to the .NET-native agent, upserts the PerformanceProfile, and returns the
-/// structured response.
-/// </summary>
-public class AnalyticsService(
-    IConceptTagRepository tagRepo,
-    IPerformanceProfileRepository profileRepo,
-    IAnalyticsAgent analyticsAgent,
-    ILogger<AnalyticsService> logger) : IAnalyticsService
+public class AnalyticsService(IUserRepository userRepository) : IAnalyticsService
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
+    // ────────────────────────────────────────────────────────────────
+    // Student analytics (unchanged)
+    // ────────────────────────────────────────────────────────────────
 
-    public async Task<AnalyticsResponse> AnalyzeAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task<StudentAnalyticsResponse> GetStudentAnalyticsAsync(Guid studentId)
     {
-        var tags = await tagRepo.GetAllAsync();
-        var availableTopics = tags.Select(t => t.Name).ToList();
+        var user = await userRepository.GetWithAnalyticsDataAsync(studentId)
+            ?? throw new NotFoundException($"Student {studentId} not found.");
 
-        var input = new AnalyticsAgentInput
+        var submissions = user.Submissions.ToList();
+
+        var totalSubmissions  = submissions.Count;
+        var accepted          = submissions.Count(s => s.Status == SubmissionStatus.Accepted);
+        var wrongAnswers      = submissions.Count(s => s.Status == SubmissionStatus.WrongAnswer);
+        var runtimeErrors     = submissions.Count(s => s.Status == SubmissionStatus.RuntimeError);
+        var compileErrors     = submissions.Count(s => s.Status == SubmissionStatus.CompileError);
+        var timeLimitExceeded = submissions.Count(s => s.Status == SubmissionStatus.TimeLimitExceeded);
+
+        var successRate = totalSubmissions > 0
+            ? Math.Round((double)accepted / totalSubmissions * 100, 2)
+            : 0;
+
+        var acceptedSubmissions = submissions.Where(s => s.Status == SubmissionStatus.Accepted).ToList();
+
+        var solvedProblemIds = acceptedSubmissions.Select(s => s.ProblemId).Distinct().ToHashSet();
+
+        var easySolved = acceptedSubmissions
+            .Where(s => solvedProblemIds.Contains(s.ProblemId) && s.Problem?.Difficulty == Difficulty.Easy)
+            .Select(s => s.ProblemId).Distinct().Count();
+
+        var mediumSolved = acceptedSubmissions
+            .Where(s => solvedProblemIds.Contains(s.ProblemId) && s.Problem?.Difficulty == Difficulty.Medium)
+            .Select(s => s.ProblemId).Distinct().Count();
+
+        var hardSolved = acceptedSubmissions
+            .Where(s => solvedProblemIds.Contains(s.ProblemId) && s.Problem?.Difficulty == Difficulty.Hard)
+            .Select(s => s.ProblemId).Distinct().Count();
+
+        var acceptedWithTime = acceptedSubmissions.Where(s => s.ExecutionTimeMs.HasValue).ToList();
+        double? avgExecutionTimeMs = acceptedWithTime.Count > 0
+            ? Math.Round(acceptedWithTime.Average(s => s.ExecutionTimeMs!.Value), 2)
+            : null;
+
+        double avgAttempts = submissions.Count > 0 && solvedProblemIds.Count > 0
+            ? Math.Round((double)totalSubmissions / Math.Max(solvedProblemIds.Count, 1), 2)
+            : 0;
+
+        var languageBreakdown = submissions
+            .GroupBy(s => s.Language.ToString())
+            .Select(g => new LanguageStatItem { Language = g.Key, Submissions = g.Count() })
+            .OrderByDescending(l => l.Submissions)
+            .ToList();
+
+        var strongTopics = ParseJsonArray(user.PerformanceProfile?.StrongTopicsJson);
+        var weakTopics   = ParseJsonArray(user.PerformanceProfile?.WeakTopicsJson);
+
+        return new StudentAnalyticsResponse
         {
-            UserId = userId,
-            AvailableTopics = availableTopics
+            UserId                    = user.Id,
+            FullName                  = user.FullName,
+            Email                     = user.Email,
+            TotalSolvedProblems       = solvedProblemIds.Count,
+            EasySolved                = easySolved,
+            MediumSolved              = mediumSolved,
+            HardSolved                = hardSolved,
+            TotalSubmissions          = totalSubmissions,
+            AcceptedSubmissions       = accepted,
+            WrongAnswers              = wrongAnswers,
+            RuntimeErrors             = runtimeErrors,
+            CompileErrors             = compileErrors,
+            TimeLimitExceeded         = timeLimitExceeded,
+            SuccessRatePercent        = successRate,
+            AverageExecutionTimeMs    = avgExecutionTimeMs,
+            AverageAttemptsPerProblem = avgAttempts,
+            LanguageBreakdown         = languageBreakdown,
+            StrongTopics              = strongTopics,
+            WeakTopics                = weakTopics,
+            LastSubmissionAt          = submissions.Count > 0 ? submissions.Max(s => s.SubmittedAt) : null,
+            MemberSince               = user.CreatedAt
         };
-
-        AnalyticsResult result;
-        try
-        {
-            result = await analyticsAgent.AnalyzeAsync(input, cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Analytics agent call failed for user {UserId}.", userId);
-            result = CreateFallbackResult();
-        }
-
-        await UpsertProfileAsync(userId, result);
-        return MapToResponse(userId, result);
     }
 
-    public async Task<AnalyticsResponse?> GetAnalyticsAsync(Guid userId, CancellationToken cancellationToken = default)
+    // ────────────────────────────────────────────────────────────────
+    // Instructor analytics
+    // ────────────────────────────────────────────────────────────────
+
+    public async Task<InstructorAnalyticsResponse> GetInstructorAnalyticsAsync(Guid instructorId)
     {
-        var profile = await profileRepo.GetByUserIdAsync(userId);
-        if (profile is null)
-            return null;
+        var instructor = await userRepository.GetInstructorWithProblemsAndSubmissionsAsync(instructorId)
+            ?? throw new NotFoundException($"Instructor {instructorId} not found.");
 
-        if (!string.IsNullOrWhiteSpace(profile.AnalyticsJson) && profile.AnalyticsJson != "{}")
-        {
-            try
-            {
-                var response = JsonSerializer.Deserialize<AnalyticsResponse>(profile.AnalyticsJson, JsonOptions);
-                if (response is not null)
-                {
-                    response.UserId = userId;
-                    response.LastUpdatedAt = profile.LastUpdatedAt;
-                    return response;
-                }
-            }
-            catch (JsonException ex)
-            {
-                logger.LogWarning(ex, "Failed to deserialize AnalyticsJson for user {UserId}.", userId);
-            }
-        }
+        if (instructor.Role != UserRole.Instructor)
+            throw new ForbiddenException("The requested user is not an instructor.");
 
-        return new AnalyticsResponse
+        var authoredProblems = instructor.AuthoredProblems.ToList();
+
+        // All submissions across every authored problem
+        var allSubmissions = authoredProblems
+            .SelectMany(p => p.Submissions)
+            .ToList();
+
+        var totalSubmissions = allSubmissions.Count;
+        var totalAccepted    = allSubmissions.Count(s => s.Status == SubmissionStatus.Accepted);
+
+        var overallAcceptRate = totalSubmissions > 0
+            ? Math.Round((double)totalAccepted / totalSubmissions * 100, 2)
+            : 0;
+
+        // Group submissions by student to build per-student summaries
+        var submissionsByStudent = allSubmissions
+            .GroupBy(s => s.UserId)
+            .ToList();
+
+        var studentSummaries = submissionsByStudent.Select(group =>
         {
-            UserId = userId,
-            LearningStage = profile.LearningStage,
-            OverallScore = profile.OverallScore,
-            Consistency = profile.Consistency,
-            Confidence = profile.Confidence,
-            RecommendedProblemDifficulty = profile.RecommendedDifficulty,
-            SuccessRate = profile.SuccessRate,
-            AverageAttempts = profile.AverageAttempts,
-            LastUpdatedAt = profile.LastUpdatedAt
+            var studentSubmissions = group.ToList();
+
+            // Grab student info from the first submission's User navigation
+            var studentUser = studentSubmissions.First().User;
+
+            var accepted     = studentSubmissions.Count(s => s.Status == SubmissionStatus.Accepted);
+            var total        = studentSubmissions.Count;
+            var successRate  = total > 0 ? Math.Round((double)accepted / total * 100, 2) : 0;
+
+            var problemsSolved = studentSubmissions
+                .Where(s => s.Status == SubmissionStatus.Accepted)
+                .Select(s => s.ProblemId)
+                .Distinct()
+                .Count();
+
+            return new StudentSummaryItem
+            {
+                StudentId           = group.Key,
+                FullName            = studentUser?.FullName ?? "Unknown",
+                Email               = studentUser?.Email    ?? string.Empty,
+                TotalSubmissions    = total,
+                AcceptedSubmissions = accepted,
+                SuccessRatePercent  = successRate,
+                ProblemsSolved      = problemsSolved,
+                LastActivityAt      = studentSubmissions.Max(s => s.SubmittedAt)
+            };
+        })
+        .OrderByDescending(s => s.ProblemsSolved)
+        .ThenByDescending(s => s.SuccessRatePercent)
+        .ToList();
+
+        return new InstructorAnalyticsResponse
+        {
+            InstructorId             = instructor.Id,
+            FullName                 = instructor.FullName,
+            Email                    = instructor.Email,
+            TotalProblemsAuthored    = authoredProblems.Count,
+            TotalStudentsReached     = submissionsByStudent.Count,
+            TotalSubmissionsReceived = totalSubmissions,
+            OverallAcceptRatePercent = overallAcceptRate,
+            Students                 = studentSummaries
         };
     }
 
-    private async Task UpsertProfileAsync(Guid userId, AnalyticsResult result)
+    // ────────────────────────────────────────────────────────────────
+    // Helper
+    // ────────────────────────────────────────────────────────────────
+
+    private static List<string> ParseJsonArray(string? json)
     {
-        var profile = await profileRepo.GetByUserIdAsync(userId);
-        var weakJson = JsonSerializer.Serialize(result.WeakTopics);
-        var strongJson = JsonSerializer.Serialize(result.StrongTopics);
-        var fullJson = JsonSerializer.Serialize(MapToResponse(userId, result), JsonOptions);
-
-        if (profile is null)
-        {
-            profile = PerformanceProfile.CreateForUser(userId);
-            profile.UpdateAnalytics(weakJson, strongJson, result.SuccessRate, result.AverageAttempts,
-                result.LearningStage, result.OverallScore, result.Consistency, result.Confidence,
-                result.RecommendedProblemDifficulty, fullJson);
-            await profileRepo.AddAsync(profile);
-        }
-        else
-        {
-            profile.UpdateAnalytics(weakJson, strongJson, result.SuccessRate, result.AverageAttempts,
-                result.LearningStage, result.OverallScore, result.Consistency, result.Confidence,
-                result.RecommendedProblemDifficulty, fullJson);
-        }
-
-        await profileRepo.SaveChangesAsync();
+        if (string.IsNullOrWhiteSpace(json)) return [];
+        try { return JsonSerializer.Deserialize<List<string>>(json) ?? []; }
+        catch (JsonException) { return []; }
     }
-
-    private static AnalyticsResponse MapToResponse(Guid userId, AnalyticsResult r) => new()
-    {
-        UserId = userId,
-        LearningStage = r.LearningStage,
-        OverallScore = r.OverallScore,
-        Consistency = r.Consistency,
-        Confidence = r.Confidence,
-        WeakTopics = r.WeakTopics,
-        StrongTopics = r.StrongTopics,
-        ImprovingTopics = r.ImprovingTopics,
-        DecliningTopics = r.DecliningTopics,
-        CommonMistakes = r.CommonMistakes,
-        RecommendedTopics = r.RecommendedTopics,
-        RecommendedProblemDifficulty = r.RecommendedProblemDifficulty,
-        PracticePlan = r.PracticePlan.Select(p => new AnalyticsPracticePlanItem
-        {
-            Topic = p.Topic, Action = p.Action, Priority = p.Priority
-        }).ToList(),
-        Summary = r.Summary,
-        SuccessRate = r.SuccessRate,
-        AverageAttempts = r.AverageAttempts,
-        ToolsUsed = r.ToolsUsed,
-        ReasoningSummary = r.ReasoningSummary
-    };
-
-    private static AnalyticsResult CreateFallbackResult() => new()
-    {
-        Summary = "Analytics could not be completed at this time. Please try again later."
-    };
 }
