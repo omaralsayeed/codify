@@ -1274,7 +1274,8 @@
         "framework": ".NETCoreApp,Version=v10.0",
         "dependencies": {
           "BCrypt.Net-Next": "4.1.0",
-          "Codify.Domain": "1.0.0"
+          "Codify.Domain": "1.0.0",
+          "Microsoft.Extensions.Logging": "10.0.5"
         },
         "compile": {
           "bin/placeholder/Codify.Application.dll": {}

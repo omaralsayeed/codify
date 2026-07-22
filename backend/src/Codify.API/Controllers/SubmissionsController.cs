@@ -13,7 +13,8 @@ namespace Codify.API.Controllers;
 public class SubmissionsController(ISubmissionService submissionService) : ControllerBase
 {
     /// <summary>
-    /// Submit code for a problem. Returns 202 Accepted with the pending submission.
+    /// Submit code for a problem.
+    /// Triggers the Code Checker Agent in the background after saving.
     /// </summary>
     [HttpPost]
     [Authorize(Roles = "Student")]
@@ -25,15 +26,29 @@ public class SubmissionsController(ISubmissionService submissionService) : Contr
     }
 
     /// <summary>
-    /// Get the result of a specific submission.
+    /// Get a specific submission by ID.
     /// Students can only see their own; instructors can see all.
     /// </summary>
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(Guid id)
     {
-        var userId = User.GetUserId();
+        var userId       = User.GetUserId();
         var isInstructor = User.IsInRole("Instructor");
-        var result = await submissionService.GetByIdAsync(id, userId, isInstructor);
+        var result       = await submissionService.GetByIdAsync(id, userId, isInstructor);
+        return Ok(ApiResponse.Ok(result));
+    }
+
+    /// <summary>
+    /// Get all AI feedback records for a submission.
+    /// The feedback is generated asynchronously after submission — allow a few seconds.
+    /// Students can only see their own feedback; instructors can see all.
+    /// </summary>
+    [HttpGet("{id:guid}/feedback")]
+    public async Task<IActionResult> GetFeedback(Guid id)
+    {
+        var userId       = User.GetUserId();
+        var isInstructor = User.IsInRole("Instructor");
+        var result       = await submissionService.GetFeedbackAsync(id, userId, isInstructor);
         return Ok(ApiResponse.Ok(result));
     }
 }

@@ -26,6 +26,8 @@ public static class DependencyInjection
         services.AddScoped<IProblemRepository, ProblemRepository>();
         services.AddScoped<IConceptTagRepository, ConceptTagRepository>();
         services.AddScoped<ISubmissionRepository, SubmissionRepository>();
+        services.AddScoped<ITestCaseRepository, TestCaseRepository>();
+        services.AddScoped<IFeedbackRepository, FeedbackRepository>();
 
         // Auth
         services.AddScoped<IJwtService, JwtService>();
@@ -35,6 +37,7 @@ public static class DependencyInjection
         services.AddScoped<IProblemService, ProblemService>();
         services.AddScoped<IConceptTagService, ConceptTagService>();
         services.AddScoped<ISubmissionService, SubmissionService>();
+        services.AddScoped<ITestCaseService, TestCaseService>();
         services.AddScoped<IExecutionService, ExecutionService>();
         services.AddScoped<IQuickRunService, QuickRunService>();
         services.AddScoped<IQuickRunWithTestsService, QuickRunWithTestsService>();
@@ -44,11 +47,12 @@ public static class DependencyInjection
         services.Configure<OpenAiOptions>(options =>
         {
             options.ApiKey = configuration[$"{OpenAiOptions.SectionName}:ApiKey"] ?? string.Empty;
-            options.Model = configuration[$"{OpenAiOptions.SectionName}:Model"] ?? OpenAiOptions.DefaultModel;
+            options.Model  = configuration[$"{OpenAiOptions.SectionName}:Model"] ?? OpenAiOptions.DefaultModel;
         });
         services.AddSingleton<ILLMClient, OpenAiChatClient>();
         services.AddSingleton<IPromptLoader, PromptLoader>();
         services.AddScoped<ITutorAgent, TutorAgent>();
+        services.AddScoped<ICodeCheckerAgent, CodeCheckerAgent>();
 
         return services;
     }
