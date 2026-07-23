@@ -1,203 +1,99 @@
-# ARCHITECTURE.md
 # Codify — System Architecture
 
----
+Codify is currently implemented as a modular monolith: one ASP.NET Core Web API host owns HTTP, auth, business logic orchestration, persistence, and the active AI hint flow. The frontend is an Angular SPA that talks to the API over JSON/REST.
 
-## 1. Pattern: Modular Monolith
+## High-Level Diagram
 
-Codify's backend is a **modular monolith** — one deployable ASP.NET Core application with clearly separated internal modules. This was chosen over microservices because:
+```mermaid
+flowchart LR
+   UI[Angular SPA\nStudent and instructor UI]
 
-- The team has 4 months and limited framework experience
-- Microservices introduce significant operational overhead
-- Modules can be extracted later if the product grows
+   subgraph API[ASP.NET Core Web API]
+      CTRL[Controllers\nAuth, Problems, Submissions, Execution, AI, Tags]
+      MID[Middleware and platform plumbing\nExceptionMiddleware\nJWT bearer auth\nCORS\nRate limiting\nSwagger]
+      APP[Application layer\nAuthService\nProblemService\nSubmissionService\nExecutionService\nConceptTagService\nAiHintService]
+      AI[AI runtime\nTutorAgent\nPromptLoader\nOpenAiChatClient\nPromptTemplate]
+      INF[Infrastructure\nEF Core DbContext\nRepositories\nJwtService]
+   end
 
-Each module owns its own domain logic and exposes only what other modules need.
+   DB[(SQL Server)]
+   OPENAI[(OpenAI API)]
 
----
+   UI -->|HTTP / REST| CTRL
+   CTRL --> MID
+   CTRL --> APP
+   APP --> INF
+   INF --> DB
+   APP --> AI
+   AI --> OPENAI
 
-## 2. High-Level Component Map
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        CLIENT LAYER                          │
-│                                                             │
-│   Angular SPA (Student UI)    Angular SPA (Instructor UI)   │
-└──────────────────────┬──────────────────────────────────────┘
-                       │ HTTP / REST
-┌──────────────────────▼──────────────────────────────────────┐
-│                      API GATEWAY LAYER                       │
-│                  (ASP.NET Core Web API)                      │
-│                                                             │
-│  AuthController  ProblemController  SubmissionController    │
-│  HintController  AnalyticsController  ExecutionController   │
-└──────────────────────┬──────────────────────────────────────┘
-                       │
-┌──────────────────────▼──────────────────────────────────────┐
-│                      DOMAIN / APPLICATION LAYER              │
-│                                                             │
-│  ┌─────────────┐  ┌─────────────┐  ┌──────────────────┐    │
-│  │ Auth Module │  │Problem Mod. │  │ Submission Mod.  │    │
-│  └─────────────┘  └─────────────┘  └──────────────────┘    │
-│  ┌─────────────┐  ┌─────────────┐  ┌──────────────────┐    │
-│  │  AI Module  │  │Analytics Mod│  │  Execution Mod.  │    │
-│  └──────┬──────┘  └─────────────┘  └────────┬─────────┘    │
-└─────────┼───────────────────────────────────┼──────────────┘
-          │                                   │
-┌─────────▼──────────────┐      ┌─────────────▼──────────────┐
-│     AI SERVICE LAYER    │      │   CODE EXECUTION LAYER      │
-│                        │      │                             │
-│  TutorAgent            │      │  ExecutionService           │
-│  CodeCheckerAgent      │      │  DockerRunner               │
-│  AnalyticsAgent        │      │  TestCaseEvaluator          │
-│  RAGPipeline           │      │                             │
-│  VectorDBClient        │      └─────────────────────────────┘
-│  LLMClient             │
-└────────────────────────┘
-          │
-┌─────────▼──────────────┐
-│  INFRASTRUCTURE LAYER   │
-│                        │
-│  PostgreSQL (EF Core)  │
-│  Chroma Vector DB      │
-│  LLM Provider API      │
-│  Docker Socket         │
-└────────────────────────┘
+   CTRL -. current placeholder route collision .- HINTS[HintsController\nPOST /api/ai/hints returns 501]
+   APP -. future work .- FUTURE[Execution sandbox\nnot implemented yet]
 ```
 
----
+## Current Modules
 
-## 3. Backend Module Breakdown
+### API Host
+The API host is the composition root in [Program.cs](../../backend/src/Codify.API/Program.cs). It wires infrastructure, JWT authentication, authorization, rate limiting, CORS for the Angular dev server, Swagger, and startup database seeding.
 
-### 3.1 Auth Module
-**Owns:** User registration, login, JWT issuance, role validation
-**Exposes:** `IAuthService` — used by all other modules to verify identity
-**Tables:** `Users`
+### Application Layer
+The application layer owns use cases and DTO mapping. The current services are:
 
-### 3.2 Problem Module
-**Owns:** Problem CRUD, concept tag management, problem filtering
-**Exposes:** `IProblemService` — used by Submission and AI modules
-**Tables:** `Problems`, `ConceptTags`, `ProblemTags`, `TestCases`
+- `AuthService` for register, login, and current-user lookup
+- `ProblemService` for problem browse, create, update, delete, and detail projection
+- `SubmissionService` for submission creation and retrieval
+- `ExecutionService` for the current sample-case run stub
+- `ConceptTagService` for concept tag CRUD and problem-tag linking
+- `AiHintService` for hint orchestration
 
-### 3.3 Submission Module
-**Owns:** Submission intake, result storage, attempt tracking
-**Exposes:** `ISubmissionService` — used by Execution and AI modules
-**Tables:** `Submissions`, `SubmissionResults`
+### Domain Layer
+The domain layer contains the stateful entities and business rules:
 
-### 3.4 AI Module
-**Owns:** Agent orchestration, prompt templates, RAG pipeline, LLM client
-**Exposes:** `ITutorAgent`, `ICodeCheckerAgent`, `IAnalyticsAgent`
-**Tables:** `HintLogs`, `FeedbackRecords`
-**External:** LLM API, Vector DB
+- `User`
+- `Problem`
+- `ConceptTag`
+- `ProblemTag`
+- `TestCase`
+- `Submission`
+- `SubmissionResult`
+- `HintLog`
+- `PerformanceProfile`
+- `FeedbackRecord`
 
-### 3.5 Analytics Module
-**Owns:** Performance profile updates, weakness detection, recommendations
-**Exposes:** `IAnalyticsService` — used by Instructor dashboard endpoints
-**Tables:** `PerformanceProfiles`
+### Infrastructure Layer
+Infrastructure provides SQL Server EF Core persistence, repository implementations, JWT issuance, and the OpenAI adapter used by the tutor agent.
 
-### 3.6 Execution Module
-**Owns:** Docker container lifecycle, test case running, output comparison
-**Exposes:** `IExecutionService` — called by Submission module
-**External:** Docker daemon
+## Current Runtime Flows
 
----
+### Authentication
+1. The client calls `/api/auth/register` or `/api/auth/login`.
+2. `AuthService` hashes or verifies passwords with BCrypt.
+3. `JwtService` issues a bearer token containing user id, email, and role.
+4. The API validates the token on every protected request.
 
-## 4. Data Flow — Student Submits Code
+### Problem Browsing and Submission
+1. Students call `/api/problems` and `/api/problems/{id}` to browse problems.
+2. Students submit code through `/api/submissions`.
+3. `SubmissionService` creates a `Submission` record in `Pending` state.
+4. `ExecutionService` currently returns a stubbed sample-case response for the run flow; a real sandbox is still pending.
 
-```
-1. Student clicks "Submit" in Angular UI
-2. POST /api/submissions → SubmissionController
-3. SubmissionService saves submission to DB (status: Pending)
-4. ExecutionService picks up the submission
-5. Docker container spins up with student code
-6. Test cases run, output captured
-7. Results saved to SubmissionResults table
-8. CodeCheckerAgent analyzes code asynchronously
-9. FeedbackRecord saved
-10. AnalyticsAgent updates PerformanceProfile
-11. GET /api/submissions/{id} returns full result to frontend
-```
+### AI Hint Flow
+1. The client calls `/api/ai/hints`.
+2. `AiHintService` validates the hint level and loads the problem with tags.
+3. `TutorAgent` loads the prompt template and renders it with the problem context.
+4. `OpenAiChatClient` sends the request to OpenAI.
+5. The agent parses the JSON response and falls back to a safe generic hint if the model call fails or returns invalid JSON.
 
----
+## Key Implementation Notes
 
-## 5. Data Flow — Student Requests a Hint
+- The runtime database provider is SQL Server, not PostgreSQL.
+- The active AI path is a single tutor-agent flow. RAG retrieval, analytics agents, and code-checker agents are not wired into runtime yet.
+- `HintsController` still exists as a placeholder and maps the same route as the active AI controller. That should be treated as a temporary mismatch, not a second production hint implementation.
+- The current execution path is a stub that echoes sample test cases; the dedicated sandbox is not implemented in code yet.
 
-```
-1. Student clicks "Get Hint" in Angular UI
-2. POST /api/ai/hints → HintController
-3. Backend assembles context:
-   - Problem statement
-   - Current hint level for this student+problem
-   - Previous attempt summary
-4. TutorAgent is called with this context
-5. RAG Pipeline queries Vector DB for relevant concept explanations
-6. LLM generates a constrained hint
-7. HintLog saved to DB
-8. Hint returned to frontend, hint level incremented
-```
+## Cross-References
 
----
-
-## 6. Frontend Structure
-
-```
-src/
-├── app/
-│   ├── auth/               # Login, Register pages
-│   ├── student/
-│   │   ├── problem-list/   # Browse problems
-│   │   ├── problem-detail/ # Problem view + code editor + hint panel
-│   │   ├── submission/     # Submission result view
-│   │   └── progress/       # Student's own analytics
-│   ├── instructor/
-│   │   ├── dashboard/      # Overview stats
-│   │   ├── students/       # Per-student drill-down
-│   │   └── topics/         # Topic-level analytics
-│   ├── shared/
-│   │   ├── components/     # Reusable UI components
-│   │   ├── services/       # HTTP service wrappers
-│   │   └── models/         # TypeScript interfaces matching API response shapes
-│   └── core/
-│       ├── guards/         # Auth route guards
-│       └── interceptors/   # JWT injection, error handling
-```
-
----
-
-## 7. Backend Folder Structure
-
-```
-src/
-├── Codify.API/             # Controllers, middleware, startup
-├── Codify.Application/     # Use cases, service interfaces, DTOs
-├── Codify.Domain/          # Entities, domain rules, enums
-├── Codify.Infrastructure/  # EF Core, LLM clients, Docker client, Vector DB
-└── Codify.ExecutionEngine/ # Sandbox logic, Docker runner, evaluator
-
-tests/
-├── Codify.UnitTests/
-└── Codify.IntegrationTests/
-```
-
----
-
-## 8. Security Considerations
-
-- JWT tokens signed with a secret key, expiry set to 1 hour
-- Role claims in token: `Student` or `Instructor`
-- Execution sandbox: no network access, 5-second timeout, 128MB memory cap
-- AI endpoints: rate-limited to prevent abuse
-- All user code executed in a throwaway Docker container, never on the host
-
----
-
-## 9. Deployment (MVP)
-
-```
-Frontend  → Static hosting (Vercel, Netlify, or Azure Static Web Apps)
-Backend   → Single Docker container (Railway, Render, or Azure App Service)
-Database  → PostgreSQL (managed — Supabase, Neon, or Railway Postgres)
-Vector DB → Chroma running as a sidecar container
-Execution → Docker-in-Docker or sibling container approach
-```
-
-All environments: `development`, `staging`, `demo`.
+- [API documentation](../api/API_SPEC.md)
+- [AI flow diagram](./AI_FLOW.md)
+- [Data model](../database/DATA_MODEL.md)
+- [ER diagram](../database/ER-Diagram.md)

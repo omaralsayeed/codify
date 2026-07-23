@@ -41,21 +41,21 @@
 
 ---
 
-## ADR-003: PostgreSQL for Primary Database
+## ADR-003: SQL Server for Primary Database
 
 **Status:** Accepted  
 **Date:** Sprint 0
 
-**Context:** We needed a relational database for users, problems, submissions, and analytics data.
+**Context:** We needed a relational database for users, problems, submissions, and AI-related records.
 
-**Decision:** PostgreSQL with Entity Framework Core.
+**Decision:** SQL Server with Entity Framework Core.
 
 **Reasons:**
-- PostgreSQL is open source, free to host on managed services, and more powerful than SQL Server for our use case.
-- EF Core handles migrations cleanly and reduces raw SQL for routine operations.
-- Strong support on hosting platforms (Supabase, Neon, Railway).
+- The current backend is already configured with `UseSqlServer` and SQL Server-compatible migrations.
+- EF Core handles migrations cleanly and keeps the relational model expressive enough for the current schema.
+- The team can deploy the same database locally and in Azure without adding another storage technology.
 
-**Rejected:** SQL Server (licensing concerns for production), MongoDB (our data is relational — problems, submissions, test cases have clear relationships).
+**Rejected:** PostgreSQL as the runtime database for the current implementation, MongoDB because the domain is relational.
 
 ---
 
@@ -79,7 +79,7 @@
 
 ## ADR-005: Docker Sandbox for Code Execution
 
-**Status:** Accepted (implementation TBD)  
+**Status:** Accepted (implementation pending)  
 **Date:** Sprint 0
 
 **Context:** We need to run student-submitted code safely.
@@ -93,7 +93,7 @@
 - Resource limits (CPU, memory, network) are easy to configure per container.
 - MVP supports Python and C# only, so we only need two base images.
 
-**Risks:** Docker-in-Docker can be tricky depending on hosting environment. This is the highest-risk component and should be validated by end of Sprint 1.
+**Risks:** The sandbox is not implemented yet in the current codebase; the active execution service is still a stub that returns sample-case placeholders.
 
 ---
 
@@ -151,29 +151,30 @@
 
 ## ADR-009: LLM Provider
 
-**Status:** ⚠️ Pending  
-**Date:** —
+**Status:** Accepted  
+**Date:** Sprint 0
 
-**Options:**
-- **OpenAI (GPT-4o):** Better instruction following, more predictable structured outputs, higher cost.
-- **Gemini (1.5 Pro):** Google ecosystem, competitive on cost, good context window.
+**Decision:** OpenAI is the active LLM provider for the tutor hint flow.
 
-**Decision criteria:** Cost per 1M tokens, structured output reliability (JSON mode), rate limits on free/developer tier.
+**Reasons:**
+- The runtime already uses the OpenAI chat client through `OpenAiChatClient`.
+- The prompt flow is built around structured JSON output and fallback handling.
+- The configured model is environment-driven; the default in code is `gpt-4o`.
 
-**Action:** Omar to run a test prompt through both with a sample hint request and code analysis task. Decision by end of Sprint 1.
+**Open Question:** Whether to add a second provider for fallback or cost control later.
 
 ---
 
 ## ADR-010: Vector Database
 
-**Status:** ⚠️ Pending  
+**Status:** Pending  
 **Date:** —
 
+**Context:** The proposal calls for RAG, but the current runtime does not yet include vector retrieval.
+
 **Options:**
-- **Chroma:** Simple, self-hostable, good Python SDK. Best for MVP.
-- **Pinecone:** Managed, fast, but paid at scale.
-- **pgvector:** PostgreSQL extension — no extra service, but less feature-rich.
+- Chroma
+- Pinecone
+- pgvector
 
-**Recommendation:** Chroma for MVP. If self-hosting proves complex, pgvector is the lowest-friction fallback.
-
-**Action:** Omar to prototype a basic embed + retrieve flow with Chroma. Decision by Sprint 2.
+**Current State:** The implementation stores only the tutor prompt template and OpenAI client plumbing. RAG remains a planned extension, not a shipped feature.

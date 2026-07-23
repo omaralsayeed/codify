@@ -336,3 +336,6 @@ openapi.json
 
 # Keep environment template for onboarding
 !.env.example
+
+*.zip
+.kiro

@@ -1,288 +1,181 @@
-# DATA_MODEL.md
 # Codify — Database Schema & Entity Reference
 
-> This is the canonical data model. All EF Core entities must match these definitions. If you need to add a field, update this file and the migration together.
+This file reflects the current EF Core model in the backend. It is the canonical reference for the tables and relationships that exist in the implementation today.
 
----
+## Entity Overview
 
-## Entity Relationship Overview
+- `Users`
+- `Problems`
+- `ConceptTags`
+- `ProblemTags`
+- `TestCases`
+- `Submissions`
+- `SubmissionResults`
+- `HintLogs`
+- `PerformanceProfiles`
+- `FeedbackRecords`
 
-```
-Users ──────────────────────────────────────────────────┐
-  │                                                      │
-  ├──< Submissions >──< SubmissionResults               │
-  │         │                                           │
-  │         └──< FeedbackRecords                        │
-  │                                                      │
-  └──< HintLogs                                         │
-  │                                                      │
-  └── PerformanceProfile                                │
-                                                        │
-Problems ──────────────────────────────────────────────┘
-  │
-  ├──< ProblemTags >── ConceptTags
-  │
-  └──< TestCases
-```
-
----
-
-## 1. User
-
-```sql
-Table: Users
-```
+## 1. Users
 
 | Field | Type | Notes |
-|-------|------|-------|
-| Id | UUID | PK, auto-generated |
-| FullName | string(200) | Required |
-| Email | string(320) | Required, unique |
-| PasswordHash | string | bcrypt hash, never store plaintext |
-| Role | enum | `Student` or `Instructor` |
-| CreatedAt | DateTime | UTC, set on insert |
-| LastLoginAt | DateTime? | UTC, nullable |
+|---|---|---|
+| Id | uniqueidentifier | PK |
+| FullName | nvarchar(200) | required |
+| Email | nvarchar(320) | required, unique |
+| PasswordHash | nvarchar(max) | BCrypt hash |
+| Role | string | enum converted to string |
+| CreatedAt | datetime2 | required |
+| LastLoginAt | datetime2? | nullable |
+| Username | nvarchar(100)? | optional profile field |
+| Bio | nvarchar(max)? | optional profile field |
+| AvatarUrl | nvarchar(500)? | optional profile field |
+| Rating | decimal(10,2) | default 0 |
+| SolvedProblems | int | default 0 |
+| UpdatedAt | datetime2 | required |
+| IsDeleted | bit | soft delete flag |
 
-**C# Enum:**
-```csharp
-public enum UserRole
-{
-    Student,
-    Instructor
-}
-```
-
-**Notes:**
-- Email is the login identifier. No username field in MVP.
-- Admin role is out of scope for MVP.
-
----
-
-## 2. Problem
-
-```sql
-Table: Problems
-```
+## 2. Problems
 
 | Field | Type | Notes |
-|-------|------|-------|
-| Id | UUID | PK |
-| Title | string(300) | Required |
-| Statement | text | Full markdown problem statement |
-| Difficulty | enum | `Easy`, `Medium`, `Hard` |
-| LanguageSupport | string[] | e.g., `["Python", "CSharp"]` — store as JSON |
-| Constraints | text | Problem constraints section |
-| CreatedAt | DateTime | UTC |
-| IsActive | bool | False = hidden from students |
+|---|---|---|
+| Id | uniqueidentifier | PK |
+| AuthorId | uniqueidentifier? | FK → Users, set null on delete |
+| Title | nvarchar(300) | required |
+| Slug | nvarchar(350) | required, unique |
+| Statement | nvarchar(max) | required |
+| Difficulty | string | enum converted to string |
+| LanguageSupportJson | nvarchar(max) | JSON array of supported languages |
+| Constraints | nvarchar(max) | required |
+| TimeLimitMs | int | default 2000 |
+| MemoryLimitMb | int | default 256 |
+| IsPublic | bit | default true |
+| IsActive | bit | active listing flag |
+| AcceptedSubmissionsCount | int | default 0 |
+| TotalSubmissionsCount | int | default 0 |
+| CreatedAt | datetime2 | required |
+| UpdatedAt | datetime2 | required |
+| IsDeleted | bit | soft delete flag |
 
-**C# Enum:**
-```csharp
-public enum Difficulty
-{
-    Easy,
-    Medium,
-    Hard
-}
-```
-
-**Notes:**
-- `Statement` supports markdown. Frontend should render it with a markdown viewer.
-- `IsActive = false` is used to hide draft or retired problems.
-
----
-
-## 3. ConceptTag
-
-```sql
-Table: ConceptTags
-```
+## 3. ConceptTags
 
 | Field | Type | Notes |
-|-------|------|-------|
-| Id | UUID | PK |
-| Name | string(100) | e.g., "Dynamic Programming", "Graph Traversal" |
-| Description | text | Short explanation used in RAG indexing |
+|---|---|---|
+| Id | uniqueidentifier | PK |
+| Name | nvarchar(100) | required, unique |
+| Slug | nvarchar(120) | required, unique |
+| Description | nvarchar(max) | required |
+| CreatedAt | datetime2 | required |
+| UpdatedAt | datetime2 | required |
+| IsDeleted | bit | soft delete flag |
 
-**Seed data (initial tags):**
-- Arrays & Hashing
-- Two Pointers
-- Sliding Window
-- Binary Search
-- Linked Lists
-- Trees
-- Graphs
-- Dynamic Programming
-- Greedy
-- Backtracking
-- Recursion
-- Sorting
+## 4. ProblemTags
 
----
-
-## 4. ProblemTag (Join Table)
-
-```sql
-Table: ProblemTags
-```
+Junction table for the many-to-many relationship between Problems and ConceptTags.
 
 | Field | Type | Notes |
-|-------|------|-------|
-| ProblemId | UUID | FK → Problems |
-| ConceptTagId | UUID | FK → ConceptTags |
+|---|---|---|
+| ProblemId | uniqueidentifier | PK part, FK → Problems |
+| ConceptTagId | uniqueidentifier | PK part, FK → ConceptTags |
 
-Composite PK: (ProblemId, ConceptTagId)
+Composite primary key: `(ProblemId, ConceptTagId)`
 
----
-
-## 5. TestCase
-
-```sql
-Table: TestCases
-```
+## 5. TestCases
 
 | Field | Type | Notes |
-|-------|------|-------|
-| Id | UUID | PK |
-| ProblemId | UUID | FK → Problems |
-| InputData | text | Raw input string passed to the program |
-| ExpectedOutput | text | Expected stdout output |
-| IsSample | bool | True = shown to student as example |
-| VisibilityMode | enum | `Public`, `Hidden` |
+|---|---|---|
+| Id | uniqueidentifier | PK |
+| ProblemId | uniqueidentifier | FK → Problems |
+| InputData | nvarchar(max) | required |
+| ExpectedOutput | nvarchar(max) | required |
+| IsSample | bit | shown in problem detail when true |
+| VisibilityMode | string | enum converted to string |
+| OrderIndex | int | default 0 |
+| CreatedAt | datetime2 | required |
+| UpdatedAt | datetime2 | required |
+| IsDeleted | bit | soft delete flag |
 
-**Notes:**
-- `IsSample = true` cases are shown on the problem page.
-- `VisibilityMode = Hidden` cases are only used for evaluation — student never sees them.
-
----
-
-## 6. Submission
-
-```sql
-Table: Submissions
-```
+## 6. Submissions
 
 | Field | Type | Notes |
-|-------|------|-------|
-| Id | UUID | PK |
-| ProblemId | UUID | FK → Problems |
-| UserId | UUID | FK → Users |
-| Code | text | Raw submitted code |
-| Language | enum | `Python`, `CSharp` |
-| Status | enum | `Pending`, `Running`, `Accepted`, `WrongAnswer`, `RuntimeError`, `TimeLimitExceeded`, `CompileError` |
-| SubmittedAt | DateTime | UTC |
-| ExecutionTimeMs | int? | Milliseconds, nullable until evaluated |
-| MemoryUsedKb | int? | KB, nullable until evaluated |
+|---|---|---|
+| Id | uniqueidentifier | PK |
+| ProblemId | uniqueidentifier | FK → Problems |
+| UserId | uniqueidentifier | FK → Users |
+| Code | nvarchar(max) | required |
+| Language | string | enum converted to string |
+| Status | string | enum converted to string |
+| SubmittedAt | datetime2 | required |
+| ExecutionTimeMs | int? | nullable |
+| MemoryUsedKb | int? | nullable |
+| PassedTestCases | int | default 0 |
+| TotalTestCases | int | default 0 |
+| Score | decimal(5,2)? | nullable percentage score |
+| UpdatedAt | datetime2 | required |
+| IsDeleted | bit | soft delete flag |
 
-**C# Enum:**
-```csharp
-public enum SubmissionLanguage { Python, CSharp }
-
-public enum SubmissionStatus
-{
-    Pending,
-    Running,
-    Accepted,
-    WrongAnswer,
-    RuntimeError,
-    TimeLimitExceeded,
-    CompileError
-}
-```
-
----
-
-## 7. SubmissionResult
-
-```sql
-Table: SubmissionResults
-```
+## 7. SubmissionResults
 
 | Field | Type | Notes |
-|-------|------|-------|
-| Id | UUID | PK |
-| SubmissionId | UUID | FK → Submissions, unique (1:1) |
-| PassedTestCount | int | |
-| FailedTestCount | int | |
-| TotalTestCount | int | |
-| ErrorMessage | text? | Compiler or runtime error output |
-| OutputSummary | text? | First failed test case details |
+|---|---|---|
+| Id | uniqueidentifier | PK |
+| SubmissionId | uniqueidentifier | FK → Submissions, unique |
+| PassedTestCount | int | required |
+| FailedTestCount | int | required |
+| TotalTestCount | int | required |
+| ErrorMessage | nvarchar(max)? | nullable |
+| OutputSummary | nvarchar(max)? | nullable |
 
----
-
-## 8. HintLog
-
-```sql
-Table: HintLogs
-```
+## 8. HintLogs
 
 | Field | Type | Notes |
-|-------|------|-------|
-| Id | UUID | PK |
-| UserId | UUID | FK → Users |
-| ProblemId | UUID | FK → Problems |
-| HintLevel | int | 1 = gentle nudge, 2 = concept hint, 3 = structural hint |
-| RequestText | text? | Optional: what the student typed when asking |
-| ResponseText | text | The hint returned by the Tutor Agent |
-| CreatedAt | DateTime | UTC |
+|---|---|---|
+| Id | uniqueidentifier | PK |
+| UserId | uniqueidentifier | FK → Users |
+| ProblemId | uniqueidentifier | FK → Problems |
+| HintLevel | int | 1 to 3 |
+| RequestText | nvarchar(max)? | nullable |
+| ResponseText | nvarchar(max) | required |
+| CreatedAt | datetime2 | required |
 
-**Notes:**
-- HintLevel increments per user per problem. Max is 3 for MVP.
-- At level 3, the agent gives the most detailed hint without writing the code.
+The table exists in the schema, but the current runtime hint flow does not yet persist rows to it.
 
----
-
-## 9. PerformanceProfile
-
-```sql
-Table: PerformanceProfiles
-```
+## 9. PerformanceProfiles
 
 | Field | Type | Notes |
-|-------|------|-------|
-| UserId | UUID | PK + FK → Users (1:1) |
-| WeakTopics | string[] | JSON array of ConceptTag names |
-| StrongTopics | string[] | JSON array of ConceptTag names |
-| SuccessRate | float | 0.0–1.0, percentage of accepted submissions |
-| AverageAttempts | float | Average attempts per solved problem |
-| LastUpdatedAt | DateTime | UTC, updated after every submission |
+|---|---|---|
+| UserId | uniqueidentifier | PK and FK → Users |
+| WeakTopicsJson | nvarchar(max) | required JSON array |
+| StrongTopicsJson | nvarchar(max) | required JSON array |
+| SuccessRate | real | required |
+| AverageAttempts | real | required |
+| LastUpdatedAt | datetime2 | required |
 
-**Notes:**
-- Updated by the Analytics Agent after each submission.
-- `WeakTopics` = concepts where success rate < 40%.
-- `StrongTopics` = concepts where success rate > 75%.
-
----
-
-## 10. FeedbackRecord
-
-```sql
-Table: FeedbackRecords
-```
+## 10. FeedbackRecords
 
 | Field | Type | Notes |
-|-------|------|-------|
-| Id | UUID | PK |
-| SubmissionId | UUID | FK → Submissions |
-| FeedbackType | enum | `CodeQuality`, `Optimization`, `IntegrityFlag` |
-| Message | text | The AI-generated feedback text |
-| CreatedAt | DateTime | UTC |
+|---|---|---|
+| Id | uniqueidentifier | PK |
+| SubmissionId | uniqueidentifier | FK → Submissions |
+| FeedbackType | string | enum converted to string |
+| Message | nvarchar(max) | required |
+| CreatedAt | datetime2 | required |
 
-**C# Enum:**
-```csharp
-public enum FeedbackType
-{
-    CodeQuality,
-    Optimization,
-    IntegrityFlag
-}
-```
+## Relationship Summary
 
----
+- Users 1:1 PerformanceProfiles
+- Users 1:N Submissions
+- Users 1:N HintLogs
+- Users 1:N Problems as author
+- Problems 1:N TestCases
+- Problems 1:N Submissions
+- Problems 1:N HintLogs
+- Problems N:M ConceptTags through ProblemTags
+- Submissions 1:1 SubmissionResults
+- Submissions 1:N FeedbackRecords
 
-## Naming Conventions
+## Notes On Constraints
 
-- Table names: PascalCase plural (e.g., `SubmissionResults`)
-- Column names: PascalCase (e.g., `SubmittedAt`)
-- All PKs are UUIDs generated by the application, not the database
-- All timestamps are stored as UTC
-- Nullable fields are explicitly marked with `?`
+- Soft-delete filters are applied to Users, Problems, ConceptTags, TestCases, and Submissions.
+- `Problem.AuthorId` is nullable and uses `ON DELETE SET NULL`.
+- `SubmissionResult.SubmissionId` is unique, enforcing a one-to-one relationship.
+- `ProblemTags` uses a composite primary key and cascade delete on both sides.

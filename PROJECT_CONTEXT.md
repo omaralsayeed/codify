@@ -11,10 +11,12 @@
 Codify is an **AI-powered programming education platform** built as a university capstone MVP. It targets CS students and bootcamp learners who want to practice algorithmic problem-solving with intelligent, progressive guidance — not just raw answers.
 
 The system combines:
-- A **code submission judge** (runs student code against test cases)
-- A **multi-agent AI layer** (tutor hints, code analysis, performance analytics)
+- A **code submission flow** that records submissions and prepares evaluation results
+- A **live tutor AI flow** for progressive hints
 - An **instructor dashboard** (progress tracking, integrity signals)
 - A **student dashboard**
+
+The code analysis, analytics, and vector-retrieval agents are part of the project plan, but they are not yet wired into the current runtime.
 ---
 
 ## 2. The Problem We're Solving
@@ -27,7 +29,7 @@ Current platforms (LeetCode, HackerRank, etc.) have three key gaps:
 | No personalized weakness tracking | Student doesn't know what to fix |
 | AI-generated code submissions are undetectable | Integrity is compromised |
 
-Codify addresses all three through its AI agent layer.
+Codify addresses the first and third items in the current codebase through its auth, submission, and hinting flows. The personalized weakness-tracking layer is still planned work.
 
 ---
 
@@ -46,11 +48,11 @@ Codify addresses all three through its AI agent layer.
 
 - User registration and login (JWT, role-based)
 - Browse, filter, and view programming problems
-- Submit code → run against hidden test cases → get pass/fail result
+- Submit code and store submission records; execution evaluation is still a stub in the current codebase
 - Request AI-generated step-by-step hints (Tutor Agent)
-- Receive code quality and optimization feedback after submission (Code Checker Agent)
-- Track performance history and weak concept areas (Analytics Agent)
-- Instructor dashboard: per-student progress, topic trends, integrity flags
+- Planned: receive code quality and optimization feedback after submission (Code Checker Agent)
+- Planned: track performance history and weak concept areas (Analytics Agent)
+- Planned: instructor dashboard with per-student progress, topic trends, and integrity flags
 
 ---
 
@@ -75,26 +77,26 @@ This is the core of Codify's differentiation. There are exactly **three agents**
 ### Agent 1 — AI Tutor Agent
 - **Trigger:** Student clicks "Get Hint" on a problem
 - **Does:** Returns a progressive hint (not the full solution)
-- **Uses:** RAG (retrieves concept context from vector DB)
+- **Uses:** OpenAI chat completion with prompt templating; RAG is planned but not wired yet
 - **Key rule:** Never reveal the full algorithm directly
 
 ### Agent 2 — AI Code Checker Agent
 - **Trigger:** Student submits code
-- **Does:** Analyzes code quality, logic, optimization, and suspicious patterns
-- **Uses:** Direct LLM analysis (no RAG needed)
+- **Does:** Planned future analysis of code quality, logic, optimization, and suspicious patterns
+- **Uses:** Direct LLM analysis (planned)
 - **Key rule:** Be constructive, structured output only
 
 ### Agent 3 — Analytics / Tagging Agent
-- **Trigger:** Background — runs after each submission
-- **Does:** Tags problems by concept, updates student weakness profile, generates recommendations
-- **Uses:** RAG + student history
+- **Trigger:** Background — planned after each submission
+- **Does:** Planned concept tagging, weakness profile updates, and recommendations
+- **Uses:** RAG + student history (planned)
 - **Key rule:** Recommendations must be explainable
 
 ---
 
 ## 7. Architecture in One Sentence
 
-> A **modular monolith** ASP.NET Core backend with a dedicated AI service layer, an Angular frontend, a PostgreSQL database, and a Docker-based code execution sandbox.
+> A **modular monolith** ASP.NET Core backend with a dedicated AI service layer, an Angular frontend, a SQL Server database, and a planned Docker-based code execution sandbox.
 
 See [ARCHITECTURE.md](./docs/architecture/ARCHITECTURE.md) for the full diagram.
 
@@ -106,13 +108,13 @@ See [ARCHITECTURE.md](./docs/architecture/ARCHITECTURE.md) for the full diagram.
 |-----------|--------|--------|
 | Backend framework | ASP.NET Core Web API | ✅ Final |
 | Architecture pattern | Modular Monolith | ✅ Final |
-| Database | PostgreSQL + EF Core | ✅ Final |
+| Database | SQL Server + EF Core | ✅ Final |
 | Auth | JWT (Bearer tokens) | ✅ Final |
 | Frontend | Angular + Tailwind CSS | ✅ Final |
-| Code execution | Docker sandbox | ✅ Final |
+| Code execution | Stubbed execution service; Docker sandbox planned | ⚠️ In progress |
 | Languages supported | Python + C# | ✅ Final |
-| LLM provider | OpenAI or Gemini | ⚠️ Pending decision |
-| Vector DB | Chroma (recommended) | ⚠️ Pending decision |
+| LLM provider | OpenAI (current runtime) | ✅ Final for current implementation |
+| Vector DB | Not wired into runtime yet | ⚠️ Planned |
 
 ---
 
@@ -120,7 +122,7 @@ See [ARCHITECTURE.md](./docs/architecture/ARCHITECTURE.md) for the full diagram.
 
 | Person | Primary Ownership |
 |--------|------------------|
-| Omar | AI agents, prompt engineering, RAG pipeline, vector DB integration |
+| Omar | AI agents, prompt engineering, future RAG pipeline, vector DB integration |
 | Khaled | Backend API structure, domain logic, database schema, EF Core |
 | Badry | Execution engine integration, submission pipeline, API-to-service wiring |
 | Salah | Frontend: student-facing UI (problem list, code editor, hint panel) |

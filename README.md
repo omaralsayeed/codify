@@ -2,7 +2,7 @@
 
 > **Capstone Project · 12-Week MVP · Team of 5**
 
-Codify is a web-based learning platform that helps students solve algorithmic problems through guided AI hints, code submission analysis, performance tracking, and instructor-facing insights. It demonstrates a practical multi-agent AI architecture.
+Codify is a web-based learning platform that helps students solve algorithmic problems through guided AI hints and code submission workflows. The current implementation demonstrates the modular-monolith backend, a live tutor hint flow, and the current execution stub.
 
 ---
 
@@ -40,11 +40,11 @@ Codify is a web-based learning platform that helps students solve algorithmic pr
 ```
 Frontend   → Angular + TypeScript + Tailwind CSS
 Backend    → ASP.NET Core Web API (C#) — Modular Monolith
-Database   → PostgreSQL + Entity Framework Core
+Database   → SQL Server + Entity Framework Core
 Auth       → JWT (Student / Instructor roles)
-AI Layer   → LLM provider (OpenAI or Gemini) + RAG pipeline
-Vector DB  → Chroma (recommended) — TBD
-Execution  → Docker sandbox (Judge0 as fallback)
+AI Layer   → OpenAI-backed tutor agent with JSON validation
+Vector DB  → Planned, not wired into runtime yet
+Execution  → Sample-case run stub; Docker sandbox still pending
 ```
 
 ---
