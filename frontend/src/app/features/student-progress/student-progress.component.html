@@ -374,45 +374,70 @@
         </div>
       </section>
 
-      <!-- ── Chunk 9a: Recommendations ─────────────────────────────────────── -->
-      <section class="prog-card" aria-label="Recommended problems">
+      <!-- ── Recommended for You ───────────────────────────────────────── -->
+      <section class="prog-card rec-section" aria-label="Recommended problems">
         <div class="prog-card__header">
           <div>
             <h2 class="prog-card__title">🎯 Recommended for You</h2>
-            <p class="prog-card__sub">Personalised by the Analytics Agent based on your weak spots.</p>
+            <p class="prog-card__sub">Based on your performance analysis.</p>
           </div>
         </div>
 
-        <div class="rec-list" role="list">
-          @for (rec of analytics.recommendations; track trackByProblemId($index, rec)) {
-            <div class="rec-item" role="listitem">
+        <!-- Empty state -->
+        @if (analytics.recommendations.length === 0) {
+          <div class="rec-empty" role="status">
+            <span class="rec-empty__icon" aria-hidden="true">✨</span>
+            <p class="rec-empty__msg">
+              Solve a few more problems and we'll build your personalised recommendations.
+            </p>
+          </div>
+        }
 
-              <div class="rec-item__left">
-                <span [class]="difficultyBadgeClass(rec.difficulty)">
-                  {{ rec.difficulty }}
-                </span>
-                <span class="rec-item__title">{{ rec.title }}</span>
-                <span class="rec-item__topic">{{ rec.topic }}</span>
-              </div>
+        <!-- Cards grid -->
+        @if (analytics.recommendations.length > 0) {
+          <div class="rec-cards" role="list">
+            @for (rec of analytics.recommendations; track trackByProblemId($index, rec); let i = $index) {
 
-              <div class="rec-item__right">
-                <span class="rec-item__reason">{{ rec.reason }}</span>
-                <button class="btn btn--ghost rec-item__btn"
-                        (click)="practiceRoute({ topicName: rec.topic, topicId: '', attempted: 0, solved: 0, strengthScore: 0, strength: 'weak', aiInsight: null })"
-                        [attr.aria-label]="'Practice ' + rec.title">
-                  Practice
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+              <article class="rec-card"
+                       role="listitem"
+                       [class.rec-card--visible]="recCardVisible[i]"
+                       [attr.aria-label]="rec.title + ', ' + rec.difficulty + ', ' + rec.topic">
+
+                <!-- Card header: title + difficulty badge -->
+                <div class="rec-card__head">
+                  <span class="rec-card__title">{{ rec.title }}</span>
+                  <span [class]="difficultyBadgeClass(rec.difficulty)">{{ rec.difficulty }}</span>
+                </div>
+
+                <!-- Topic pill -->
+                <span class="rec-card__topic-pill">{{ rec.topic }}</span>
+
+                <!-- Reason quote -->
+                <blockquote class="rec-card__reason"
+                            [attr.aria-label]="'Reason: ' + rec.reason">
+                  <span class="rec-card__reason-icon" aria-hidden="true">💬</span>
+                  <p>{{ rec.reason }}</p>
+                </blockquote>
+
+                <!-- CTA -->
+                <a class="rec-card__cta btn btn--primary"
+                   [routerLink]="['/problems', rec.problemId]"
+                   [attr.aria-label]="'Start problem: ' + rec.title">
+                  Start Problem
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
                        stroke="currentColor" stroke-width="2.5"
                        stroke-linecap="round" stroke-linejoin="round"
                        aria-hidden="true">
                     <path d="M5 12h14M12 5l7 7-7 7"/>
                   </svg>
-                </button>
-              </div>
+                </a>
 
-            </div>
-          }
-        </div>
+              </article>
+
+            }
+          </div>
+        }
+
       </section>
 
       <!-- ── Chunk 9b: Hint Usage ───────────────────────────────────────────── -->

@@ -77,11 +77,15 @@ export class StudentProgressComponent implements OnInit, OnDestroy {
   // ── Focus-card stagger visibility (index → visible) ────────────────────────
   focusCardVisible: boolean[] = [];
 
+  // ── Rec-card stagger visibility (index → visible) ──────────────────────────
+  recCardVisible: boolean[] = [];
+
   // ── Timer handles ───────────────────────────────────────────────────────────
   private counterIds:      (ReturnType<typeof setInterval> | null)[] = [];
   private dotTimerIds:     (ReturnType<typeof setTimeout>  | null)[] = [];
   private barTimerId:       ReturnType<typeof setTimeout>  | null    = null;
   private focusTimerIds:   (ReturnType<typeof setTimeout>  | null)[] = [];
+  private recTimerIds:     (ReturnType<typeof setTimeout>  | null)[] = [];
 
   // Teardown
   private readonly destroy$ = new Subject<void>();
@@ -98,6 +102,7 @@ export class StudentProgressComponent implements OnInit, OnDestroy {
     this.clearAllCounters();
     this.clearAllDotTimers();
     this.clearFocusTimers();
+    this.clearRecTimers();
     if (this.barTimerId !== null) clearTimeout(this.barTimerId);
   }
 
@@ -114,9 +119,11 @@ export class StudentProgressComponent implements OnInit, OnDestroy {
     this.dotVisible           = Array(7).fill(false);
     this.barWidths            = {};
     this.focusCardVisible     = [];
+    this.recCardVisible       = [];
     this.clearAllCounters();
     this.clearAllDotTimers();
     this.clearFocusTimers();
+    this.clearRecTimers();
 
     this.analyticsService
       .getStudentAnalytics()
@@ -147,6 +154,16 @@ export class StudentProgressComponent implements OnInit, OnDestroy {
               this.cdr.detectChanges();
             }, 300 + i * 120);
             this.focusTimerIds[i] = id;
+          });
+
+          // Stagger recommendation cards in (offset 400ms, 100ms between)
+          this.recCardVisible = new Array(data.recommendations.length).fill(false);
+          data.recommendations.forEach((_, i) => {
+            const id = setTimeout(() => {
+              this.recCardVisible[i] = true;
+              this.cdr.detectChanges();
+            }, 400 + i * 100);
+            this.recTimerIds[i] = id;
           });
         },
         error: () => {
@@ -259,6 +276,11 @@ export class StudentProgressComponent implements OnInit, OnDestroy {
   private clearFocusTimers(): void {
     this.focusTimerIds.forEach(id => { if (id !== null) clearTimeout(id); });
     this.focusTimerIds = [];
+  }
+
+  private clearRecTimers(): void {
+    this.recTimerIds.forEach(id => { if (id !== null) clearTimeout(id); });
+    this.recTimerIds = [];
   }
 
   private clearAllCounters(): void {

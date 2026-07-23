@@ -811,93 +811,156 @@
   &--tle      { background: $purple-lt; color: $purple; }
 }
 
-// ── Recommendations list ──────────────────────────────────────────────────────
+// ── Recommended for You — cards ───────────────────────────────────────────────
 
-.rec-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  border: 1px solid $border;
-  border-radius: $r-lg;
-  overflow: hidden;
+.rec-section {
+  border-top: 3px solid $blue;
 }
 
-.rec-item {
+// Empty state
+.rec-empty {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  gap: 10px;
+  padding: 36px 0 8px;
+  text-align: center;
+
+  &__icon { font-size: 36px; line-height: 1; }
+  &__msg  {
+    font-size: 14px;
+    color: $muted;
+    font-family: $ff-body;
+    max-width: 340px;
+    line-height: 1.6;
+    margin: 0;
+  }
+}
+
+// Grid — 3 cards on desktop, 2 on tablet, 1 on mobile
+.rec-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
-  padding: 14px 18px;
-  border-bottom: 1px solid $border;
-  background: $white;
-  transition: background 0.12s;
 
-  &:last-child { border-bottom: none; }
+  @media (max-width: $tablet) { grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: $mobile) { grid-template-columns: 1fr; }
+}
 
-  &:hover { background: $ivory; }
+// Individual rec card
+.rec-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: $ivory;
+  border: 1px solid $border;
+  border-radius: $r-lg;
+  padding: 18px 20px 20px;
+  box-shadow: $shadow;
 
-  &__left {
+  // Stagger animation — starts hidden, JS adds --visible
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 0.3s ease,
+              transform 0.3s ease,
+              box-shadow 0.2s ease;
+
+  &--visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  // Elevation on hover
+  &:hover {
+    box-shadow: $shadow-lg;
+    transform: translateY(-3px);
+  }
+
+  // When stagger hasn't fired yet, keep the hover lift suppressed
+  &:not(&--visible):hover {
+    transform: translateY(14px);
+    box-shadow: $shadow;
+  }
+
+  // Header: title left, badge right
+  &__head {
     display: flex;
-    align-items: center;
-    gap: 10px;
-    flex: 1;
-    min-width: 0;
-    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
   }
 
   &__title {
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 700;
     color: $navy;
     font-family: $ff-body;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    line-height: 1.35;
+    flex: 1;
+    min-width: 0;
   }
 
-  &__topic {
-    font-size: 12px;
-    color: $muted;
-    font-family: $ff-mono;
-    white-space: nowrap;
-  }
-
-  &__right {
-    display: flex;
+  // Topic pill — matches the project's section-tag style
+  &__topic-pill {
+    display: inline-flex;
     align-items: center;
-    gap: 12px;
-    flex-shrink: 0;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: $ff-mono;
+    letter-spacing: 0.04em;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: $blue-lt;
+    color: $blue;
+    align-self: flex-start;
+    white-space: nowrap;
   }
 
+  // Reason quote — same style as Chunk 6 AI insight
   &__reason {
-    font-size: 12px;
-    color: $orange;
-    font-family: $ff-body;
-    font-weight: 500;
-    max-width: 240px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    margin: 0;
+    padding: 8px 12px;
+    background: $gold-lt;
+    border-left: 3px solid $gold;
+    border-radius: 0 $r $r 0;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    flex: 1;   // pushes CTA to bottom
 
-    @media (max-width: $tablet) { display: none; }
+    p {
+      font-size: 12px;
+      font-style: italic;
+      color: $navy2;
+      font-family: $ff-body;
+      line-height: 1.55;
+      margin: 0;
+    }
   }
 
-  &__btn {
-    font-size: 12px;
-    padding: 6px 14px;
-    gap: 6px;
-    white-space: nowrap;
+  &__reason-icon {
+    font-size: 13px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  // CTA button — full width, primary, with arrow
+  &__cta {
+    margin-top: auto;
+    width: 100%;
+    gap: 8px;
+    font-size: 13px;
+    padding: 9px 16px;
+    text-decoration: none;
+    justify-content: center;
 
     svg { transition: transform 0.15s; flex-shrink: 0; }
     &:hover svg { transform: translateX(3px); }
-  }
 
-  @media (max-width: $mobile) {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-
-    &__right { width: 100%; justify-content: space-between; }
+    &:focus-visible {
+      outline: 2px solid $white;
+      outline-offset: 2px;
+    }
   }
 }
 
