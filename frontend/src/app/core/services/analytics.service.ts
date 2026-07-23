@@ -24,6 +24,8 @@ import {
   WeeklyActivity,
   ScorePoint,
   RecommendedProblem,
+  StudentAnalytics,
+  MOCK_ANALYTICS,
 } from '../models/analytics.model';
 import { ServiceError } from '../models/submission.model';
 
@@ -152,6 +154,23 @@ export class AnalyticsService {
     //   .pipe(map(r => r.data), catchError(e => this.handleError(e)));
 
     return of(this.mockDashboard().recommendations).pipe(delay(1200));
+  }
+
+  /**
+   * GET /api/analytics/progress
+   *
+   * Returns the full StudentAnalytics payload for the progress page.
+   * Includes summary, topic performance, difficulty breakdown, success rate
+   * history, recent submissions, recommendations, and hint usage.
+   * TODO: replace with real Analytics Agent API call
+   */
+  getStudentAnalytics(): Observable<StudentAnalytics> {
+    // TODO: replace with real Analytics Agent API call
+    // return this.http
+    //   .get<ApiEnvelope<StudentAnalytics>>(`${this.API}/analytics/progress`, { headers: this.headers() })
+    //   .pipe(map(r => r.data), catchError(e => this.handleError(e)));
+
+    return of(MOCK_ANALYTICS).pipe(delay(1200));
   }
 
   // ── Mock data ──────────────────────────────────────────────────────────────

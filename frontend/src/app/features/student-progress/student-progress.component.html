@@ -1,5 +1,69 @@
-<section class="progress-page section-pad">
-  <div class="section-inner">
-    <p>Student Progress — coming soon</p>
+<div class="progress-page">
+  <div class="progress-inner">
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         LOADING STATE — shimmer skeleton
+    ═══════════════════════════════════════════════════════════════════════ -->
+    @if (isLoading) {
+      <div class="skeleton-page" aria-busy="true" aria-label="Loading your progress">
+
+        <!-- Hero strip -->
+        <div class="skeleton-hero">
+          <div class="sk sk--title"></div>
+          <div class="sk sk--sub"></div>
+        </div>
+
+        <!-- Three summary cards -->
+        <div class="skeleton-cards">
+          <div class="sk sk--card"></div>
+          <div class="sk sk--card"></div>
+          <div class="sk sk--card"></div>
+        </div>
+
+        <!-- Two chart placeholders -->
+        <div class="skeleton-charts">
+          <div class="sk sk--chart"></div>
+          <div class="sk sk--chart"></div>
+        </div>
+
+        <!-- Wide block (table placeholder) -->
+        <div class="sk sk--table"></div>
+
+      </div>
+    }
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         ERROR STATE
+    ═══════════════════════════════════════════════════════════════════════ -->
+    @if (!isLoading && error) {
+      <div class="error-state" role="alert">
+        <span class="error-state__icon" aria-hidden="true">⚠</span>
+        <p class="error-state__msg">{{ error }}</p>
+        <button class="btn btn--ghost" (click)="load()">Try Again</button>
+      </div>
+    }
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         LOADED STATE — all sections rendered here in subsequent chunks
+    ═══════════════════════════════════════════════════════════════════════ -->
+    @if (!isLoading && !error && analytics) {
+
+      <!-- Page header -->
+      <header class="page-header">
+        <div>
+          <span class="section-tag tag-teal">My Progress</span>
+          <h1 class="page-title">
+            {{ analytics.summary.studentName }}'s Learning Journey
+          </h1>
+          <p class="page-subtitle">
+            Track your performance, spot weak areas, and follow personalised recommendations.
+          </p>
+        </div>
+      </header>
+
+      <!-- Sections will be added chunk by chunk below this comment -->
+
+    }
+
   </div>
-</section>
+</div>
