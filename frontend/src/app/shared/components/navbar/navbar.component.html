@@ -11,15 +11,25 @@
       <a routerLink="/" fragment="how"      class="nav-link">How it works</a>
       <a routerLink="/" fragment="student"  class="nav-link">For students</a>
       <a routerLink="/" fragment="instructor" class="nav-link">For instructors</a>
-      <button class="btn btn--ghost" routerLink="/auth/login">Log in</button>
-      <button class="btn btn--primary" routerLink="/auth/register">Get started</button>
+      <button class="btn btn--ghost"    (click)="navigateTo('/auth/login')">Log in</button>
+      <button class="btn btn--primary"  (click)="navigateTo('/auth/register')">Get started</button>
     </div>
   }
 
   <!-- Desktop: Logged-in links -->
   @if (auth.isLoggedIn()) {
     <div class="nav-links nav-links--desktop">
-      <a routerLink="/problems" class="nav-link">Problems</a>
+      <a routerLink="/problems"
+         routerLinkActive="nav-link--active"
+         class="nav-link">Problems</a>
+
+      <a routerLink="/dashboard"
+         routerLinkActive="nav-link--active"
+         class="nav-link">Dashboard</a>
+
+      <a routerLink="/progress"
+         routerLinkActive="nav-link--active"
+         class="nav-link">Progress</a>
 
       <!-- Notification Bell -->
       <div class="notif-container">
@@ -59,49 +69,29 @@
               </div>
             </div>
             <div class="quick-actions">
-              <a routerLink="/dashboard" class="quick-action">
+              <button class="quick-action" (click)="navigateTo('/dashboard')">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                  <rect x="3" y="3" width="7" height="7"></rect>
+                  <rect x="14" y="3" width="7" height="7"></rect>
+                  <rect x="14" y="14" width="7" height="7"></rect>
+                  <rect x="3" y="14" width="7" height="7"></rect>
                 </svg>
-                <span>Notebook</span>
-              </a>
-              <a routerLink="/progress" class="quick-action">
+                <span>Dashboard</span>
+              </button>
+              <button class="quick-action" (click)="navigateTo('/problems')">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="16 18 22 12 16 6"></polyline>
+                  <polyline points="8 6 2 12 8 18"></polyline>
+                </svg>
+                <span>Problems</span>
+              </button>
+              <button class="quick-action" (click)="navigateTo('/progress')">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <line x1="18" y1="20" x2="18" y2="10"></line>
                   <line x1="12" y1="20" x2="12" y2="4"></line>
                   <line x1="6" y1="20" x2="6" y2="14"></line>
                 </svg>
                 <span>Progress</span>
-              </a>
-            </div>
-            <div class="profile-menu">
-              <button class="menu-item">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="3"></circle>
-                  <path d="M12 1v6m0 6v6"></path>
-                  <path d="m4.93 4.93 4.24 4.24m5.66 5.66 4.24 4.24"></path>
-                  <path d="M1 12h6m6 0h6"></path>
-                  <path d="m4.93 19.07 4.24-4.24m5.66-5.66 4.24-4.24"></path>
-                </svg>
-                <span>Settings</span>
-              </button>
-              <button class="menu-item">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="5"></circle>
-                  <line x1="12" y1="1" x2="12" y2="3"></line>
-                  <line x1="12" y1="21" x2="12" y2="23"></line>
-                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-                  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-                  <line x1="1" y1="12" x2="3" y2="12"></line>
-                  <line x1="21" y1="12" x2="23" y2="12"></line>
-                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-                  <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-                </svg>
-                <span>Appearance</span>
-                <svg class="menu-arrow" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="9 18 15 12 9 6"></polyline>
-                </svg>
               </button>
             </div>
             <div class="profile-divider"></div>
@@ -143,8 +133,10 @@
           <span class="streak-emoji">🔥</span>
           <span class="streak-count">{{ streakDays }}</span>
         </div>
-        <!-- Avatar -->
-        <div class="nav-avatar">{{ auth.user()?.avatarInitials }}</div>
+        <!-- Avatar (opens mobile menu) -->
+        <button class="profile-trigger" (click)="toggleMobileMenu($event)" aria-label="Open menu">
+          <div class="nav-avatar">{{ auth.user()?.avatarInitials }}</div>
+        </button>
       </div>
     }
 
@@ -165,8 +157,8 @@
         <a routerLink="/" fragment="student"    class="mobile-link" (click)="isMobileMenuOpen=false">For students</a>
         <a routerLink="/" fragment="instructor" class="mobile-link" (click)="isMobileMenuOpen=false">For instructors</a>
         <div class="mobile-menu-actions">
-          <button class="btn btn--ghost" routerLink="/auth/login"    (click)="isMobileMenuOpen=false">Log in</button>
-          <button class="btn btn--primary" routerLink="/auth/register" (click)="isMobileMenuOpen=false">Get started</button>
+          <button class="btn btn--ghost"   (click)="navigateTo('/auth/login')">Log in</button>
+          <button class="btn btn--primary" (click)="navigateTo('/auth/register')">Get started</button>
         </div>
       }
       @if (auth.isLoggedIn()) {
@@ -177,9 +169,18 @@
             <div class="profile-plan">Free Plan</div>
           </div>
         </div>
-        <a routerLink="/problems"  class="mobile-link" (click)="isMobileMenuOpen=false">Problems</a>
-        <a routerLink="/dashboard" class="mobile-link" (click)="isMobileMenuOpen=false">Notebook</a>
-        <a routerLink="/progress"  class="mobile-link" (click)="isMobileMenuOpen=false">Progress</a>
+        <a routerLink="/problems"
+           routerLinkActive="mobile-link--active"
+           class="mobile-link"
+           (click)="isMobileMenuOpen=false">Problems</a>
+        <a routerLink="/dashboard"
+           routerLinkActive="mobile-link--active"
+           class="mobile-link"
+           (click)="isMobileMenuOpen=false">Dashboard</a>
+        <a routerLink="/progress"
+           routerLinkActive="mobile-link--active"
+           class="mobile-link"
+           (click)="isMobileMenuOpen=false">Progress</a>
         <button class="mobile-link mobile-link--danger" (click)="logout()">Log out</button>
       }
     </div>

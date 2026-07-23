@@ -11,7 +11,7 @@ import { AuthService } from '../../../core/services/auth.service';
 })
 export class NavbarComponent {
   auth = inject(AuthService);
-  private router = inject(Router);
+  readonly router = inject(Router);
 
   isNotifOpen = false;
   isProfileOpen = false;
@@ -21,7 +21,15 @@ export class NavbarComponent {
   logout(): void {
     this.auth.logout();
     this.isMobileMenuOpen = false;
+    this.isProfileOpen = false;
     this.router.navigate(['/']);
+  }
+
+  navigateTo(path: string): void {
+    this.router.navigate([path]);
+    this.isProfileOpen = false;
+    this.isMobileMenuOpen = false;
+    this.isNotifOpen = false;
   }
 
   toggleMobileMenu(event: Event): void {

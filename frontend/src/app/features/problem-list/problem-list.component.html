@@ -44,7 +44,8 @@
         </thead>
         <tbody>
           @for (problem of filteredProblems; track trackByProblemId($index, problem)) {
-            <tr>
+            <tr class="problem-row" [routerLink]="['/problems', problem.id]" role="link" tabindex="0"
+                (keydown.enter)="null" [attr.aria-label]="'Open problem: ' + problem.title">
               <td class="title">{{ problem.title }}</td>
               <td>{{ problem.topicLabel }}</td>
               <td><app-difficulty-badge [difficulty]="problem.difficulty" /></td>
