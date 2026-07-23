@@ -326,50 +326,51 @@
 
       </div>
 
-      <!-- ── Chunk 8: Recent Submissions ──────────────────────────────────── -->
-      <section class="prog-card" aria-label="Recent submissions">
+      <!-- ── Recent Activity ────────────────────────────────────────────── -->
+      <section class="prog-card" aria-label="Recent activity">
         <div class="prog-card__header">
           <div>
-            <h2 class="prog-card__title">Recent Submissions</h2>
-            <p class="prog-card__sub">Your last {{ analytics.recentSubmissions.length }} attempts.</p>
+            <h2 class="prog-card__title">Recent Activity</h2>
+            <p class="prog-card__sub">Your last {{ analytics.recentSubmissions.length }} submissions.</p>
           </div>
         </div>
 
-        <div class="sub-table-wrap">
-          <table class="sub-table" aria-label="Recent submissions table">
-            <thead>
-              <tr>
-                <th scope="col">Problem</th>
-                <th scope="col">Difficulty</th>
-                <th scope="col">Status</th>
-                <th scope="col">Language</th>
-                <th scope="col">When</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (sub of analytics.recentSubmissions; track trackBySubmissionId($index, sub)) {
-                <tr>
-                  <td class="sub-table__title">{{ sub.problemTitle }}</td>
-                  <td>
-                    <span [class]="difficultyBadgeClass(sub.difficulty)">
-                      {{ sub.difficulty }}
-                    </span>
-                  </td>
-                  <td>
-                    <span [class]="submissionStatusClass(sub.status)"
-                          [attr.aria-label]="sub.status">
-                      <span class="sub-status__icon" aria-hidden="true">
-                        {{ submissionStatusIcon(sub.status) }}
-                      </span>
-                      {{ sub.status }}
-                    </span>
-                  </td>
-                  <td class="sub-table__lang">{{ sub.language }}</td>
-                  <td class="sub-table__time">{{ relativeTime(sub.submittedAt) }}</td>
-                </tr>
-              }
-            </tbody>
-          </table>
+        <div class="activity-list" role="list">
+          @for (sub of analytics.recentSubmissions; track trackBySubmissionId($index, sub)) {
+
+            <a class="activity-row"
+               [routerLink]="['/problems', sub.problemId]"
+               role="listitem"
+               [attr.aria-label]="sub.problemTitle + ', ' + sub.difficulty + ', ' + sub.status + ', ' + relativeTime(sub.submittedAt)">
+
+              <!-- Left: title + meta row -->
+              <div class="activity-row__main">
+                <span class="activity-row__title">{{ sub.problemTitle }}</span>
+                <div class="activity-row__meta">
+                  <span [class]="difficultyBadgeClass(sub.difficulty)">{{ sub.difficulty }}</span>
+                  <span [class]="submissionStatusClass(sub.status)">
+                    <span class="sub-status__icon" aria-hidden="true">{{ submissionStatusIcon(sub.status) }}</span>
+                    {{ sub.status }}
+                  </span>
+                  <span class="activity-row__lang">{{ sub.language }}</span>
+                </div>
+              </div>
+
+              <!-- Right: time + arrow -->
+              <div class="activity-row__right">
+                <span class="activity-row__time">{{ relativeTime(sub.submittedAt) }}</span>
+                <svg class="activity-row__arrow"
+                     width="16" height="16" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                     aria-hidden="true">
+                  <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+              </div>
+
+            </a>
+
+          }
         </div>
       </section>
 

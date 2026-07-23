@@ -7,7 +7,7 @@ import {
   ViewChild,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 
 import { AnalyticsService }  from '../../core/services/analytics.service';
@@ -34,7 +34,7 @@ const STRENGTH_ORDER: Record<TopicStrength, number> = {
 @Component({
   selector: 'app-student-progress',
   standalone: true,
-  imports: [CommonModule, TopicRadarChartComponent, SuccessRateChartComponent, DifficultyDonutChartComponent],
+  imports: [CommonModule, RouterLink, TopicRadarChartComponent, SuccessRateChartComponent, DifficultyDonutChartComponent],
   templateUrl: './student-progress.component.html',
   styleUrl: './student-progress.component.scss',
 })
@@ -332,13 +332,19 @@ export class StudentProgressComponent implements OnInit, OnDestroy {
 
   relativeTime(iso: string): string {
     const diff = Date.now() - new Date(iso).getTime();
-    const mins  = Math.floor(diff / 60000);
-    if (mins < 1)   return 'just now';
-    if (mins < 60)  return `${mins}m ago`;
+    const mins  = Math.floor(diff / 60_000);
+    if (mins < 1)    return 'just now';
+    if (mins < 60)   return `${mins}m ago`;
     const hrs = Math.floor(mins / 60);
-    if (hrs  < 24)  return `${hrs}h ago`;
+    if (hrs  < 24)   return `${hrs}h ago`;
     const days = Math.floor(hrs / 24);
-    return `${days}d ago`;
+    if (days === 1)  return 'Yesterday';
+    if (days < 7)    return `${days} days ago`;
+    const weeks = Math.floor(days / 7);
+    if (weeks < 5)   return `${weeks}w ago`;
+    const months = Math.floor(days / 30);
+    if (months < 12) return `${months}mo ago`;
+    return `${Math.floor(months / 12)}y ago`;
   }
 
   trackBySubmissionId(_i: number, s: { submissionId: string }): string {

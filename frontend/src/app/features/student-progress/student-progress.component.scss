@@ -692,69 +692,101 @@
   }
 }
 
-// ── Recent Submissions table ──────────────────────────────────────────────────
+// ── Recent Activity list ──────────────────────────────────────────────────────
 
-.sub-table-wrap {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+.activity-list {
+  display: flex;
+  flex-direction: column;
   border: 1px solid $border;
   border-radius: $r-lg;
+  overflow: hidden;
 }
 
-.sub-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-family: $ff-body;
-  font-size: 14px;
+.activity-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  text-decoration: none;
+  color: inherit;
+  border-bottom: 1px solid $border;
+  background: $white;
+  transition: background 0.13s, transform 0.13s;
+  cursor: pointer;
 
-  th {
-    text-align: left;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: $navy2;
-    background: $ivory;
-    padding: 12px 16px;
-    white-space: nowrap;
-    border-bottom: 1px solid $border;
+  &:last-child { border-bottom: none; }
+
+  &:hover {
+    background: $blue-lt;
+
+    .activity-row__arrow {
+      transform: translateX(4px);
+    }
   }
 
-  td {
-    padding: 13px 16px;
-    border-bottom: 1px solid $border;
-    color: $charcoal;
-    vertical-align: middle;
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: -2px;
   }
 
-  tbody tr {
-    transition: background 0.12s;
-
-    &:last-child td { border-bottom: none; }
-
-    &:hover { background: $ivory; }
+  // Main: title above, meta row below
+  &__main {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    flex: 1;
   }
 
   &__title {
+    font-size: 14px;
     font-weight: 600;
     color: $navy;
-    max-width: 260px;
+    font-family: $ff-body;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+
+    // On mobile, status badge wraps naturally under the title
+    @media (max-width: $mobile) {
+      gap: 6px;
+    }
+  }
+
   &__lang {
-    font-family: $ff-mono;
     font-size: 12px;
+    font-family: $ff-mono;
     color: $muted;
+    white-space: nowrap;
+  }
+
+  // Right side: timestamp + arrow
+  &__right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
   }
 
   &__time {
-    font-family: $ff-mono;
     font-size: 12px;
+    font-family: $ff-mono;
     color: $muted;
     white-space: nowrap;
+  }
+
+  &__arrow {
+    color: $blue;
+    flex-shrink: 0;
+    transition: transform 0.15s ease;
   }
 }
 
