@@ -23,9 +23,9 @@
          routerLinkActive="nav-link--active"
          class="nav-link">Problems</a>
 
-      <a routerLink="/dashboard"
+      <a [routerLink]="profileUrl"
          routerLinkActive="nav-link--active"
-         class="nav-link">Dashboard</a>
+         class="nav-link">Profile</a>
 
       <a routerLink="/progress"
          routerLinkActive="nav-link--active"
@@ -69,14 +69,12 @@
               </div>
             </div>
             <div class="quick-actions">
-              <button class="quick-action" (click)="navigateTo('/dashboard')">
+              <button class="quick-action" (click)="navigateTo(profileUrl)">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="3" width="7" height="7"></rect>
-                  <rect x="14" y="3" width="7" height="7"></rect>
-                  <rect x="14" y="14" width="7" height="7"></rect>
-                  <rect x="3" y="14" width="7" height="7"></rect>
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
                 </svg>
-                <span>Dashboard</span>
+                <span>My Profile</span>
               </button>
               <button class="quick-action" (click)="navigateTo('/problems')">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -173,10 +171,10 @@
            routerLinkActive="mobile-link--active"
            class="mobile-link"
            (click)="isMobileMenuOpen=false">Problems</a>
-        <a routerLink="/dashboard"
+        <a [routerLink]="profileUrl"
            routerLinkActive="mobile-link--active"
            class="mobile-link"
-           (click)="isMobileMenuOpen=false">Dashboard</a>
+           (click)="isMobileMenuOpen=false">Profile</a>
         <a routerLink="/progress"
            routerLinkActive="mobile-link--active"
            class="mobile-link"

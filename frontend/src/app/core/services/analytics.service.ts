@@ -26,6 +26,9 @@ import {
   RecommendedProblem,
   StudentAnalytics,
   MOCK_ANALYTICS,
+  PublicProfileData,
+  ActivityDay,
+  LanguageStat,
 } from '../models/analytics.model';
 import { ServiceError } from '../models/submission.model';
 
@@ -173,6 +176,27 @@ export class AnalyticsService {
     return of(this.mockStudentAnalytics()).pipe(delay(1200));
   }
 
+  /**
+   * GET /api/profile/:username
+   *
+   * Returns the public profile data for any user by username slug.
+   * No auth required — this is a public endpoint.
+   * TODO: replace with real Analytics Agent API call
+   */
+  // ── Public profile mock — precomputed once at construction ─────────────────
+  // Precomputing avoids 730 Math.random() calls on every navigation
+  private readonly _cachedProfile: PublicProfileData = this.buildMockPublicProfile();
+
+  getPublicProfile(username: string): Observable<PublicProfileData> {
+    // TODO: replace with real Analytics Agent API call
+    // return this.http
+    //   .get<ApiEnvelope<PublicProfileData>>(`${this.API}/profile/${username}`)
+    //   .pipe(map(r => r.data), catchError(e => this.handleError(e)));
+
+    // Synchronous — no delay, profile data is pre-built at service init
+    return of(this._cachedProfile);
+  }
+
   // ── Mock data ──────────────────────────────────────────────────────────────
 
   /**
@@ -318,5 +342,78 @@ export class AnalyticsService {
         estimatedMinutes:   15,
       },
     ];
+  }
+
+  // ── Public profile mock ─────────────────────────────────────────────────────
+
+  private buildMockPublicProfile(): PublicProfileData {
+    const today = new Date();
+
+    // Build 365-day activity grid with realistic sparse submissions
+    const activityGrid: ActivityDay[] = Array.from({ length: 365 }, (_, i) => {
+      const d = new Date(today);
+      d.setDate(today.getDate() - (364 - i));
+      // ~40% of days have activity; recent days are denser
+      const recency = i / 365; // 0 = oldest, 1 = today
+      const prob    = 0.25 + recency * 0.35;
+      const count   = Math.random() < prob ? Math.ceil(Math.random() * 4) : 0;
+      return { date: d.toISOString().slice(0, 10), count };
+    });
+
+    const totalActiveDays       = activityGrid.filter(d => d.count > 0).length;
+    const totalSubmissions      = activityGrid.reduce((s, d) => s + d.count, 0);
+
+    // Compute streak from the grid end
+    let currentStreak = 0;
+    for (let i = activityGrid.length - 1; i >= 0; i--) {
+      if (activityGrid[i].count > 0) currentStreak++;
+      else break;
+    }
+    let longestStreak = 0;
+    let run = 0;
+    for (const d of activityGrid) {
+      if (d.count > 0) { run++; longestStreak = Math.max(longestStreak, run); }
+      else run = 0;
+    }
+
+    const recentAccepted: PublicProfileData['recentAccepted'] = [
+      { submissionId: 's1', problemId: 'p1', problemTitle: 'Two Sum',                 difficulty: 'Easy',   status: 'Accepted', language: 'Python',     submittedAt: this.daysAgo(1) },
+      { submissionId: 's3', problemId: 'p3', problemTitle: 'Climbing Stairs',          difficulty: 'Easy',   status: 'Accepted', language: 'C#',         submittedAt: this.daysAgo(2) },
+      { submissionId: 's5', problemId: 'p5', problemTitle: 'Valid Parentheses',        difficulty: 'Easy',   status: 'Accepted', language: 'JavaScript', submittedAt: this.daysAgo(3) },
+      { submissionId: 's6', problemId: 'p6', problemTitle: 'Maximum Subarray',         difficulty: 'Medium', status: 'Accepted', language: 'Python',     submittedAt: this.daysAgo(7) },
+      { submissionId: 's7', problemId: 'p7', problemTitle: 'Binary Search',            difficulty: 'Easy',   status: 'Accepted', language: 'Python',     submittedAt: this.daysAgo(10) },
+      { submissionId: 's8', problemId: 'p8', problemTitle: 'Merge Intervals',          difficulty: 'Medium', status: 'Accepted', language: 'C#',         submittedAt: this.daysAgo(14) },
+      { submissionId: 's9', problemId: 'p9', problemTitle: 'Reverse Linked List',      difficulty: 'Easy',   status: 'Accepted', language: 'Python',     submittedAt: this.daysAgo(18) },
+      { submissionId: 's10',problemId: 'p3', problemTitle: 'Climbing Stairs',          difficulty: 'Easy',   status: 'Accepted', language: 'Python',     submittedAt: this.daysAgo(25) },
+    ];
+
+    return {
+      user: {
+        username:      'test_student',
+        name:          'Test Student',
+        avatarInitials:'TS',
+        role:          'student',
+        joinedAt:      new Date(today.getFullYear(), 0, 15).toISOString(),
+      },
+      totalSolved:    31,
+      totalAttempted: 47,
+      successRate:    66,
+      streak: { currentStreak, longestStreak, totalActiveDays, totalSubmissionsLastYear: totalSubmissions },
+      difficultyBreakdown: { easy: 18, medium: 10, hard: 3 },
+      languageStats: [
+        { language: 'Python',     solved: 22 },
+        { language: 'C#',         solved:  7 },
+        { language: 'JavaScript', solved:  2 },
+      ],
+      topicStats:     MOCK_ANALYTICS.topics,
+      activityGrid,
+      recentAccepted,
+    };
+  }
+
+  private daysAgo(n: number): string {
+    const d = new Date();
+    d.setDate(d.getDate() - n);
+    return d.toISOString();
   }
 }

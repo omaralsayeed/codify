@@ -1,0 +1,236 @@
+<div class="profile-page">
+
+  <!-- ── LOADING ──────────────────────────────────────────────────────────── -->
+  @if (isLoading) {
+    <div class="profile-layout">
+      <!-- Left skeleton -->
+      <aside class="profile-sidebar">
+        <div class="sk sk--avatar"></div>
+        <div class="sk sk--line sk--name"></div>
+        <div class="sk sk--line sk--sub"></div>
+        <div class="sk sk--block"></div>
+        <div class="sk sk--block"></div>
+      </aside>
+      <!-- Right skeleton -->
+      <main class="profile-main">
+        <div class="sk sk--hero"></div>
+        <div class="sk sk--heatmap"></div>
+        <div class="sk sk--table"></div>
+      </main>
+    </div>
+  }
+
+  <!-- ── ERROR ─────────────────────────────────────────────────────────────── -->
+  @if (!isLoading && error) {
+    <div class="profile-error" role="alert">
+      <span aria-hidden="true">⚠</span>
+      <p>{{ error }}</p>
+    </div>
+  }
+
+  <!-- ── LOADED ────────────────────────────────────────────────────────────── -->
+  @if (!isLoading && !error && profile) {
+    <div class="profile-layout">
+
+      <!-- ════════════════════════════════════════════════
+           LEFT SIDEBAR
+      ════════════════════════════════════════════════ -->
+      <aside class="profile-sidebar">
+
+        <!-- Avatar -->
+        <div class="avatar-wrap">
+          <div class="avatar-circle"
+               [style.background]="avatarColor(profile.user.avatarInitials)"
+               aria-hidden="true">
+            {{ profile.user.avatarInitials }}
+          </div>
+        </div>
+
+        <!-- Identity -->
+        <div class="sidebar-identity">
+          <h1 class="sidebar-name">{{ profile.user.name }}</h1>
+          <span class="sidebar-username">@{{ profile.user.username }}</span>
+          <span class="sidebar-role">{{ profile.user.role | titlecase }}</span>
+        </div>
+
+        <!-- Streak + joined -->
+        <div class="sidebar-meta">
+          <div class="sidebar-meta__row">
+            <span aria-hidden="true">🔥</span>
+            <span>{{ profile.streak.currentStreak }}-day streak</span>
+          </div>
+          <div class="sidebar-meta__row">
+            <span aria-hidden="true">📅</span>
+            <span>Joined {{ joinedYear(profile.user.joinedAt) }}</span>
+          </div>
+        </div>
+
+        <hr class="sidebar-divider" aria-hidden="true" />
+
+        <!-- Difficulty breakdown -->
+        <div class="sidebar-section" aria-label="Problems solved by difficulty">
+          <h2 class="sidebar-section__title">Problems Solved</h2>
+
+          <!-- Solved ring summary -->
+          <div class="solved-summary">
+            <div class="solved-total">
+              <span class="solved-total__num">{{ profile.totalSolved }}</span>
+              <span class="solved-total__denom">/ {{ profile.totalAttempted }}</span>
+            </div>
+            <span class="solved-total__lbl">Solved</span>
+          </div>
+
+          <div class="diff-bars">
+            <div class="diff-row">
+              <span class="diff-row__label diff-row__label--easy">Easy</span>
+              <div class="diff-row__track">
+                <div class="diff-row__fill diff-row__fill--easy"
+                     [style.width.%]="difficultyPercent(profile.difficultyBreakdown.easy, profile.totalSolved)">
+                </div>
+              </div>
+              <span class="diff-row__count">{{ profile.difficultyBreakdown.easy }}</span>
+            </div>
+            <div class="diff-row">
+              <span class="diff-row__label diff-row__label--medium">Medium</span>
+              <div class="diff-row__track">
+                <div class="diff-row__fill diff-row__fill--medium"
+                     [style.width.%]="difficultyPercent(profile.difficultyBreakdown.medium, profile.totalSolved)">
+                </div>
+              </div>
+              <span class="diff-row__count">{{ profile.difficultyBreakdown.medium }}</span>
+            </div>
+            <div class="diff-row">
+              <span class="diff-row__label diff-row__label--hard">Hard</span>
+              <div class="diff-row__track">
+                <div class="diff-row__fill diff-row__fill--hard"
+                     [style.width.%]="difficultyPercent(profile.difficultyBreakdown.hard, profile.totalSolved)">
+                </div>
+              </div>
+              <span class="diff-row__count">{{ profile.difficultyBreakdown.hard }}</span>
+            </div>
+          </div>
+        </div>
+
+        <hr class="sidebar-divider" aria-hidden="true" />
+
+        <!-- Languages -->
+        <div class="sidebar-section" aria-label="Languages used">
+          <h2 class="sidebar-section__title">Languages</h2>
+          <ul class="lang-list">
+            @for (lang of profile.languageStats; track lang.language) {
+              <li class="lang-item">
+                <span class="lang-item__name">{{ lang.language }}</span>
+                <span class="lang-item__count">{{ lang.solved }} solved</span>
+              </li>
+            }
+          </ul>
+        </div>
+
+        <hr class="sidebar-divider" aria-hidden="true" />
+
+        <!-- Topic strengths -->
+        <div class="sidebar-section" aria-label="Topic strengths">
+          <h2 class="sidebar-section__title">Topics</h2>
+          <ul class="topic-list">
+            @for (t of profile.topicStats; track trackByTopic($index, t)) {
+              <li class="topic-item">
+                <span class="topic-item__name">{{ t.topicName }}</span>
+                <span [class]="topicBadgeClass(t.strength)">{{ t.strength }}</span>
+              </li>
+            }
+          </ul>
+        </div>
+
+      </aside>
+
+      <!-- ════════════════════════════════════════════════
+           RIGHT MAIN
+      ════════════════════════════════════════════════ -->
+      <main class="profile-main">
+
+        <!-- Summary row -->
+        <section class="summary-row" aria-label="Overall statistics">
+          <div class="summary-stat">
+            <span class="summary-stat__val">{{ profile.totalSolved }}</span>
+            <span class="summary-stat__lbl">Solved</span>
+          </div>
+          <div class="summary-sep" aria-hidden="true"></div>
+          <div class="summary-stat">
+            <span class="summary-stat__val">{{ profile.totalAttempted }}</span>
+            <span class="summary-stat__lbl">Attempted</span>
+          </div>
+          <div class="summary-sep" aria-hidden="true"></div>
+          <div class="summary-stat">
+            <span class="summary-stat__val">{{ profile.successRate }}<span class="summary-stat__unit">%</span></span>
+            <span class="summary-stat__lbl">Success Rate</span>
+          </div>
+          <div class="summary-sep" aria-hidden="true"></div>
+          <div class="summary-stat">
+            <span class="summary-stat__val">{{ profile.streak.longestStreak }}</span>
+            <span class="summary-stat__lbl">Best Streak</span>
+          </div>
+        </section>
+
+        <!-- Difficulty pills -->
+        <div class="diff-pills" aria-label="Problems solved by difficulty">
+          <span class="diff-pill diff-pill--easy">
+            Easy <strong>{{ profile.difficultyBreakdown.easy }}</strong>
+          </span>
+          <span class="diff-pill diff-pill--medium">
+            Medium <strong>{{ profile.difficultyBreakdown.medium }}</strong>
+          </span>
+          <span class="diff-pill diff-pill--hard">
+            Hard <strong>{{ profile.difficultyBreakdown.hard }}</strong>
+          </span>
+        </div>
+
+        <!-- Activity heatmap -->
+        <section class="heatmap-section" aria-label="Submission activity">
+          <div class="heatmap-header">
+            <span class="heatmap-header__stat">
+              {{ profile.streak.totalSubmissionsLastYear }} submissions in the past year
+            </span>
+            <span class="heatmap-header__meta">
+              Total active days: {{ profile.streak.totalActiveDays }}
+              &nbsp;·&nbsp;
+              Max streak: {{ profile.streak.longestStreak }} days
+            </span>
+          </div>
+
+          <app-activity-heatmap [days]="profile.activityGrid" />
+        </section>
+
+        <!-- Recent accepted submissions -->
+        <section class="recent-section" aria-label="Recent accepted submissions">
+          <h2 class="recent-section__title">Recent AC</h2>
+
+          <div class="recent-list" role="list">
+            @for (sub of profile.recentAccepted; track trackBySubmissionId($index, sub)) {
+              <a class="recent-row"
+                 [routerLink]="['/problems', sub.problemId]"
+                 role="listitem"
+                 [attr.aria-label]="sub.problemTitle + ', ' + sub.difficulty + ', ' + relativeTime(sub.submittedAt)">
+
+                <span class="recent-row__title">{{ sub.problemTitle }}</span>
+
+                <span class="recent-row__right">
+                  <span [class]="difficultyClass(sub.difficulty)">{{ sub.difficulty }}</span>
+                  <span class="recent-row__time">{{ relativeTime(sub.submittedAt) }}</span>
+                  <svg class="recent-row__arrow" width="14" height="14" viewBox="0 0 24 24"
+                       fill="none" stroke="currentColor" stroke-width="2"
+                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                  </svg>
+                </span>
+
+              </a>
+            }
+          </div>
+        </section>
+
+      </main><!-- /profile-main -->
+
+    </div><!-- /profile-layout -->
+  }
+
+</div><!-- /profile-page -->

@@ -1,0 +1,540 @@
+@use '../../styles/variables' as *;
+
+// ── Page shell ────────────────────────────────────────────────────────────────
+
+.profile-page {
+  background: $ivory;
+  min-height: calc(100vh - 64px);
+  padding: 40px 2rem 80px;
+
+  @media (max-width: $mobile) {
+    padding: 24px 1rem 60px;
+  }
+}
+
+// ── Two-column layout ─────────────────────────────────────────────────────────
+
+.profile-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 28px;
+  max-width: 1100px;
+  margin: 0 auto;
+  align-items: start;
+
+  @media (max-width: $tablet) {
+    grid-template-columns: 240px 1fr;
+    gap: 20px;
+  }
+
+  @media (max-width: $mobile) {
+    grid-template-columns: 1fr;
+  }
+}
+
+// ── Skeleton ──────────────────────────────────────────────────────────────────
+
+@keyframes shimmer {
+  0%   { background-position: -600px 0; }
+  100% { background-position:  600px 0; }
+}
+
+%sk { background: linear-gradient(90deg, $ivory2 25%, #ede9e0 50%, $ivory2 75%);
+      background-size: 600px 100%; animation: shimmer 1.5s infinite; border-radius: $r; }
+
+.sk {
+  @extend %sk;
+  &--avatar  { width: 80px; height: 80px; border-radius: 50%; margin-bottom: 12px; }
+  &--name    { height: 20px; width: 140px; }
+  &--sub     { height: 14px; width: 100px; margin-top: 8px; }
+  &--block   { height: 100px; border-radius: $r-lg; margin-top: 16px; }
+  &--hero    { height: 72px; border-radius: $r-lg; }
+  &--heatmap { height: 140px; border-radius: $r-lg; margin-top: 20px; }
+  &--table   { height: 220px; border-radius: $r-lg; margin-top: 20px; }
+  &--line    { display: block; }
+}
+
+// ── Error ─────────────────────────────────────────────────────────────────────
+
+.profile-error {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 10px; padding: 80px 24px; text-align: center;
+  font-family: $ff-body; font-size: 16px; color: $muted;
+  span { font-size: 36px; }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// LEFT SIDEBAR
+// ═════════════════════════════════════════════════════════════════════════════
+
+.profile-sidebar {
+  background: $white;
+  border: 1px solid $border;
+  border-radius: $r-lg;
+  padding: 24px 20px;
+  box-shadow: $shadow;
+  position: sticky;
+  top: 80px;    // below navbar (64px) + 16px gap
+
+  @media (max-width: $mobile) {
+    position: static;
+  }
+}
+
+// Avatar
+.avatar-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.avatar-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: $ff-mono;
+  font-size: 28px;
+  font-weight: 700;
+  color: $white;
+  flex-shrink: 0;
+}
+
+// Identity
+.sidebar-identity {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.sidebar-name {
+  font-family: $ff-body;
+  font-size: 17px;
+  font-weight: 700;
+  color: $navy;
+  margin: 0;
+}
+
+.sidebar-username {
+  font-family: $ff-mono;
+  font-size: 12px;
+  color: $muted;
+}
+
+.sidebar-role {
+  display: inline-block;
+  font-size: 11px;
+  font-family: $ff-body;
+  font-weight: 600;
+  background: $blue-lt;
+  color: $blue;
+  padding: 2px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.03em;
+  margin-top: 4px;
+}
+
+// Meta (streak + joined)
+.sidebar-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13px;
+    font-family: $ff-body;
+    color: $charcoal;
+  }
+}
+
+.sidebar-divider {
+  border: none;
+  border-top: 1px solid $border;
+  margin: 12px 0;
+}
+
+// Section header
+.sidebar-section {
+  margin-bottom: 4px;
+
+  &__title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: $navy2;
+    font-family: $ff-body;
+    margin: 0 0 10px;
+  }
+}
+
+// Solved summary
+.solved-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.solved-total {
+  &__num {
+    font-family: $ff-display;
+    font-size: 32px;
+    color: $navy;
+    line-height: 1;
+  }
+  &__denom {
+    font-family: $ff-body;
+    font-size: 14px;
+    color: $muted;
+    margin-left: 2px;
+  }
+  &__lbl {
+    font-size: 11px;
+    color: $muted;
+    font-family: $ff-body;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    margin-top: 2px;
+  }
+}
+
+// Difficulty bars
+.diff-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.diff-row {
+  display: grid;
+  grid-template-columns: 52px 1fr 28px;
+  align-items: center;
+  gap: 8px;
+
+  &__label {
+    font-size: 12px;
+    font-family: $ff-body;
+    font-weight: 600;
+    &--easy   { color: $teal; }
+    &--medium { color: $gold; }
+    &--hard   { color: $red;  }
+  }
+
+  &__track {
+    height: 6px;
+    background: $ivory2;
+    border-radius: 20px;
+    overflow: hidden;
+  }
+
+  &__fill {
+    height: 100%;
+    border-radius: 20px;
+    transition: width 0.6s ease;
+    &--easy   { background: $teal; }
+    &--medium { background: $gold; }
+    &--hard   { background: $red;  }
+  }
+
+  &__count {
+    font-family: $ff-mono;
+    font-size: 11px;
+    color: $muted;
+    text-align: right;
+  }
+}
+
+// Languages list
+.lang-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lang-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  font-family: $ff-body;
+
+  &__name  { color: $charcoal; font-weight: 500; }
+  &__count { color: $muted; font-family: $ff-mono; font-size: 11px; }
+}
+
+// Topic list
+.topic-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.topic-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  font-family: $ff-body;
+
+  &__name { color: $charcoal; font-weight: 500; }
+}
+
+.topic-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: $ff-mono;
+  padding: 2px 7px;
+  border-radius: 20px;
+  text-transform: capitalize;
+
+  &--strong  { background: $teal-lt;  color: $teal;      }
+  &--average { background: $gold-lt;  color: $gold-dark;  }
+  &--weak    { background: $red-lt;   color: $red;        }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// RIGHT MAIN
+// ═════════════════════════════════════════════════════════════════════════════
+
+.profile-main {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+// Summary stats row
+.summary-row {
+  background: $white;
+  border: 1px solid $border;
+  border-radius: $r-lg;
+  padding: 20px 28px;
+  box-shadow: $shadow;
+  display: flex;
+  align-items: center;
+  gap: 0;
+
+  @media (max-width: $mobile) {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    padding: 16px;
+  }
+}
+
+.summary-sep {
+  width: 1px;
+  background: $border;
+  align-self: stretch;
+  margin: 0 24px;
+  flex-shrink: 0;
+
+  @media (max-width: $mobile) { display: none; }
+}
+
+.summary-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+
+  &__val {
+    font-family: $ff-display;
+    font-size: clamp(24px, 3vw, 32px);
+    color: $navy;
+    line-height: 1;
+  }
+
+  &__unit {
+    font-size: 0.55em;
+    font-family: $ff-body;
+    color: $navy2;
+  }
+
+  &__lbl {
+    font-size: 11px;
+    font-family: $ff-body;
+    color: $muted;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+  }
+}
+
+// Difficulty pills
+.diff-pills {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.diff-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-family: $ff-body;
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-weight: 500;
+
+  strong { font-family: $ff-mono; font-weight: 700; }
+
+  &--easy   { background: $teal-lt;  color: $teal;      }
+  &--medium { background: $gold-lt;  color: $gold-dark;  }
+  &--hard   { background: $red-lt;   color: $red;        }
+}
+
+// Heatmap card
+.heatmap-section {
+  background: $white;
+  border: 1px solid $border;
+  border-radius: $r-lg;
+  padding: 20px 20px 16px;
+  box-shadow: $shadow;
+
+  // CSS custom properties consumed by the heatmap sub-component
+  --cell:        11px;
+  --gap:         3px;
+  --cell-radius: 2px;
+}
+
+.heatmap-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+
+  &__stat {
+    font-size: 13px;
+    font-family: $ff-body;
+    font-weight: 600;
+    color: $navy;
+  }
+
+  &__meta {
+    font-size: 12px;
+    font-family: $ff-mono;
+    color: $muted;
+  }
+}
+
+// Recent accepted submissions
+.recent-section {
+  background: $white;
+  border: 1px solid $border;
+  border-radius: $r-lg;
+  padding: 20px 20px 8px;
+  box-shadow: $shadow;
+
+  &__title {
+    font-size: 14px;
+    font-weight: 700;
+    color: $navy;
+    font-family: $ff-body;
+    margin: 0 0 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+}
+
+.recent-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.recent-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 4px;
+  border-bottom: 1px solid $border;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.12s;
+
+  &:last-child { border-bottom: none; }
+
+  &:hover {
+    background: $blue-lt;
+    border-radius: $r;
+    padding-left: 10px;
+    padding-right: 10px;
+    margin: 0 -6px;
+
+    .recent-row__arrow { transform: translateX(3px); }
+  }
+
+  &:focus-visible { outline: 2px solid $blue; outline-offset: 2px; border-radius: $r; }
+
+  &__title {
+    font-size: 14px;
+    font-family: $ff-body;
+    color: $navy;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  &__time {
+    font-size: 12px;
+    font-family: $ff-mono;
+    color: $muted;
+    white-space: nowrap;
+  }
+
+  &__arrow {
+    color: $blue;
+    transition: transform 0.15s;
+    flex-shrink: 0;
+  }
+}
+
+// Submission status pill (used inline on recent rows if needed)
+.sub-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-family: $ff-mono;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 20px;
+  white-space: nowrap;
+
+  &--accepted { background: $teal-lt;   color: $teal;   }
+  &--wrong    { background: $red-lt;    color: $red;    }
+  &--error    { background: $orange-lt; color: $orange; }
+  &--tle      { background: $purple-lt; color: $purple; }
+}
