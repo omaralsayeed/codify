@@ -53,42 +53,18 @@
 .sk {
   @extend %sk-base;
 
-  // Hero
   &--title { height: 40px; width: min(420px, 80%); }
   &--sub   { height: 18px; width: min(280px, 60%); margin-top: 12px; }
-
-  // Cards
   &--card  { height: 104px; border-radius: $r-lg; flex: 1; min-width: 0; }
-
-  // Charts
   &--chart { height: 240px; border-radius: $r-lg; flex: 1; min-width: 0; }
-
-  // Table
   &--table { height: 200px; border-radius: $r-lg; }
 }
 
-.skeleton-hero {
-  display: flex;
-  flex-direction: column;
-}
-
-.skeleton-cards {
-  display: flex;
-  gap: 16px;
-
-  @media (max-width: $mobile) {
-    flex-direction: column;
-  }
-}
-
-.skeleton-charts {
-  display: flex;
-  gap: 20px;
-
-  @media (max-width: $tablet) {
-    flex-direction: column;
-  }
-}
+.skeleton-hero  { display: flex; flex-direction: column; }
+.skeleton-cards { display: flex; gap: 16px;
+  @media (max-width: $mobile) { flex-direction: column; } }
+.skeleton-charts { display: flex; gap: 20px;
+  @media (max-width: $tablet) { flex-direction: column; } }
 
 // ── Error state ───────────────────────────────────────────────────────────────
 
@@ -101,38 +77,213 @@
   padding: 100px 24px;
   text-align: center;
 
-  &__icon {
-    font-size: 44px;
-    color: $orange;
-    line-height: 1;
+  &__icon { font-size: 44px; color: $orange; line-height: 1; }
+  &__msg  { color: $muted; font-size: 16px; font-family: $ff-body; margin: 0; }
+}
+
+// ── Hero strip ────────────────────────────────────────────────────────────────
+
+.hero-strip {
+  background: $white;
+  border: 1px solid $border;
+  border-radius: $r-lg;
+  padding: 28px 32px;
+  box-shadow: $shadow;
+
+  @media (max-width: $mobile) {
+    padding: 20px 18px;
   }
-
-  &__msg {
-    color: $muted;
-    font-size: 16px;
-    font-family: $ff-body;
-    margin: 0;
-  }
 }
 
-// ── Page header ───────────────────────────────────────────────────────────────
-
-.page-header {
-  margin-bottom: 8px; // extra bottom — the > * + * rule adds 32 px on top of sections below
+.hero-strip__top {
+  margin-bottom: 20px;
 }
 
-.page-title {
-  font-family: $ff-display;
-  font-size: clamp(28px, 4vw, 42px);
-  color: $navy;
-  margin: 4px 0 8px;
-  line-height: 1.15;
-}
-
-.page-subtitle {
-  color: $muted;
-  font-size: 15px;
-  line-height: 1.6;
+.hero-greeting {
+  font-family: $ff-body;
+  font-size: 17px;
+  color: $charcoal;
   margin: 0;
-  max-width: 560px;
+  line-height: 1.4;
+
+  strong {
+    color: $navy;
+    font-weight: 700;
+  }
+}
+
+.hero-divider {
+  border: none;
+  border-top: 1px solid $border;
+  margin: 0 0 24px;
+}
+
+// ── Stats row ─────────────────────────────────────────────────────────────────
+
+.hero-stats {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+
+  @media (max-width: $mobile) {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+}
+
+// Vertical separator between stat cells (hidden on mobile grid)
+.hero-stat__sep {
+  width: 1px;
+  background: $border;
+  align-self: stretch;
+  margin: 0 28px;
+  flex-shrink: 0;
+
+  @media (max-width: $mobile) {
+    display: none;
+  }
+}
+
+.hero-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+
+  &__value {
+    font-family: $ff-display;
+    font-size: clamp(28px, 3.5vw, 40px);
+    color: $navy;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  &__unit {
+    font-size: 0.55em;
+    font-family: $ff-body;
+    color: $navy2;
+    font-weight: 500;
+  }
+
+  &__label {
+    font-size: 12px;
+    color: $muted;
+    font-family: $ff-body;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+
+  // Streak cell is wider — it hosts dots + badge
+  &--streak {
+    flex: 1.6;
+
+    @media (max-width: $mobile) {
+      grid-column: 1 / -1;  // full width on mobile
+    }
+  }
+}
+
+// ── Streak block internals ────────────────────────────────────────────────────
+
+.streak-top {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.streak-icon {
+  font-size: 22px;
+  line-height: 1;
+  position: relative;
+  top: 2px;
+}
+
+.streak-best {
+  font-size: 12px;
+  color: $muted;
+  font-family: $ff-body;
+  margin-top: 2px;
+
+  &--record {
+    color: $gold;
+    font-weight: 600;
+  }
+}
+
+// ── Activity dots ─────────────────────────────────────────────────────────────
+
+.activity-dots {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: nowrap;
+
+  @media (max-width: $mobile) {
+    gap: 6px;
+  }
+}
+
+.dot-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+// Outer ring wrapper — today gets a visible ring
+.dot-wrap {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: scale(0.5);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+
+  &--visible {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  &--today {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+
+  @media (max-width: $mobile) {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+
+  &--active   { background: $teal; }
+  &--inactive { background: $ivory2; border: 1px solid $border; }
+
+  @media (max-width: $mobile) {
+    width: 9px;
+    height: 9px;
+  }
+}
+
+.dot-label {
+  font-size: 10px;
+  color: $muted;
+  font-family: $ff-mono;
+  text-align: center;
+  white-space: nowrap;
+
+  @media (max-width: $mobile) {
+    font-size: 9px;
+  }
 }

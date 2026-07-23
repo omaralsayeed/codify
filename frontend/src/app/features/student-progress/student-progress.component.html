@@ -6,29 +6,20 @@
     ═══════════════════════════════════════════════════════════════════════ -->
     @if (isLoading) {
       <div class="skeleton-page" aria-busy="true" aria-label="Loading your progress">
-
-        <!-- Hero strip -->
         <div class="skeleton-hero">
           <div class="sk sk--title"></div>
           <div class="sk sk--sub"></div>
         </div>
-
-        <!-- Three summary cards -->
         <div class="skeleton-cards">
           <div class="sk sk--card"></div>
           <div class="sk sk--card"></div>
           <div class="sk sk--card"></div>
         </div>
-
-        <!-- Two chart placeholders -->
         <div class="skeleton-charts">
           <div class="sk sk--chart"></div>
           <div class="sk sk--chart"></div>
         </div>
-
-        <!-- Wide block (table placeholder) -->
         <div class="sk sk--table"></div>
-
       </div>
     }
 
@@ -44,26 +35,105 @@
     }
 
     <!-- ══════════════════════════════════════════════════════════════════════
-         LOADED STATE — all sections rendered here in subsequent chunks
+         LOADED STATE
     ═══════════════════════════════════════════════════════════════════════ -->
     @if (!isLoading && !error && analytics) {
 
-      <!-- Page header -->
-      <header class="page-header">
-        <div>
-          <span class="section-tag tag-teal">My Progress</span>
-          <h1 class="page-title">
-            {{ analytics.summary.studentName }}'s Learning Journey
-          </h1>
-          <p class="page-subtitle">
-            Track your performance, spot weak areas, and follow personalised recommendations.
+      <!-- ── Hero strip ─────────────────────────────────────────────────── -->
+      <section class="hero-strip" aria-label="Performance summary">
+
+        <!-- Greeting + name -->
+        <div class="hero-strip__top">
+          <p class="hero-greeting">
+            {{ greeting }}, <strong>{{ analytics.summary.studentName }}</strong> 👋
           </p>
         </div>
-      </header>
 
-      <!-- Sections will be added chunk by chunk below this comment -->
+        <!-- Divider -->
+        <hr class="hero-divider" aria-hidden="true" />
 
-    }
+        <!-- Stats row -->
+        <div class="hero-stats" role="list" aria-label="Key statistics">
+
+          <div class="hero-stat" role="listitem">
+            <span class="hero-stat__value" aria-label="{{ displayedAttempted }} attempted">
+              {{ displayedAttempted }}
+            </span>
+            <span class="hero-stat__label">Attempted</span>
+          </div>
+
+          <div class="hero-stat__sep" aria-hidden="true"></div>
+
+          <div class="hero-stat" role="listitem">
+            <span class="hero-stat__value" aria-label="{{ displayedSolved }} solved">
+              {{ displayedSolved }}
+            </span>
+            <span class="hero-stat__label">Solved</span>
+          </div>
+
+          <div class="hero-stat__sep" aria-hidden="true"></div>
+
+          <div class="hero-stat" role="listitem">
+            <span class="hero-stat__value" aria-label="{{ displayedSuccessRate }} percent success rate">
+              {{ displayedSuccessRate }}<span class="hero-stat__unit">%</span>
+            </span>
+            <span class="hero-stat__label">Success Rate</span>
+          </div>
+
+          <div class="hero-stat__sep" aria-hidden="true"></div>
+
+          <!-- Streak stat — full block with dots + badge -->
+          <div class="hero-stat hero-stat--streak" role="listitem">
+            <div class="streak-top">
+              <span class="streak-icon" aria-hidden="true">🔥</span>
+              <span class="hero-stat__value" aria-label="{{ displayedStreak }} day streak">
+                {{ displayedStreak }}
+                <span class="hero-stat__unit"> days</span>
+              </span>
+            </div>
+            <span class="hero-stat__label">Current Streak</span>
+
+            <!-- Personal best badge -->
+            @if (isPersonalBest) {
+              <span class="streak-best streak-best--record" aria-label="Personal best streak">
+                🏆 Personal best!
+              </span>
+            } @else {
+              <span class="streak-best" aria-label="Longest streak: {{ analytics.summary.streak.longestStreak }} days">
+                Best: {{ analytics.summary.streak.longestStreak }} days
+              </span>
+            }
+
+            <!-- 7-day activity dots -->
+            <div class="activity-dots"
+                 role="list"
+                 aria-label="Activity over the last 7 days">
+              @for (day of analytics.summary.streak.lastSevenDays; track day.date; let i = $index) {
+                <div class="dot-col"
+                     role="listitem"
+                     [attr.aria-label]="dayLabel(day) + ': ' + (day.submitted ? 'submitted' : 'no submission')">
+                  <div class="dot-wrap"
+                       [class.dot-wrap--today]="isToday(day)"
+                       [class.dot-wrap--visible]="dotVisible[i]">
+                    <span class="dot"
+                          [class.dot--active]="day.submitted"
+                          [class.dot--inactive]="!day.submitted">
+                    </span>
+                  </div>
+                  <span class="dot-label" aria-hidden="true">{{ dayLabel(day) }}</span>
+                </div>
+              }
+            </div>
+
+          </div><!-- /streak stat -->
+
+        </div><!-- /hero-stats -->
+
+      </section><!-- /hero-strip -->
+
+      <!-- Further sections added in subsequent chunks -->
+
+    }<!-- /loaded -->
 
   </div>
 </div>
