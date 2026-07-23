@@ -1,0 +1,295 @@
+@use '../../../styles/variables' as *;
+
+// ── Not-found state ───────────────────────────────────────────────────────────
+
+.not-found {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 24px;
+  text-align: center;
+}
+
+.not-found-icon {
+  font-size: 40px;
+  margin-bottom: 16px;
+}
+
+.not-found-title {
+  font-family: $ff-display;
+  font-size: 20px;
+  color: $navy;
+  margin: 0 0 8px;
+}
+
+.not-found-sub {
+  font-size: 14px;
+  color: $muted;
+  margin: 0 0 20px;
+}
+
+// ── Back link ─────────────────────────────────────────────────────────────────
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+  color: $blue;
+  text-decoration: none;
+  margin-bottom: 20px;
+
+  &:hover { text-decoration: underline; }
+}
+
+// ── Detail layout ─────────────────────────────────────────────────────────────
+
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+// ── Student header ────────────────────────────────────────────────────────────
+
+.student-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.avatar-lg {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: $navy;
+  color: $ivory;
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.header-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.student-name {
+  font-family: $ff-display;
+  font-size: 22px;
+  color: $navy;
+  margin: 0;
+}
+
+.integrity-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  width: fit-content;
+
+  &.badge--clean   { background: $teal-lt; color: $teal; }
+  &.badge--review  { background: $gold-lt; color: $gold; }
+  &.badge--flagged { background: $red-lt;  color: $red;  }
+}
+
+// ── Stat pills ────────────────────────────────────────────────────────────────
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+
+  @media (max-width: $tablet) { grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: $mobile) { grid-template-columns: repeat(2, 1fr); }
+}
+
+.stat-pill {
+  background: $white;
+  border: 1px solid $border;
+  border-radius: $r;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: $shadow;
+}
+
+.stat-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.stat-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat-value {
+  font-family: $ff-display;
+  font-size: 22px;
+  color: $navy;
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: $muted;
+}
+
+// ── Last active ───────────────────────────────────────────────────────────────
+
+.last-active {
+  font-size: 12px;
+  color: $muted;
+  margin: -8px 0 0;
+}
+
+// ── Two-column layout ─────────────────────────────────────────────────────────
+
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+
+  @media (max-width: $tablet) { grid-template-columns: 1fr; }
+}
+
+// ── Section card ──────────────────────────────────────────────────────────────
+
+.section-card {
+  background: $white;
+  border: 1px solid $border;
+  border-radius: $r;
+  padding: 20px;
+  box-shadow: $shadow;
+}
+
+.section-title {
+  font-family: $ff-display;
+  font-size: 16px;
+  color: $navy;
+  margin: 0 0 16px;
+}
+
+// ── Topic mastery bars ────────────────────────────────────────────────────────
+
+.topic-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.topic-row {
+  display: grid;
+  grid-template-columns: 100px 1fr 36px;
+  align-items: center;
+  gap: 10px;
+}
+
+.topic-name {
+  font-size: 13px;
+  color: $charcoal;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bar-track {
+  height: 8px;
+  background: $ivory2;
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.5s ease;
+
+  &.bar--teal { background: $teal; }
+  &.bar--blue { background: $blue; }
+  &.bar--gold { background: $gold; }
+  &.bar--red  { background: $red;  }
+}
+
+.topic-pct {
+  font-size: 12px;
+  font-weight: 600;
+  color: $muted;
+  text-align: right;
+}
+
+// ── Submissions list ──────────────────────────────────────────────────────────
+
+.submission-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.submission-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid $border;
+
+  &:last-child { border-bottom: none; }
+}
+
+.sub-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sub-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: $navy;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sub-date {
+  font-size: 11px;
+  color: $muted;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+
+  &.status--accepted { background: $teal-lt; color: $teal; }
+  &.status--wrong    { background: $red-lt;  color: $red;  }
+  &.status--other    { background: $gold-lt; color: $gold; }
+}
+
+.empty-sub {
+  font-size: 13px;
+  color: $muted;
+  margin: 0;
+}

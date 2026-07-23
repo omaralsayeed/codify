@@ -1,0 +1,120 @@
+<!-- Not found -->
+@if (student() === 'not-found') {
+  <div class="not-found">
+    <span class="not-found-icon" aria-hidden="true">🔍</span>
+    <h2 class="not-found-title">Student not found</h2>
+    <p class="not-found-sub">The student you're looking for doesn't exist or has been removed.</p>
+    <a class="back-link" routerLink="../">← Back to students</a>
+  </div>
+}
+
+<!-- Detail view -->
+@if (student() !== 'not-found' && student() !== null) {
+  @let s = $any(student());
+
+  <div class="detail">
+
+    <!-- Back link -->
+    <a class="back-link" routerLink="../">← Back to students</a>
+
+    <!-- Student header -->
+    <div class="student-header">
+      <div class="avatar-lg" aria-hidden="true">{{ s.initials }}</div>
+      <div class="header-body">
+        <h1 class="student-name">{{ s.name }}</h1>
+        <span class="integrity-badge" [ngClass]="integrityClass(s.integrityStatus)">
+          {{ s.integrityStatus | titlecase }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Stat pills -->
+    <div class="stats-row">
+      <div class="stat-pill">
+        <span class="stat-icon" aria-hidden="true">🔥</span>
+        <div class="stat-body">
+          <span class="stat-value">{{ s.streak }}</span>
+          <span class="stat-label">Day streak</span>
+        </div>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-icon" aria-hidden="true">💡</span>
+        <div class="stat-body">
+          <span class="stat-value">{{ s.hintsUsed }}</span>
+          <span class="stat-label">Hints used</span>
+        </div>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-icon" aria-hidden="true">✅</span>
+        <div class="stat-body">
+          <span class="stat-value">{{ s.problemsSolved }}</span>
+          <span class="stat-label">Problems solved</span>
+        </div>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-icon" aria-hidden="true">📈</span>
+        <div class="stat-body">
+          <span class="stat-value">{{ s.avgScore }}</span>
+          <span class="stat-label">Avg score</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Last active -->
+    <p class="last-active">
+      Last active: <strong>{{ formatDate(s.lastActiveAt) }}</strong>
+    </p>
+
+    <!-- Two-column layout -->
+    <div class="two-col">
+
+      <!-- Topic mastery -->
+      <div class="section-card">
+        <h2 class="section-title">Topic Mastery</h2>
+        <ul class="topic-list" aria-label="Topic mastery">
+          @for (t of s.topicMastery; track t.topic) {
+            <li class="topic-row">
+              <span class="topic-name">{{ t.topic }}</span>
+              <div class="bar-track"
+                   role="progressbar"
+                   [attr.aria-valuenow]="t.percentage"
+                   aria-valuemin="0"
+                   aria-valuemax="100"
+                   [attr.aria-label]="t.topic + ': ' + t.percentage + '%'">
+                <div class="bar-fill"
+                     [ngClass]="barColor(t.percentage)"
+                     [style.width.%]="t.percentage">
+                </div>
+              </div>
+              <span class="topic-pct">{{ t.percentage }}%</span>
+            </li>
+          }
+        </ul>
+      </div>
+
+      <!-- Recent submissions -->
+      <div class="section-card">
+        <h2 class="section-title">Recent Submissions</h2>
+        @if (s.recentSubmissions.length > 0) {
+          <ul class="submission-list" aria-label="Recent submissions">
+            @for (sub of s.recentSubmissions; track sub.submittedAt) {
+              <li class="submission-row">
+                <div class="sub-info">
+                  <span class="sub-title">{{ sub.problemTitle }}</span>
+                  <span class="sub-date">{{ formatDate(sub.submittedAt) }}</span>
+                </div>
+                <span class="status-badge" [ngClass]="statusClass(sub.status)">
+                  {{ sub.status }}
+                </span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="empty-sub">No submissions yet.</p>
+        }
+      </div>
+
+    </div>
+
+  </div>
+}
