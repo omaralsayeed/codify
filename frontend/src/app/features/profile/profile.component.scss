@@ -342,11 +342,6 @@
   padding-bottom: 40px;
   border-bottom: 1px solid rgba(26, 43, 74, 0.07);
   margin-bottom: 40px;
-
-  // CSS custom properties consumed by the heatmap sub-component
-  --cell:        11px;
-  --gap:         3px;
-  --cell-radius: 2px;
 }
 
 .heatmap-header {
@@ -358,10 +353,15 @@
   flex-wrap: wrap;
 
   &__stat {
-    font-size: 14px;
+    font-size: 13px;
     font-family: $ff-body;
-    font-weight: 600;
-    color: $navy;
+    font-weight: 400;
+    color: $charcoal;
+
+    strong {
+      font-weight: 700;
+      color: $navy;
+    }
   }
 
   &__meta {
