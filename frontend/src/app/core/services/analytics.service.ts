@@ -170,10 +170,39 @@ export class AnalyticsService {
     //   .get<ApiEnvelope<StudentAnalytics>>(`${this.API}/analytics/progress`, { headers: this.headers() })
     //   .pipe(map(r => r.data), catchError(e => this.handleError(e)));
 
-    return of(MOCK_ANALYTICS).pipe(delay(1200));
+    return of(this.mockStudentAnalytics()).pipe(delay(1200));
   }
 
   // ── Mock data ──────────────────────────────────────────────────────────────
+
+  /**
+   * Builds a fresh StudentAnalytics object every call so dates are always
+   * relative to the real current date — ensures isToday() works correctly
+   * and streak dots display the right day labels.
+   */
+  private mockStudentAnalytics(): StudentAnalytics {
+    const today = new Date();
+
+    // Build last 7 days with submitted = true for all except 5 days ago
+    const lastSevenDays = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(today);
+      d.setDate(today.getDate() - (6 - i));
+      const dayStr = d.toISOString().slice(0, 10);
+      // Miss one day (index 2 = 4 days ago) to show the hollow dot
+      return { date: dayStr, submitted: i !== 2 };
+    });
+
+    return {
+      ...MOCK_ANALYTICS,
+      summary: {
+        ...MOCK_ANALYTICS.summary,
+        streak: {
+          ...MOCK_ANALYTICS.summary.streak,
+          lastSevenDays,
+        },
+      },
+    };
+  }
 
   private mockDashboard(): StudentDashboardData {
     return {

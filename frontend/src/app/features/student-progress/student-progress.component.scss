@@ -437,9 +437,9 @@
   white-space: nowrap;
   flex-shrink: 0;
 
-  &--strong  { background: $teal-lt;   color: $teal;   }
-  &--average { background: $gold-lt;   color: #8a6d00; }
-  &--weak    { background: $red-lt;    color: $red;    }
+  &--strong  { background: $teal-lt;   color: $teal;      }
+  &--average { background: $gold-lt;   color: $gold-dark; }
+  &--weak    { background: $red-lt;    color: $red;       }
 }
 
 // ── Radar chart container ─────────────────────────────────────────────────────
@@ -989,6 +989,7 @@
   border: 1px solid $border;
   border-radius: $r-lg;
   text-align: center;
+  position: relative;  // anchor for the tooltip
 
   &__val {
     font-family: $ff-display;
@@ -1016,13 +1017,8 @@
     border-color: $orange;
     .hint-stat__val { color: $orange; }
   }
-}
 
-// ── Hint tile tooltip ─────────────────────────────────────────────────────────
-
-.hint-stat {
-  position: relative;  // needed for tooltip absolute positioning
-
+  // Tooltip (shown on --warn tile hover/focus)
   &__tooltip {
     display: none;
     position: absolute;
@@ -1041,7 +1037,6 @@
     z-index: 10;
     box-shadow: $shadow;
 
-    // Caret
     &::after {
       content: '';
       position: absolute;
@@ -1053,7 +1048,6 @@
     }
   }
 
-  // Show tooltip on hover/focus for the warn tile
   &--warn:hover &__tooltip,
   &--warn:focus-within &__tooltip {
     display: block;
