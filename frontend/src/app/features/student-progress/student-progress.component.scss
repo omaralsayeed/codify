@@ -287,3 +287,168 @@
     font-size: 9px;
   }
 }
+
+// ── Shared card pattern (matches dashboard chart-card) ────────────────────────
+
+.prog-card {
+  background: $white;
+  border: 1px solid $border;
+  border-radius: $r-lg;
+  padding: 24px 28px;
+  box-shadow: $shadow;
+
+  &__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+
+  &__title {
+    font-size: 16px;
+    font-weight: 700;
+    color: $navy;
+    font-family: $ff-body;
+    margin: 0 0 4px;
+  }
+
+  &__sub {
+    font-size: 13px;
+    color: $muted;
+    font-family: $ff-body;
+    margin: 0;
+    max-width: 480px;
+    line-height: 1.5;
+  }
+
+  @media (max-width: $mobile) {
+    padding: 18px 16px;
+  }
+}
+
+// ── Topic section layout ──────────────────────────────────────────────────────
+
+.topic-body {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 32px;
+  align-items: start;
+
+  @media (max-width: $tablet) {
+    grid-template-columns: 1fr;
+  }
+}
+
+// ── Topic list ────────────────────────────────────────────────────────────────
+
+.topic-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.topic-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__name {
+    font-size: 13px;
+    font-weight: 600;
+    color: $charcoal;
+    font-family: $ff-body;
+    min-width: 160px;
+
+    @media (max-width: $mobile) {
+      min-width: 0;
+    }
+  }
+
+  &__track-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  &__score {
+    font-family: $ff-mono;
+    font-size: 12px;
+    color: $muted;
+    white-space: nowrap;
+    min-width: 52px;
+    text-align: right;
+  }
+
+  &__insight {
+    font-size: 12px;
+    color: $navy2;
+    font-family: $ff-body;
+    line-height: 1.5;
+    margin: 2px 0 0;
+    padding: 7px 10px;
+    background: $blue-lt;
+    border-radius: $r;
+    display: flex;
+    gap: 6px;
+    align-items: flex-start;
+  }
+}
+
+// ── Progress bar ──────────────────────────────────────────────────────────────
+
+.topic-bar {
+  flex: 1;
+  height: 8px;
+  background: $ivory2;
+  border-radius: 20px;
+  overflow: hidden;
+
+  &__fill {
+    height: 100%;
+    border-radius: 20px;
+    width: 0;                          // start at 0; JS sets real width after paint
+    transition: width 0.75s cubic-bezier(0.25, 1, 0.5, 1);
+
+    &--strong  { background: $teal; }
+    &--average { background: $gold; }
+    &--weak    { background: $red;  }
+  }
+}
+
+// ── Strength badge ────────────────────────────────────────────────────────────
+
+.strength-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: $ff-mono;
+  padding: 2px 8px;
+  border-radius: 20px;
+  letter-spacing: 0.04em;
+  text-transform: capitalize;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  &--strong  { background: $teal-lt;   color: $teal;   }
+  &--average { background: $gold-lt;   color: #8a6d00; }
+  &--weak    { background: $red-lt;    color: $red;    }
+}
+
+// ── Radar chart container ─────────────────────────────────────────────────────
+
+.topic-radar {
+  // On mobile the radar moves below the list (grid stacks naturally)
+  @media (max-width: $tablet) {
+    max-width: 360px;
+    margin: 0 auto;
+    width: 100%;
+  }
+}

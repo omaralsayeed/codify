@@ -131,6 +131,66 @@
 
       </section><!-- /hero-strip -->
 
+      <!-- ── Topic Strength Breakdown ────────────────────────────────────── -->
+      <section class="prog-card topic-section" aria-label="Topic strength breakdown">
+
+        <!-- Card header -->
+        <div class="prog-card__header">
+          <div>
+            <h2 class="prog-card__title">Topic Breakdown</h2>
+            <p class="prog-card__sub">Your performance across every topic, sorted by what needs attention first.</p>
+          </div>
+        </div>
+
+        <!-- Two-column body -->
+        <div class="topic-body">
+
+          <!-- LEFT — topic list -->
+          <div class="topic-list" role="list" aria-label="Topic strength scores">
+            @for (topic of sortedTopics; track trackByTopicId($index, topic)) {
+              <div class="topic-row"
+                   role="listitem"
+                   [attr.aria-label]="topic.topicName + ': ' + topic.strengthScore + ' out of 100, ' + topic.strength">
+
+                <!-- Name + badge -->
+                <div class="topic-row__meta">
+                  <span class="topic-row__name">{{ topic.topicName }}</span>
+                  <span [class]="strengthBadgeClass(topic.strength)">{{ topic.strength }}</span>
+                </div>
+
+                <!-- Bar + score -->
+                <div class="topic-row__track-row">
+                  <div class="topic-bar"
+                       role="progressbar"
+                       [attr.aria-valuenow]="topic.strengthScore"
+                       aria-valuemin="0" aria-valuemax="100">
+                    <div [class]="strengthBarClass(topic.strength)"
+                         [style.width.%]="barWidth(topic)">
+                    </div>
+                  </div>
+                  <span class="topic-row__score">{{ topic.strengthScore }}/100</span>
+                </div>
+
+                <!-- AI insight (weak topics only) -->
+                @if (topic.aiInsight) {
+                  <p class="topic-row__insight">
+                    <span aria-hidden="true">💡</span> {{ topic.aiInsight }}
+                  </p>
+                }
+
+              </div>
+            }
+          </div>
+
+          <!-- RIGHT — radar chart -->
+          <div class="topic-radar" aria-label="Radar chart of topic strengths">
+            <app-topic-radar-chart [topics]="analytics.topics" />
+          </div>
+
+        </div>
+
+      </section>
+
       <!-- Further sections added in subsequent chunks -->
 
     }<!-- /loaded -->

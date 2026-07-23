@@ -8,18 +8,29 @@ import {
 import { CommonModule } from '@angular/common';
 import { Subject, takeUntil } from 'rxjs';
 
-import { AnalyticsService }             from '../../core/services/analytics.service';
-import { AuthService }                  from '../../core/services/auth.service';
-import { StudentAnalytics, DailyActivity } from '../../core/models/analytics.model';
+import { AnalyticsService }  from '../../core/services/analytics.service';
+import { AuthService }       from '../../core/services/auth.service';
+import {
+  StudentAnalytics,
+  DailyActivity,
+  TopicPerformance,
+  TopicStrength,
+} from '../../core/models/analytics.model';
+import { TopicRadarChartComponent } from './topic-radar-chart.component';
 
 // ── countUp config ────────────────────────────────────────────────────────────
 const COUNT_UP_DURATION_MS = 800;
 const COUNT_UP_TICK_MS     = 16;   // ~60 fps
 
+// Strength sort order: weak → average → strong
+const STRENGTH_ORDER: Record<TopicStrength, number> = {
+  weak: 0, average: 1, strong: 2,
+};
+
 @Component({
   selector: 'app-student-progress',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TopicRadarChartComponent],
   templateUrl: './student-progress.component.html',
   styleUrl: './student-progress.component.scss',
 })
@@ -43,12 +54,16 @@ export class StudentProgressComponent implements OnInit, OnDestroy {
   displayedSuccessRate = 0;
   displayedStreak      = 0;
 
-  // ── Activity dot stagger visibility (index → visible) ──────────────────────
+  // ── Activity dot stagger visibility ────────────────────────────────────────
   dotVisible: boolean[] = Array(7).fill(false);
+
+  // ── Topic bar animation: width currently displayed per topic (by topicId) ──
+  barWidths: Record<string, number> = {};
 
   // ── Timer handles ───────────────────────────────────────────────────────────
   private counterIds: (ReturnType<typeof setInterval> | null)[] = [];
   private dotTimerIds: (ReturnType<typeof setTimeout> | null)[] = [];
+  private barTimerId: ReturnType<typeof setTimeout> | null = null;
 
   // Teardown
   private readonly destroy$ = new Subject<void>();
@@ -64,6 +79,7 @@ export class StudentProgressComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
     this.clearAllCounters();
     this.clearAllDotTimers();
+    if (this.barTimerId !== null) clearTimeout(this.barTimerId);
   }
 
   // ── Data loading ────────────────────────────────────────────────────────────
@@ -72,12 +88,12 @@ export class StudentProgressComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     this.error     = null;
 
-    // Reset display values for retry
     this.displayedAttempted   = 0;
     this.displayedSolved      = 0;
     this.displayedSuccessRate = 0;
     this.displayedStreak      = 0;
     this.dotVisible           = Array(7).fill(false);
+    this.barWidths            = {};
     this.clearAllCounters();
     this.clearAllDotTimers();
 
@@ -88,8 +104,18 @@ export class StudentProgressComponent implements OnInit, OnDestroy {
         next: (data) => {
           this.analytics = data;
           this.isLoading = false;
+          // Initialise all bars at 0 so the CSS transition fires from 0
+          data.topics.forEach(t => { this.barWidths[t.topicId] = 0; });
           this.cdr.detectChanges();
           this.startHeroAnimations(data);
+          // Small delay so the DOM paints the 0-width bars first,
+          // then we set real widths and the CSS transition animates them
+          this.barTimerId = setTimeout(() => {
+            data.topics.forEach(t => {
+              this.barWidths[t.topicId] = t.strengthScore;
+            });
+            this.cdr.detectChanges();
+          }, 120);
         },
         error: () => {
           this.error     = 'Could not load your progress. Please try again.';
@@ -104,18 +130,44 @@ export class StudentProgressComponent implements OnInit, OnDestroy {
     this.activeTimeRange = range;
   }
 
+  // ── Sorted topics ───────────────────────────────────────────────────────────
+
+  /** Returns topics sorted weak → average → strong, then by strengthScore asc. */
+  get sortedTopics(): TopicPerformance[] {
+    return [...(this.analytics?.topics ?? [])].sort((a, b) => {
+      const orderDiff = STRENGTH_ORDER[a.strength] - STRENGTH_ORDER[b.strength];
+      return orderDiff !== 0 ? orderDiff : a.strengthScore - b.strengthScore;
+    });
+  }
+
+  // ── Bar helpers ─────────────────────────────────────────────────────────────
+
+  barWidth(topic: TopicPerformance): number {
+    return this.barWidths[topic.topicId] ?? 0;
+  }
+
+  strengthBarClass(strength: TopicStrength): string {
+    return `topic-bar__fill topic-bar__fill--${strength}`;
+  }
+
+  strengthBadgeClass(strength: TopicStrength): string {
+    return `strength-badge strength-badge--${strength}`;
+  }
+
+  trackByTopicId(_i: number, t: TopicPerformance): string {
+    return t.topicId;
+  }
+
   // ── Hero animation orchestration ────────────────────────────────────────────
 
   private startHeroAnimations(data: StudentAnalytics): void {
     const s = data.summary;
 
-    // Four stat counters — all start simultaneously, 800 ms each
-    this.counterIds[0] = this.countUp(s.totalAttempted,   v => this.displayedAttempted   = v);
-    this.counterIds[1] = this.countUp(s.totalSolved,      v => this.displayedSolved      = v);
-    this.counterIds[2] = this.countUp(s.successRate,      v => this.displayedSuccessRate = v);
-    this.counterIds[3] = this.countUp(s.streak.currentStreak, v => this.displayedStreak = v);
+    this.counterIds[0] = this.countUp(s.totalAttempted,       v => { this.displayedAttempted   = v; this.cdr.detectChanges(); });
+    this.counterIds[1] = this.countUp(s.totalSolved,          v => { this.displayedSolved      = v; this.cdr.detectChanges(); });
+    this.counterIds[2] = this.countUp(s.successRate,          v => { this.displayedSuccessRate = v; this.cdr.detectChanges(); });
+    this.counterIds[3] = this.countUp(s.streak.currentStreak, v => { this.displayedStreak      = v; this.cdr.detectChanges(); });
 
-    // Activity dots stagger in at 60 ms intervals
     s.streak.lastSevenDays.forEach((_, i) => {
       const id = setTimeout(() => {
         this.dotVisible[i] = true;
@@ -125,12 +177,6 @@ export class StudentProgressComponent implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * Counts a display value from 0 → target over COUNT_UP_DURATION_MS.
-   * Uses ease-out quadratic — fast start, gentle landing.
-   * Respects prefers-reduced-motion: jumps straight to target if set.
-   * Returns the interval ID so the caller can clear it on destroy.
-   */
   private countUp(
     target: number,
     setter: (v: number) => void,
@@ -145,14 +191,9 @@ export class StudentProgressComponent implements OnInit, OnDestroy {
 
     return setInterval(() => {
       tick++;
-      const progress = tick / totalTicks;
-      const eased    = 1 - Math.pow(1 - progress, 2);  // ease-out quad
+      const eased = 1 - Math.pow(1 - tick / totalTicks, 2);
       setter(Math.min(target, Math.round(eased * target)));
-
-      if (tick >= totalTicks) {
-        setter(target); // guarantee exact final value
-        // Can't self-clear inside setInterval without the id — caller clears
-      }
+      if (tick >= totalTicks) setter(target);
     }, COUNT_UP_TICK_MS);
   }
 
@@ -190,7 +231,6 @@ export class StudentProgressComponent implements OnInit, OnDestroy {
   // ── Activity dot helpers ────────────────────────────────────────────────────
 
   dayLabel(day: DailyActivity): string {
-    // Parse the ISO date string as local date (split to avoid timezone shift)
     const [y, m, d] = day.date.split('-').map(Number);
     return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'short' });
   }
