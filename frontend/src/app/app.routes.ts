@@ -7,5 +7,6 @@ export const routes: Routes = [
   { path: 'problems',  loadComponent: () => import('./features/problem-list/problem-list.component').then(m => m.ProblemListComponent), canActivate: [authGuard] },
   { path: 'problems/:id', loadComponent: () => import('./features/problem-page/problem-page.component').then(m => m.ProblemPageComponent), canActivate: [authGuard], data: { hideLayout: true } },
   { path: 'dashboard', loadComponent: () => import('./features/student-dashboard/student-dashboard.component').then(m => m.StudentDashboardComponent), canActivate: [authGuard] },
+  { path: 'instructor', loadChildren: () => import('./features/instructor/instructor.routes').then(m => m.INSTRUCTOR_ROUTES) },
   { path: '**',        redirectTo: '' }
 ];
