@@ -21,6 +21,11 @@ export const INSTRUCTOR_ROUTES: Routes = [
           import('./students/instructor-students.component').then(m => m.InstructorStudentsComponent),
       },
       {
+        path: 'students/:id',
+        loadComponent: () =>
+          import('./student-detail/instructor-student-detail.component').then(m => m.InstructorStudentDetailComponent),
+      },
+      {
         path: 'integrity',
         loadComponent: () =>
           import('./integrity/instructor-integrity.component').then(m => m.InstructorIntegrityComponent),

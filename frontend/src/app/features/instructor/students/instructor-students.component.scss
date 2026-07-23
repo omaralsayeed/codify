@@ -1,0 +1,248 @@
+@use '../../../styles/variables' as *;
+
+.students {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+// ── Header ────────────────────────────────────────────────────────────────────
+
+.page-title {
+  font-family: $ff-display;
+  font-size: 22px;
+  color: $navy;
+  margin: 0;
+}
+
+.page-sub {
+  font-size: 13px;
+  color: $muted;
+  margin: 4px 0 0;
+}
+
+// ── Toolbar ───────────────────────────────────────────────────────────────────
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.search-wrap {
+  position: relative;
+  flex: 1;
+  max-width: 340px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 13px;
+  pointer-events: none;
+}
+
+.search-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 12px 0 32px;
+  border: 1px solid $border;
+  border-radius: $r;
+  font-family: $ff-body;
+  font-size: 13px;
+  color: $charcoal;
+  background: $white;
+  outline: none;
+  box-sizing: border-box;
+
+  &:focus {
+    border-color: $blue;
+    box-shadow: 0 0 0 3px rgba(46, 134, 171, 0.12);
+  }
+
+  &::placeholder { color: $muted; }
+}
+
+// ── Table ─────────────────────────────────────────────────────────────────────
+
+.table-wrap {
+  background: $white;
+  border: 1px solid $border;
+  border-radius: $r;
+  box-shadow: $shadow;
+  overflow-x: auto;
+}
+
+.students-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th, td {
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 13px;
+  }
+
+  thead tr {
+    border-bottom: 1px solid $border;
+  }
+
+  th {
+    font-size: 11px;
+    font-weight: 700;
+    color: $muted;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    background: $ivory;
+
+    &.sortable {
+      cursor: pointer;
+      user-select: none;
+
+      &:hover { color: $navy; }
+    }
+  }
+
+  tbody tr {
+    border-bottom: 1px solid $border;
+
+    &:last-child { border-bottom: none; }
+  }
+}
+
+.sort-icon {
+  font-size: 11px;
+  opacity: 0.6;
+  margin-left: 2px;
+}
+
+// ── Student row ───────────────────────────────────────────────────────────────
+
+.student-row {
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover  { background: $blue-lt; }
+  &:focus  { outline: 2px solid $blue; outline-offset: -2px; }
+}
+
+.student-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: $navy;
+  color: $ivory;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.student-name {
+  font-weight: 500;
+  color: $navy;
+}
+
+// ── Score cell ────────────────────────────────────────────────────────────────
+
+.score-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.score-value {
+  font-weight: 600;
+  color: $charcoal;
+  width: 28px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.score-bar-track {
+  flex: 1;
+  height: 6px;
+  background: $ivory2;
+  border-radius: 99px;
+  overflow: hidden;
+  min-width: 60px;
+}
+
+.score-bar-fill {
+  height: 100%;
+  background: $blue;
+  border-radius: 99px;
+  transition: width 0.4s ease;
+}
+
+// ── Integrity badge ───────────────────────────────────────────────────────────
+
+.integrity-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+
+  &.badge--clean   { background: $teal-lt;   color: $teal;   }
+  &.badge--review  { background: $gold-lt;   color: $gold;   }
+  &.badge--flagged { background: $red-lt;    color: $red;    }
+}
+
+// ── Action arrow ──────────────────────────────────────────────────────────────
+
+.col-action {
+  color: $muted;
+  font-size: 18px;
+  text-align: right;
+  width: 24px;
+}
+
+// ── Empty state ───────────────────────────────────────────────────────────────
+
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  background: $white;
+  border: 1px solid $border;
+  border-radius: $r;
+}
+
+.empty-icon {
+  font-size: 32px;
+  display: block;
+  margin-bottom: 12px;
+}
+
+.empty-text {
+  font-size: 14px;
+  color: $muted;
+  margin: 0;
+}
+
+// ── Screen reader utility ─────────────────────────────────────────────────────
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
