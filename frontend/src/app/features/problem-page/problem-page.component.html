@@ -31,14 +31,42 @@
         Run
       </button>
 
-      <button class="btn btn--primary toolbar-btn" (click)="onSubmit()" type="button">
-        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
-             fill="none" stroke="currentColor" stroke-width="2"
-             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <polyline points="20 6 9 17 4 12"></polyline>
-        </svg>
-        Submit
+      <button
+        class="btn btn--primary toolbar-btn"
+        [class.toolbar-btn--flash-accepted]="submitFlash === 'accepted'"
+        [class.toolbar-btn--flash-rejected]="submitFlash === 'rejected'"
+        [class.toolbar-btn--submitting]="isSubmitting"
+        (click)="onSubmit()"
+        type="button"
+        [disabled]="isSubmitting"
+        [attr.aria-label]="isSubmitting ? 'Submitting solution…' : 'Submit solution'"
+        [title]="submitBtnTitle">
+        @if (isSubmitting) {
+          <span class="btn-spinner btn-spinner--light" aria-label="Submitting…" role="status"></span>
+          Submitting…
+        } @else {
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          Submit
+        }
       </button>
+
+      <!-- Validation message — appears inline below the Submit button -->
+      @if (submitValidationError) {
+        <span class="submit-validation-msg" role="alert" aria-live="assertive">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          {{ submitValidationError }}
+        </span>
+      }
 
       <button class="btn toolbar-btn toolbar-btn--copy" (click)="onCopy()" type="button"
               aria-label="Copy code">
@@ -51,15 +79,34 @@
         Copy
       </button>
 
-      <button class="btn toolbar-btn toolbar-btn--hint" (click)="onAiHint()" type="button">
-        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
-             fill="none" stroke="currentColor" stroke-width="2"
-             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <circle cx="12" cy="12" r="10"></circle>
-          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-          <line x1="12" y1="17" x2="12.01" y2="17"></line>
-        </svg>
-        AI Hint
+      <button
+        class="btn toolbar-btn toolbar-btn--hint"
+        [class.toolbar-btn--hint-loading]="isHintLoading"
+        [class.toolbar-btn--hint-exhausted]="!canRequestMoreHints && hintLevel > 0"
+        (click)="onAiHint()"
+        type="button"
+        [disabled]="hintButtonDisabled"
+        [attr.aria-label]="hintButtonLabel"
+        [title]="hintBtnTitle">
+        @if (isHintLoading) {
+          <!-- Spinner while thinking -->
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round"
+               class="spin" role="status" aria-label="Fetching hint…">
+            <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+          </svg>
+        } @else {
+          <!-- Lightbulb icon (all non-loading states) -->
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="9" y1="18" x2="15" y2="18"></line>
+            <line x1="10" y1="22" x2="14" y2="22"></line>
+            <path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"></path>
+          </svg>
+        }
+        {{ hintButtonLabel }}
       </button>
     </div>
 
@@ -195,6 +242,11 @@
                 <line x1="16" y1="16" x2="16" y2="16"></line>
               </svg>
               Codify
+              @if (hintHistory.length > 0) {
+                <span class="tab-hint-count" aria-label="{{ hintHistory.length }} hints used">
+                  {{ hintHistory.length }}
+                </span>
+              }
             </button>
           </nav>
 
@@ -357,10 +409,98 @@
               </div>
             }
 
-            <!-- Codify Tab -->
+            <!-- Codify Tab — AI Hint History -->
             @if (activeTab === 'codify') {
-              <div id="codify-panel" role="tabpanel" aria-labelledby="codify-tab" class="tab-placeholder">
-                <p>AI-powered code assistance and explanations will appear here.</p>
+              <div id="codify-panel" role="tabpanel" aria-labelledby="codify-tab">
+
+                @if (hintHistory.length === 0 && !isHintLoading) {
+                  <div class="empty-state">
+                    <div class="empty-state-inner">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24"
+                           fill="none" stroke="currentColor" stroke-width="1.5"
+                           stroke-linecap="round" stroke-linejoin="round"
+                           class="empty-state-icon" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                      </svg>
+                      <p>Click <strong>AI Hint</strong> in the toolbar to get a progressive hint for your current code.</p>
+                      <p class="empty-state-sub">Up to 3 levels — each one goes deeper.</p>
+                    </div>
+                  </div>
+                }
+
+                @if (isHintLoading && hintHistory.length === 0) {
+                  <div class="empty-state">
+                    <p class="hint-loading-text">Generating hint…</p>
+                  </div>
+                }
+
+                <!-- Hint timeline -->
+                @if (hintHistory.length > 0) {
+                  <div class="hints-timeline">
+                    @for (item of hintHistory; track item.level) {
+                      <div class="hint-item">
+                        <div class="hint-level">
+                          <span class="hint-level-badge">Hint {{ item.level }}/3</span>
+                        </div>
+                        <div class="hint-content">
+                          <p class="hint-text" style="white-space: pre-line;">{{ item.explanation }}</p>
+                          <p class="hint-time">{{ item.appliedAt | date:'h:mm a' }}</p>
+                        </div>
+                      </div>
+                    }
+
+                    <!-- Loading next hint -->
+                    @if (isHintLoading) {
+                      <div class="hint-item hint-item--loading">
+                        <div class="hint-level">
+                          <span class="hint-level-badge hint-level-badge--loading">…</span>
+                        </div>
+                        <div class="hint-content">
+                          <p class="hint-text hint-loading-text">Generating next hint…</p>
+                        </div>
+                      </div>
+                    }
+
+                    <!-- CTA: next hint or hand-off to Codify chat -->
+                    @if (!isHintLoading) {
+                      <div class="hint-cta">
+                        @if (canRequestMoreHints) {
+                          <button
+                            class="btn btn--ghost hint-cta-btn"
+                            (click)="onHintRequested()"
+                            type="button">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                 fill="none" stroke="currentColor" stroke-width="2"
+                                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                              <circle cx="12" cy="12" r="10"></circle>
+                              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                            </svg>
+                            Get Hint {{ nextHintLevel }}/3
+                          </button>
+                        }
+                        <!-- Always show chat hand-off once at least one hint used -->
+                        <button
+                          class="btn btn--ghost hint-cta-btn hint-cta-btn--chat"
+                          (click)="navigateToCodifyChat()"
+                          type="button">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                               fill="none" stroke="currentColor" stroke-width="2"
+                               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                          </svg>
+                          Ask Codify
+                        </button>
+                        @if (!canRequestMoreHints) {
+                          <p class="hints-exhausted">All hints revealed. Time to code it up!</p>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+
               </div>
             }
 
@@ -478,7 +618,7 @@
           </header>
 
           <!-- Editor Body -->
-          <div class="editor-body">
+          <div class="editor-body" [class.editor-body--glow]="editorGlowing">
             <!-- Line Numbers -->
             <div class="editor-line-numbers" aria-hidden="true">
               @for (line of currentCode.split('\n'); track $index) {
@@ -487,8 +627,10 @@
             </div>
 
             <!-- Code Textarea -->
-            <textarea 
+            <textarea
+              #editorTextarea
               class="editor-textarea"
+              [class.editor-textarea--highlight]="editorHighlighting"
               [value]="currentCode"
               (input)="onEditorInput($event)"
               spellcheck="false"
@@ -499,9 +641,71 @@
               placeholder="Write your code here..."></textarea>
           </div>
 
+          <!-- ── Hint Explanation Overlay Card ─────────────────────────── -->
+          <!-- Anchored to bottom-left of the editor; slides up on appear     -->
+          @if (showHintOverlay) {
+            <div
+              class="hint-overlay-card"
+              role="status"
+              aria-live="polite"
+              aria-label="Hint {{ hintOverlayLevel }} of {{ totalHintsAvailable || 3 }} applied">
+
+              <!-- Header -->
+              <div class="hint-overlay-header">
+                <span class="hint-overlay-badge">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+                       fill="none" stroke="currentColor" stroke-width="2"
+                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="9" y1="18" x2="15" y2="18"></line>
+                    <line x1="10" y1="22" x2="14" y2="22"></line>
+                    <path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"></path>
+                  </svg>
+                  Hint {{ hintOverlayLevel }} of {{ totalHintsAvailable || 3 }} applied
+                </span>
+                <button
+                  class="hint-overlay-dismiss"
+                  (click)="dismissHintOverlay()"
+                  type="button"
+                  aria-label="Dismiss hint card">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"
+                       fill="none" stroke="currentColor" stroke-width="2.5"
+                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Explanation text -->
+              <p class="hint-overlay-text">{{ hintOverlayExplanation }}</p>
+
+              <!-- Chat handoff -->
+              <button
+                class="hint-overlay-chat-btn"
+                (click)="navigateToCodifyChat()"
+                type="button">
+                Ask Codify Chat why
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+              </button>
+
+              <!-- 6 s countdown progress bar -->
+              <div class="hint-overlay-progress" aria-hidden="true">
+                <div
+                  class="hint-overlay-progress-bar"
+                  [style.width.%]="hintOverlayProgress">
+                </div>
+              </div>
+
+            </div>
+          }
+
           <!-- Status Bar -->
-          <footer class="editor-status-bar">
-            <div class="status-left">
+          <footer class="editor-status-bar">            <div class="status-left">
               <span class="status-indicator status-indicator--saved">
                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
                      fill="none" stroke="currentColor" stroke-width="2.5"
@@ -539,9 +743,15 @@
   </div>
 
   <!-- ── Bottom Test Case Panel ───────────────────────────────────────────── -->
-  <div class="bottom-panel-container" [class.bottom-panel-container--open]="isBottomPanelOpen">
+  <div class="bottom-panel-container"
+       [class.bottom-panel-container--open]="isBottomPanelOpen"
+       [style.height.px]="isBottomPanelOpen ? testPanelHeight + 40 : 40">
     
-    <!-- Toggle Handle -->
+    <!-- Drag Handle + Toggle (combined row) -->
+    <div class="bottom-panel-resizer"
+         (mousedown)="onBottomResizerMouseDown($event)">
+      <div class="bottom-panel-resizer-dots" aria-hidden="true"></div>
+    </div>
     <button 
       class="bottom-panel-toggle"
       (click)="toggleBottomPanel()"
@@ -559,114 +769,621 @@
 
     <!-- Panel Content -->
     @if (isBottomPanelOpen) {
-      <div class="bottom-panel-content">
+      <div class="bottom-panel-content" [style.height.px]="testPanelHeight">
 
-        <!-- Test Case Tabs -->
-        <nav class="test-case-tabs" role="tablist" aria-label="Test cases">
-          @for (testCase of testCases; track testCase.id; let i = $index) {
-            <button 
-              class="test-case-tab"
-              [class.test-case-tab--active]="activeTestCase === i"
-              (click)="setActiveTestCase(i)"
+        <!-- ── Result Banner (above tabs, always visible after submit triggered) -->
+        @if (showResultBanner) {
+          <div
+            class="result-banner"
+            [class.result-banner--judging]="submitPhase === 'submitting'"
+            [class.result-banner--accepted]="submitPhase === 'done' && isAccepted"
+            [class.result-banner--rejected]="submitPhase === 'done' && !isAccepted"
+            [class.result-banner--error]="submitPhase === 'error'"
+            [attr.data-status]="submitResult?.status ?? null"
+            role="status"
+            [attr.aria-live]="submitPhase === 'submitting' ? 'polite' : 'assertive'">
+
+            @if (submitPhase === 'submitting') {
+              <!-- Judging state -->
+              <span class="result-banner-spinner" role="status" aria-label="Judging your solution…"></span>
+              <span class="result-banner-label">Judging your solution…</span>
+            }
+
+            @if (submitPhase === 'error') {
+              <!-- Error state -->
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+                   fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round"
+                   class="result-banner-icon" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+              <span class="result-banner-label">{{ submissionError }}</span>
+            }
+
+            @if (submitPhase === 'done' && submitResult) {
+              <!-- Verdict state -->
+              @if (isAccepted) {
+                <!-- Accepted icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="2.5"
+                     stroke-linecap="round" stroke-linejoin="round"
+                     class="result-banner-icon" aria-hidden="true">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              } @else {
+                <!-- Rejected icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="2.5"
+                     stroke-linecap="round" stroke-linejoin="round"
+                     class="result-banner-icon" aria-hidden="true">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              }
+
+              <span class="result-banner-label">{{ verdictLabel }}</span>
+
+              <span class="result-banner-divider" aria-hidden="true"></span>
+
+              <span class="result-banner-meta">
+                <span class="result-banner-chip">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24"
+                       fill="none" stroke="currentColor" stroke-width="2"
+                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                  </svg>
+                  {{ passRatio }}
+                </span>
+                <span class="result-banner-chip">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24"
+                       fill="none" stroke="currentColor" stroke-width="2"
+                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                  </svg>
+                  {{ executionTime }}
+                </span>
+                <span class="result-banner-chip">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24"
+                       fill="none" stroke="currentColor" stroke-width="2"
+                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                  </svg>
+                  {{ memoryUsed }}
+                </span>
+              </span>
+
+              <button
+                class="result-banner-detail-btn"
+                (click)="setBottomTab('result')"
+                type="button">
+                Details
+              </button>
+            }
+          </div>
+        }
+
+        <!-- ── Bottom Panel Top Bar: Test Cases | Result ────────────────────── -->
+        <div class="bottom-panel-top-bar">
+          <!-- Test Cases group -->
+          <nav class="test-case-tabs" role="tablist" aria-label="Test cases"
+               [class.test-case-tabs--hidden]="activeBottomTab === 'result' || activeBottomTab === 'feedback'">
+            @for (testCase of testCases; track testCase.id; let i = $index) {
+              <button
+                class="test-case-tab"
+                [class.test-case-tab--active]="activeTestCase === i && activeBottomTab === 'testcases'"
+                (click)="setBottomTab('testcases'); setActiveTestCase(i)"
+                type="button"
+                role="tab"
+                [attr.aria-selected]="activeTestCase === i && activeBottomTab === 'testcases'"
+                [attr.aria-controls]="'testcase-panel-' + i">
+                <!-- Run-pass indicator dot -->
+                @if (runResult && runResult.testResults[i]) {
+                  <span
+                    class="case-dot"
+                    [class.case-dot--pass]="runResult.testResults[i].passed"
+                    [class.case-dot--fail]="!runResult.testResults[i].passed"
+                    aria-hidden="true">
+                  </span>
+                }
+                {{ testCase.label }}
+              </button>
+            }
+            <button
+              class="test-case-tab test-case-tab--add"
+              (click)="setBottomTab('testcases'); addTestCase()"
+              type="button"
+              aria-label="Add test case">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                   fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+          </nav>
+
+          <!-- Result tab (only shown after submit / run) -->
+          @if (showResultTab) {
+            <button
+              class="test-case-tab test-case-tab--result"
+              [class.test-case-tab--active]="activeBottomTab === 'result'"
+              (click)="setBottomTab('result')"
               type="button"
               role="tab"
-              [attr.aria-selected]="activeTestCase === i"
-              [attr.aria-controls]="'testcase-panel-' + i">
-              {{ testCase.label }}
+              [attr.aria-selected]="activeBottomTab === 'result'">
+              @if (submitPhase === 'submitting') {
+                <span class="result-tab-spinner" aria-hidden="true"></span>
+                Judging…
+              } @else if (submitResult) {
+                <span
+                  class="result-tab-dot"
+                  [class.result-tab-dot--accepted]="isAccepted"
+                  [class.result-tab-dot--rejected]="!isAccepted"
+                  aria-hidden="true">
+                </span>
+                {{ isAccepted ? 'Accepted' : submitResult.status }}
+              } @else {
+                Result
+              }
             </button>
           }
-          <button 
-            class="test-case-tab test-case-tab--add"
-            (click)="addTestCase()"
+
+          <!-- AI Feedback tab — always present, dot reflects fetch state -->
+          <button
+            class="test-case-tab test-case-tab--feedback"
+            [class.test-case-tab--active]="activeBottomTab === 'feedback'"
+            (click)="setBottomTab('feedback')"
             type="button"
-            aria-label="Add test case">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
-                 fill="none" stroke="currentColor" stroke-width="2"
-                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
+            role="tab"
+            [attr.aria-selected]="activeBottomTab === 'feedback'"
+            aria-controls="feedback-panel">
+            <!-- Dot indicator: hidden before any submission -->
+            @if (isFeedbackLoading) {
+              <span class="feedback-tab-dot feedback-tab-dot--loading" aria-label="Loading feedback…"></span>
+            } @else if (submissionFeedback && !feedbackError) {
+              <span class="feedback-tab-dot feedback-tab-dot--ready" aria-label="Feedback ready"></span>
+            } @else if (feedbackError) {
+              <span class="feedback-tab-dot feedback-tab-dot--error" aria-label="Feedback failed"></span>
+            }
+            AI Feedback
           </button>
-        </nav>
-
-        <!-- Test Case Content -->
-        <div class="test-case-content">
-
-          <!-- Left: Inputs -->
-          <div class="test-case-inputs">
-            <h3 class="test-section-heading">Input</h3>
-            
-            <div class="input-field">
-              <label class="input-label" for="input-nums">nums</label>
-              <input 
-                id="input-nums"
-                type="text"
-                class="input-box"
-                [value]="currentTestCase.nums"
-                readonly
-                placeholder="[2,7,11,15]" />
-            </div>
-
-            <div class="input-field">
-              <label class="input-label" for="input-target">target</label>
-              <input 
-                id="input-target"
-                type="text"
-                class="input-box"
-                [value]="currentTestCase.target"
-                readonly
-                placeholder="9" />
-            </div>
-          </div>
-
-          <!-- Right: Outputs -->
-          <div class="test-case-outputs">
-            
-            <!-- Expected Output -->
-            <div class="output-section">
-              <h3 class="test-section-heading">Expected Output</h3>
-              <div class="output-box">
-                <code>{{ currentTestCase.expected }}</code>
-              </div>
-            </div>
-
-            <!-- Actual Output -->
-            <div class="output-section">
-              <h3 class="test-section-heading">Actual Output</h3>
-              <div class="output-box output-box--empty">
-                <span class="output-placeholder">Run your code to see output</span>
-              </div>
-            </div>
-
-            <!-- Run Output (Console) -->
-            <div class="output-section">
-              <h3 class="test-section-heading">Console</h3>
-              <div class="output-box output-box--empty">
-                <span class="output-placeholder">No output yet</span>
-              </div>
-            </div>
-
-          </div>
-
         </div>
+
+        <!-- ── Test Case Content ──────────────────────────────────────────────── -->
+        @if (activeBottomTab === 'testcases') {
+          <div class="test-case-content" [id]="'testcase-panel-' + activeTestCase">
+
+            <!-- Left: Inputs -->
+            <div class="test-case-inputs">
+              <h3 class="test-section-heading">Input</h3>
+
+              <div class="input-field">
+                <label class="input-label" for="input-nums">nums</label>
+                <input
+                  id="input-nums"
+                  type="text"
+                  class="input-box"
+                  [value]="currentTestCase.nums"
+                  readonly
+                  placeholder="[2,7,11,15]" />
+              </div>
+
+              <div class="input-field">
+                <label class="input-label" for="input-target">target</label>
+                <input
+                  id="input-target"
+                  type="text"
+                  class="input-box"
+                  [value]="currentTestCase.target"
+                  readonly
+                  placeholder="9" />
+              </div>
+            </div>
+
+            <!-- Right: Outputs -->
+            <div class="test-case-outputs">
+
+              <!-- Expected Output -->
+              <div class="output-section">
+                <h3 class="test-section-heading">Expected Output</h3>
+                <div class="output-box">
+                  <code>{{ currentTestCase.expected }}</code>
+                </div>
+              </div>
+
+              <!-- Actual Output -->
+              <div class="output-section">
+                <h3 class="test-section-heading">Actual Output</h3>
+                @if (runPhase === 'running') {
+                  <div class="output-box output-box--empty">
+                    <span class="output-placeholder">Running…</span>
+                  </div>
+                } @else if (runPhase === 'done' && currentActualOutput) {
+                  <div class="output-box"
+                       [class.output-box--pass]="runResult?.testResults?.[activeTestCase]?.passed"
+                       [class.output-box--fail]="!runResult?.testResults?.[activeTestCase]?.passed">
+                    <code>{{ currentActualOutput }}</code>
+                  </div>
+                } @else {
+                  <div class="output-box output-box--empty">
+                    <span class="output-placeholder">Run your code to see output</span>
+                  </div>
+                }
+              </div>
+
+              <!-- Console -->
+              <div class="output-section">
+                <h3 class="test-section-heading">Console</h3>
+                @if (runPhase === 'running') {
+                  <div class="output-box output-box--empty">
+                    <span class="output-placeholder">Running…</span>
+                  </div>
+                } @else if (runPhase === 'done') {
+                  <div class="output-box">
+                    <code>{{ currentConsoleOutput || '(no output)' }}</code>
+                  </div>
+                } @else {
+                  <div class="output-box output-box--empty">
+                    <span class="output-placeholder">No output yet</span>
+                  </div>
+                }
+              </div>
+
+            </div>
+
+          </div>
+        }
+
+        <!-- ── Submit Result Panel ───────────────────────────────────────────── -->
+        @if (activeBottomTab === 'result') {
+          <div class="result-panel">
+
+            <!-- Judging spinner -->
+            @if (submitPhase === 'submitting') {
+              <div class="result-judging">
+                <span class="result-judging-spinner" role="status" aria-label="Judging your solution…"></span>
+                <span>Judging your solution…</span>
+              </div>
+            }
+
+            <!-- Final verdict -->
+            @if (submitPhase === 'done' && submitResult) {
+              <div class="result-verdict"
+                   [class.result-verdict--accepted]="isAccepted"
+                   [class.result-verdict--rejected]="!isAccepted"
+                   [attr.data-status]="submitResult.status">
+
+                <!-- Verdict header -->
+                <div class="result-verdict-header">
+                  @if (isAccepted) {
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                         fill="none" stroke="currentColor" stroke-width="2.5"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  } @else {
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                         fill="none" stroke="currentColor" stroke-width="2.5"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  }
+                  <span class="result-verdict-label">{{ verdictLabel }}</span>
+                </div>
+
+                <!-- Stats row -->
+                <div class="result-stats">
+                  <div class="result-stat">
+                    <span class="result-stat-label">Test Cases</span>
+                    <span class="result-stat-value">{{ passRatio }}</span>
+                  </div>
+                  <div class="result-stat">
+                    <span class="result-stat-label">Runtime</span>
+                    <span class="result-stat-value">{{ executionTime }}</span>
+                  </div>
+                  <div class="result-stat">
+                    <span class="result-stat-label">Memory</span>
+                    <span class="result-stat-value">{{ memoryUsed }}</span>
+                  </div>
+                </div>
+
+                <!-- Error message (if any) -->
+                @if (submitResult.result?.errorMessage) {
+                  <div class="result-error-msg">
+                    <code>{{ submitResult.result!.errorMessage }}</code>
+                  </div>
+                }
+
+                <!-- AI feedback items (if any) -->
+                @if (submitResult.aiFeedback.length) {
+                  <div class="result-ai-feedback">
+                    <p class="result-ai-feedback-label">AI Feedback</p>
+                    @for (fb of submitResult.aiFeedback; track fb.type) {
+                      <p class="result-ai-feedback-item">{{ fb.message }}</p>
+                    }
+                  </div>
+                }
+
+              </div>
+            }
+
+          </div>
+        }
+
+        <!-- ── AI Feedback Panel ─────────────────────────────────────────────── -->
+        @if (activeBottomTab === 'feedback') {
+          <div class="feedback-panel" id="feedback-panel" role="tabpanel" aria-label="AI Feedback">
+
+            <!-- ── 1. Loading state: three shimmer skeleton cards ─────────── -->
+            @if (isFeedbackLoading) {
+              <div class="feedback-skeletons" aria-busy="true" aria-label="Loading feedback…">
+                <div class="feedback-skeleton-card">
+                  <div class="skeleton skeleton--badge"></div>
+                  <div class="skeleton skeleton--title"></div>
+                  <div class="skeleton skeleton--body"></div>
+                  <div class="skeleton skeleton--body skeleton--body-short"></div>
+                </div>
+                <div class="feedback-skeleton-card">
+                  <div class="skeleton skeleton--badge"></div>
+                  <div class="skeleton skeleton--title"></div>
+                  <div class="skeleton skeleton--body"></div>
+                </div>
+                <div class="feedback-skeleton-card">
+                  <div class="skeleton skeleton--badge"></div>
+                  <div class="skeleton skeleton--title"></div>
+                  <div class="skeleton skeleton--body"></div>
+                  <div class="skeleton skeleton--body skeleton--body-short"></div>
+                </div>
+              </div>
+            }
+
+            <!-- ── 2. Error state ─────────────────────────────────────────── -->
+            @if (!isFeedbackLoading && feedbackError) {
+              <div class="feedback-error-state" role="alert">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="1.5"
+                     stroke-linecap="round" stroke-linejoin="round"
+                     class="feedback-error-icon" aria-hidden="true">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                  <line x1="12" y1="9" x2="12" y2="13"></line>
+                  <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                <p class="feedback-error-msg">Couldn't load feedback</p>
+                <button
+                  class="btn btn--ghost feedback-retry-btn"
+                  (click)="submissionId && fetchFeedback(submissionId)"
+                  type="button">
+                  Try again
+                </button>
+              </div>
+            }
+
+            <!-- ── 3. Empty state (no submission yet) ────────────────────── -->
+            @if (!isFeedbackLoading && !feedbackError && !submissionFeedback) {
+              <div class="feedback-empty-state">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="1.5"
+                     stroke-linecap="round" stroke-linejoin="round"
+                     class="feedback-empty-icon" aria-hidden="true">
+                  <line x1="18" y1="20" x2="18" y2="10"></line>
+                  <line x1="12" y1="20" x2="12" y2="4"></line>
+                  <line x1="6"  y1="20" x2="6"  y2="14"></line>
+                </svg>
+                <p class="feedback-empty-title">No feedback yet</p>
+                <p class="feedback-empty-sub">
+                  Submit your solution to receive<br>AI-powered code quality analysis.
+                </p>
+              </div>
+            }
+
+            <!-- ── 4. Loaded state: score header + optional strips + list ── -->
+            @if (!isFeedbackLoading && !feedbackError && submissionFeedback) {
+
+              <!-- Score header row -->
+              <div class="feedback-score-header">
+                <div class="feedback-score-left">
+                  <!-- displayedScore ticks up via setInterval in TS -->
+                  <span class="feedback-score-number" [class]="scoreColorClass"
+                        [attr.aria-label]="'Overall score: ' + submissionFeedback.overallScore + ' out of 100'">
+                    {{ displayedScore }}
+                  </span>
+                  <span class="feedback-score-denom" aria-hidden="true">/ 100</span>
+                  @if (hasPerfectScore) {
+                    <span class="feedback-score-perfect" aria-label="Perfect score">✨</span>
+                  }
+                  <span class="feedback-score-label">Overall Score</span>
+                </div>
+                <div class="feedback-type-counts" aria-label="Feedback breakdown">
+                  <span class="feedback-type-chip feedback-type-chip--quality">
+                    quality&nbsp;{{ feedbackCountOf('quality') }}
+                  </span>
+                  <span class="feedback-type-chip feedback-type-chip--optimization">
+                    optimization&nbsp;{{ feedbackCountOf('optimization') }}
+                  </span>
+                  <span class="feedback-type-chip feedback-type-chip--anomaly">
+                    anomaly&nbsp;{{ feedbackCountOf('anomaly') }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Summary -->
+              <p class="feedback-summary">{{ submissionFeedback.summary }}</p>
+
+              <!-- High severity warning strip — only when at least one high item exists -->
+              @if (highSeverityCount > 0) {
+                <div class="feedback-severity-strip" role="alert">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"
+                       fill="none" stroke="currentColor" stroke-width="2"
+                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                  </svg>
+                  {{ highSeverityCount }} high severity issue{{ highSeverityCount > 1 ? 's' : '' }} found — review before resubmitting
+                </div>
+              }
+
+              <!-- Zero items edge case — no filter pills or list needed -->
+              @if (feedbackIsEmpty) {
+                <div class="feedback-clean-state">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                       fill="none" stroke="currentColor" stroke-width="2"
+                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                  No specific feedback items — your code looks clean!
+                </div>
+              }
+
+              <!-- Filter pills + items list — only when items exist -->
+              @if (!feedbackIsEmpty) {
+
+                <!-- Filter pills -->
+                <div class="feedback-filters" role="group" aria-label="Filter feedback by type">
+                  <button
+                    class="feedback-filter-pill"
+                    [class.feedback-filter-pill--active]="activeFeedbackFilter === 'all'"
+                    (click)="activeFeedbackFilter = 'all'"
+                    type="button">
+                    All ({{ submissionFeedback.feedbackItems.length }})
+                  </button>
+                  <button
+                    class="feedback-filter-pill feedback-filter-pill--quality"
+                    [class.feedback-filter-pill--active]="activeFeedbackFilter === 'quality'"
+                    [class.feedback-filter-pill--zero]="feedbackCountOf('quality') === 0"
+                    (click)="activeFeedbackFilter = 'quality'"
+                    type="button">
+                    Quality ({{ feedbackCountOf('quality') }})
+                  </button>
+                  <button
+                    class="feedback-filter-pill feedback-filter-pill--optimization"
+                    [class.feedback-filter-pill--active]="activeFeedbackFilter === 'optimization'"
+                    [class.feedback-filter-pill--zero]="feedbackCountOf('optimization') === 0"
+                    (click)="activeFeedbackFilter = 'optimization'"
+                    type="button">
+                    Optimization ({{ feedbackCountOf('optimization') }})
+                  </button>
+                  <button
+                    class="feedback-filter-pill feedback-filter-pill--anomaly"
+                    [class.feedback-filter-pill--active]="activeFeedbackFilter === 'anomaly'"
+                    [class.feedback-filter-pill--zero]="feedbackCountOf('anomaly') === 0"
+                    (click)="activeFeedbackFilter = 'anomaly'"
+                    type="button">
+                    Anomaly ({{ feedbackCountOf('anomaly') }})
+                  </button>
+                </div>
+
+                <!-- Feedback items list with staggered entrance animation -->
+                <div class="feedback-items-list">
+                  @for (item of filteredFeedbackItems; track item.id; let i = $index) {
+                    <div
+                      class="feedback-item-card"
+                      [style.animation-delay]="i * 80 + 'ms'">
+
+                      <!-- Card top row: type badge + severity badge + line range -->
+                      <div class="feedback-item-top">
+                        <span
+                          class="feedback-badge feedback-badge--type"
+                          [class.feedback-badge--quality]="item.type === 'quality'"
+                          [class.feedback-badge--optimization]="item.type === 'optimization'"
+                          [class.feedback-badge--anomaly]="item.type === 'anomaly'">
+                          {{ item.type }}
+                        </span>
+                        <span
+                          class="feedback-badge feedback-badge--severity"
+                          [class.feedback-badge--low]="item.severity === 'low'"
+                          [class.feedback-badge--medium]="item.severity === 'medium'"
+                          [class.feedback-badge--high]="item.severity === 'high'">
+                          {{ item.severity }}
+                        </span>
+                        @if (item.lineStart !== null) {
+                          <span class="feedback-item-line"
+                                [attr.aria-label]="'Line ' + item.lineStart + (item.lineEnd !== item.lineStart ? ' to ' + item.lineEnd : '')">
+                            Line {{ item.lineStart }}{{ item.lineEnd !== null && item.lineEnd !== item.lineStart ? '–' + item.lineEnd : '' }}
+                          </span>
+                        }
+                      </div>
+
+                      <!-- Title + description -->
+                      <p class="feedback-item-title">{{ item.title }}</p>
+                      <p class="feedback-item-desc">{{ item.description }}</p>
+
+                      <!-- Jump to line — only when lineStart is set -->
+                      @if (item.lineStart !== null) {
+                        <button
+                          class="feedback-jump-btn"
+                          (click)="jumpToLine(item.lineStart!)"
+                          type="button"
+                          [attr.aria-label]="'Jump to line ' + item.lineStart + ' in editor'">
+                          Jump to line
+                          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+                               fill="none" stroke="currentColor" stroke-width="2"
+                               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                            <polyline points="12 5 19 12 12 19"></polyline>
+                          </svg>
+                        </button>
+                      }
+
+                    </div>
+                  }
+
+                  <!-- Empty filter result -->
+                  @if (filteredFeedbackItems.length === 0) {
+                    <p class="feedback-filter-empty">
+                      No {{ activeFeedbackFilter }} items found.
+                    </p>
+                  }
+                </div>
+
+              }
+
+            }
+
+          </div>
+        }
 
         <!-- Bottom Action Row -->
         <div class="bottom-panel-actions">
-          <button class="btn btn--ghost" (click)="onRun()" type="button">
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
-                 fill="none" stroke="currentColor" stroke-width="2"
-                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <polygon points="5 3 19 12 5 21 5 3"></polygon>
-            </svg>
-            Run Code
+          <button
+            class="btn btn--ghost"
+            (click)="onRun()"
+            type="button"
+            [disabled]="runPhase === 'running'">
+            @if (runPhase === 'running') {
+              <span class="btn-spinner" role="status" aria-label="Running code…"></span>
+              Running…
+            } @else {
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+                   fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
+              Run Code
+            }
           </button>
-          <button class="btn btn--primary" (click)="onSubmit()" type="button">
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
-                 fill="none" stroke="currentColor" stroke-width="2"
-                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
-            Submit Solution
+          <button
+            class="btn btn--primary"
+            (click)="onSubmit()"
+            type="button"
+            [disabled]="isSubmitting"
+            [title]="submitBtnTitle">
+            @if (isSubmitting) {
+              <span class="btn-spinner btn-spinner--light" role="status" aria-label="Submitting…"></span>
+              Submitting…
+            } @else {
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+                   fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              Submit Solution
+            }
           </button>
         </div>
 
@@ -676,8 +1393,7 @@
   </div>
 
   <!-- ── Mobile Floating Action Bar ───────────────────────────────────────── -->
-  <div class="mobile-action-bar">
-    <button class="mobile-action-btn mobile-action-btn--secondary" (click)="onRun()" type="button">
+  <div class="mobile-action-bar">    <button class="mobile-action-btn mobile-action-btn--secondary" (click)="onRun()" type="button">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
            fill="none" stroke="currentColor" stroke-width="2"
            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -685,13 +1401,19 @@
       </svg>
       Run
     </button>
-    <button class="mobile-action-btn mobile-action-btn--primary" (click)="onSubmit()" type="button">
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-           fill="none" stroke="currentColor" stroke-width="2"
-           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <polyline points="20 6 9 17 4 12"></polyline>
-      </svg>
-      Submit
+    <button class="mobile-action-btn mobile-action-btn--primary" (click)="onSubmit()" type="button"
+            [disabled]="isSubmitting">
+      @if (isSubmitting) {
+        <span class="btn-spinner btn-spinner--light" aria-hidden="true"></span>
+        Submitting…
+      } @else {
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        Submit
+      }
     </button>
     <button class="mobile-action-btn mobile-action-btn--test" (click)="toggleBottomPanel()" type="button">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
@@ -706,5 +1428,28 @@
       Tests
     </button>
   </div>
+
+  <!-- ── Toast notification ────────────────────────────────────────────────── -->
+  @if (toastMessage) {
+    <div
+      class="toast"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true">
+      <span class="toast-text">{{ toastMessage }}</span>
+      <button
+        class="toast-dismiss"
+        (click)="dismissToast()"
+        type="button"
+        aria-label="Dismiss notification">
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2.5"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+  }
 
 </div>

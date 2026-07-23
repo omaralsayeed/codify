@@ -150,7 +150,7 @@
   font-weight: 600;
 
   &:hover {
-    background: darken(#E1F5EE, 4%);
+    background: darken($teal-lt, 4%);
     border-color: $teal;
   }
 }
@@ -1082,13 +1082,42 @@
   flex-shrink: 0;
   background: $white;
   border-top: 1px solid $border;
-  transition: max-height 0.3s ease;
-  max-height: 40px; // collapsed: just the toggle button visible
   overflow: hidden;
+  // Height is driven entirely by [style.height.px] binding — no CSS max-height needed
+}
 
-  &--open {
-    max-height: 280px; // expanded: full panel height
+// ── Bottom Panel Resizer Handle ───────────────────────────────────────────────
+.bottom-panel-resizer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  cursor: row-resize;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  transition: background 0.15s;
+
+  &:hover,
+  &:active {
+    background: rgba($blue, 0.08);
+
+    .bottom-panel-resizer-dots {
+      background: $blue;
+    }
   }
+}
+
+.bottom-panel-resizer-dots {
+  width: 32px;
+  height: 3px;
+  border-radius: 2px;
+  background: $border;
+  pointer-events: none;
+  transition: background 0.15s;
 }
 
 .bottom-panel-toggle {
@@ -1125,8 +1154,8 @@
 .bottom-panel-content {
   display: flex;
   flex-direction: column;
-  height: 240px; // total height minus toggle button
   overflow: hidden;
+  // Height set via [style.height.px] binding
 }
 
 // ── Test Case Tabs ────────────────────────────────────────────────────────────
@@ -1666,8 +1695,8 @@
   }
 
   &--wrong {
-    background: #FFEBEE;
-    color: #D32F2F;
+    background: $red-lt;
+    color: $red;
   }
 }
 
@@ -1775,10 +1804,7 @@
     top: 12px;
   }
 
-  // Bottom panel adjustments
-  .bottom-panel-container--open {
-    max-height: 240px; // slightly smaller on tablet
-  }
+  // Bottom panel adjustments — height driven by JS binding, no max-height override needed
 
   .test-case-outputs {
     grid-template-columns: repeat(2, 1fr); // 2 columns instead of 3
@@ -1966,4 +1992,1677 @@
     top: 52px; // only problem toolbar, no global nav
     height: calc(100vh - 52px);
   }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CHUNK 1 ADDITIONS: Submission result + AI hints
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ── Spinner animation ─────────────────────────────────────────────────────────
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+}
+
+// ── Hint button disabled state ────────────────────────────────────────────────
+.toolbar-btn--hint:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+// ── Bottom panel top bar (houses test-case tabs + result tab) ─────────────────
+.bottom-panel-top-bar {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid $border;
+  background: $white;
+  flex-shrink: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+// Inline result tab appended after the test case tabs
+.test-case-tab--result {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto; // push to right end
+  padding: 8px 16px;
+  border-left: 1px solid $border;
+  font-weight: 600;
+
+  &.test-case-tab--active {
+    color: $navy;
+
+    &::after {
+      background: $navy;
+    }
+  }
+}
+
+// Pass / fail coloured dots in test-case tab labels
+.case-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 4px;
+  flex-shrink: 0;
+
+  &--pass { background: $teal; }
+  &--fail { background: $red; }
+}
+
+// Small dot in the result tab itself
+.result-tab-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+
+  &--accepted { background: $teal; }
+  &--rejected { background: $red; }
+}
+
+// Tiny spinning indicator in the result tab during judging
+.result-tab-spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 2px solid $border;
+  border-top-color: $blue;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+// ── Output box pass / fail tinting ────────────────────────────────────────────
+.output-box--pass {
+  border-color: rgba(29, 158, 117, 0.4);
+  background: $teal-lt;
+}
+
+.output-box--fail {
+  border-color: rgba(211, 47, 47, 0.3);
+  background: $red-lt;
+}
+
+// ── Result panel ──────────────────────────────────────────────────────────────
+.result-panel {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+// Judging in-progress row
+.result-judging {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+  font-family: $ff-body;
+  font-size: 14px;
+  color: $navy2;
+}
+
+.result-judging-spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 3px solid $border;
+  border-top-color: $blue;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+// Verdict card
+.result-verdict {
+  border-radius: $r;
+  border: 1px solid $border;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  &--accepted {
+    border-color: rgba(29, 158, 117, 0.4);
+    background: $teal-lt;
+
+    .result-verdict-header { color: $teal; }
+    .result-verdict-label  { color: $teal; }
+  }
+
+  &--rejected {
+    border-color: rgba(211, 47, 47, 0.25);
+    background: $red-lt;
+
+    .result-verdict-header { color: $red; }
+    .result-verdict-label  { color: $red; }
+  }
+}
+
+.result-verdict-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: $ff-body;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.result-verdict-label {
+  font-family: $ff-mono;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+// Stats row inside verdict card
+.result-stats {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.result-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.result-stat-label {
+  font-family: $ff-body;
+  font-size: 11px;
+  font-weight: 600;
+  color: $muted;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.result-stat-value {
+  font-family: $ff-mono;
+  font-size: 14px;
+  font-weight: 600;
+  color: $navy;
+}
+
+// Error / output-summary message
+.result-error-msg {
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 6px;
+  padding: 10px 12px;
+
+  code {
+    font-family: $ff-mono;
+    font-size: 12px;
+    color: $red;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+}
+
+// AI feedback sub-section
+.result-ai-feedback {
+  padding-top: 8px;
+  border-top: 1px solid $border;
+}
+
+.result-ai-feedback-label {
+  font-family: $ff-body;
+  font-size: 11px;
+  font-weight: 700;
+  color: $muted;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 6px 0;
+}
+
+.result-ai-feedback-item {
+  font-family: $ff-body;
+  font-size: 13px;
+  color: $charcoal;
+  line-height: 1.6;
+  margin: 0 0 4px 0;
+}
+
+// ── Button spinners (inside Run / Submit buttons while loading) ───────────────
+.btn-spinner {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border: 2px solid rgba(46, 134, 171, 0.3);
+  border-top-color: $blue;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+
+  &--light {
+    border-color: rgba(255, 255, 255, 0.3);
+    border-top-color: $white;
+  }
+}
+
+// ── Hint panel additions ──────────────────────────────────────────────────────
+
+// Empty state (no hints yet)
+.empty-state-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  max-width: 340px;
+
+  p {
+    font-family: $ff-body;
+    font-size: 14px;
+    color: $muted;
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  strong {
+    color: $teal;
+  }
+}
+
+.empty-state-icon {
+  color: $teal;
+  opacity: 0.6;
+}
+
+.empty-state-sub {
+  font-size: 12px !important;
+  color: $muted !important;
+  opacity: 0.75;
+}
+
+// Follow-up question under a hint
+.hint-follow-up {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-family: $ff-body;
+  font-size: 13px;
+  color: $navy2;
+  font-style: italic;
+  line-height: 1.55;
+  margin: 8px 0 0 0;
+
+  svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: $teal;
+  }
+}
+
+// Loading hint placeholder
+.hint-loading-text {
+  font-family: $ff-body;
+  font-size: 13px;
+  color: $muted;
+  font-style: italic;
+}
+
+// Loading hint item (pulsing)
+.hint-item--loading {
+  opacity: 0.6;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.hint-level-badge--loading {
+  background: $ivory2;
+  color: $muted;
+  letter-spacing: 0.2em;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50%       { opacity: 0.35; }
+}
+
+// CTA row below hints
+.hint-cta {
+  display: flex;
+  align-items: center;
+  padding: 4px 0 8px 0;
+}
+
+.hint-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.hints-exhausted {
+  font-family: $ff-body;
+  font-size: 13px;
+  color: $muted;
+  font-style: italic;
+  margin: 0;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CHUNK 3 & 4: Submit button states + Result banner
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ── Toolbar Submit button flash states ───────────────────────────────────────
+// 700ms flash using a background-color transition after the verdict arrives.
+
+.toolbar-btn--submitting {
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+.toolbar-btn--flash-accepted {
+  background: $teal !important;
+  color: $white !important;
+  transition: background 0.2s ease, color 0.2s ease !important;
+}
+
+.toolbar-btn--flash-rejected {
+  background: $red !important;
+  color: $white !important;
+  transition: background 0.2s ease, color 0.2s ease !important;
+}
+
+// ── Bottom panel: height is driven entirely by [style.height.px] binding ─────
+// No max-height override needed here — the JS clamps to MIN/MAX_PANEL_HEIGHT.
+
+// ── Result banner ─────────────────────────────────────────────────────────────
+// Sits between the panel toggle handle and the tab row.
+// Animates in with a slideDown + fadeIn on appearance.
+
+@keyframes bannerSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.result-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  flex-shrink: 0;
+  border-bottom: 1px solid $border;
+  font-family: $ff-body;
+  font-size: 13px;
+  animation: bannerSlideDown 0.15s ease-out both;
+  min-height: 40px;
+
+  // ── State modifiers ─────────────────────────────────────────────────────────
+
+  &--judging {
+    background: $ivory;
+    color: $navy2;
+  }
+
+  &--accepted {
+    background: $teal-lt;
+    border-bottom-color: rgba(29, 158, 117, 0.25);
+
+    .result-banner-label {
+      color: $teal;
+      font-weight: 700;
+    }
+
+    .result-banner-icon {
+      color: $teal;
+    }
+  }
+
+  &--rejected {
+    background: $red-lt;
+    border-bottom-color: rgba(211, 47, 47, 0.2);
+
+    .result-banner-label {
+      color: $red;
+      font-weight: 700;
+    }
+
+    .result-banner-icon {
+      color: $red;
+    }
+  }
+
+  &--error {
+    background: $orange-lt;
+    border-bottom-color: rgba(230, 126, 34, 0.25);
+
+    .result-banner-label {
+      color: $orange;
+    }
+
+    .result-banner-icon {
+      color: $orange;
+    }
+  }
+}
+
+.result-banner-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid $border;
+  border-top-color: $blue;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+.result-banner-icon {
+  flex-shrink: 0;
+}
+
+.result-banner-label {
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+// Vertical rule between status label and stats chips
+.result-banner-divider {
+  display: inline-block;
+  width: 1px;
+  height: 14px;
+  background: $border;
+  flex-shrink: 0;
+  margin: 0 2px;
+}
+
+.result-banner-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+// Individual stat pill inside the banner
+.result-banner-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: $ff-mono;
+  font-size: 11px;
+  font-weight: 600;
+  color: $navy2;
+  background: rgba(26, 43, 74, 0.06);
+  padding: 2px 7px;
+  border-radius: 20px;
+  white-space: nowrap;
+
+  svg {
+    flex-shrink: 0;
+    opacity: 0.7;
+  }
+}
+
+// "Details" button — right-aligned
+.result-banner-detail-btn {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-family: $ff-body;
+  font-size: 12px;
+  font-weight: 600;
+  color: $blue;
+  background: transparent;
+  border: 1px solid $blue;
+  border-radius: $r;
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+
+  &:hover {
+    background: $blue-lt;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+}
+
+// ── Responsive: mobile banner ─────────────────────────────────────────────────
+@media (max-width: $mobile) {
+  .result-banner {
+    padding: 8px 12px;
+    flex-wrap: wrap;
+    min-height: auto;
+  }
+
+  .result-banner-meta {
+    gap: 4px;
+  }
+
+  .result-banner-chip {
+    font-size: 10px;
+    padding: 2px 6px;
+  }
+
+  .result-banner-detail-btn {
+    font-size: 11px;
+    padding: 2px 8px;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CHUNK 5: Accepted Celebration — three layers
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ── Layer 1a: Banner label pulse on Accepted ──────────────────────────────────
+// Fires once when .result-banner--accepted appears. Scale 1 → 1.08 → 1, 300ms.
+
+@keyframes acceptedPulse {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+// ── Layer 1b: Banner background glow fade ────────────────────────────────────
+// A brief brightening of the green background that decays to the resting tint.
+
+@keyframes bannerGlow {
+  0%   { background-color: rgba(29, 158, 117, 0.30); }
+  30%  { background-color: rgba(29, 158, 117, 0.55); }
+  100% { background-color: $teal-lt; } // resting state
+}
+
+.result-banner--accepted {
+  // Play both animations sequentially on entry
+  animation: bannerSlideDown 0.15s ease-out both,
+             bannerGlow      0.55s ease-out 0.10s both;
+
+  // The label + icon pulse together
+  .result-banner-label,
+  .result-banner-icon {
+    animation: acceptedPulse 0.30s ease-out 0.12s both;
+    display: inline-flex;  // needed for transform to apply on inline elements
+    align-items: center;
+  }
+}
+
+// ── Layer 2: Confetti particle keyframe ──────────────────────────────────────
+// Each particle reads its target dx/dy/spin from CSS custom properties set
+// via inline styles in the TypeScript launchConfetti() method.
+// Timeline: shoot outward + spin → fade out in the last 30%.
+
+@keyframes confettiFall {
+  0% {
+    transform: translate(-50%, -50%) translate(0, 0) rotate(0deg);
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) translate(var(--dx), var(--dy)) rotate(var(--spin));
+    opacity: 0;
+  }
+}
+
+// ── Layer 3: Editor body glow ─────────────────────────────────────────────────
+// A green box-shadow blooms then fades over 900ms.
+// We use two keyframe phases (in + out) driven by the class toggle in TS.
+
+@keyframes editorGlowIn {
+  0%   { box-shadow: inset 0 0 0 0 rgba(29, 158, 117, 0);    }
+  40%  { box-shadow: inset 0 0 0 3px rgba(29, 158, 117, 0.7); }
+  100% { box-shadow: inset 0 0 0 2px rgba(29, 158, 117, 0.3); }
+}
+
+@keyframes editorGlowOut {
+  0%   { box-shadow: inset 0 0 0 2px rgba(29, 158, 117, 0.3); }
+  100% { box-shadow: inset 0 0 0 0 rgba(29, 158, 117, 0);    }
+}
+
+.editor-body--glow {
+  // Bloom in over 400ms
+  animation: editorGlowIn 0.40s ease-out both;
+  // When the class is removed by TS, the element returns to its default state.
+  // For a smooth exit we rely on the CSS transition below.
+  transition: box-shadow 0.50s ease-out;
+}
+
+// Without the class, clear any lingering shadow via transition
+.editor-body {
+  transition: box-shadow 0.50s ease-out;
+}
+
+// ── prefers-reduced-motion override ──────────────────────────────────────────
+// Disable ALL animations defined in this chunk when the user opts out.
+// Layers 2 & 3 are also blocked in TS before DOM manipulation even starts.
+
+@media (prefers-reduced-motion: reduce) {
+  .result-banner--accepted {
+    animation: bannerSlideDown 0.15s ease-out both; // keep the slide, drop the glow
+    .result-banner-label,
+    .result-banner-icon {
+      animation: none;
+    }
+  }
+
+  @keyframes confettiFall { /* no-op — particles are never created under reduced motion */ }
+
+  .editor-body--glow {
+    animation: none;
+  }
+
+  .editor-body {
+    transition: none;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CHUNK 6: Hint chat hand-off button
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.hint-cta {
+  // Allow multiple buttons to sit side-by-side
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hint-cta-btn--chat {
+  color: $teal;
+  border-color: rgba(29, 158, 117, 0.35);
+
+  &:hover {
+    background: $teal-lt;
+    border-color: $teal;
+    color: $teal;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CHUNK 8: Hint button states, overlay card, editor highlight, tab count badge
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ── Toolbar hint button — loading pulsing glow ────────────────────────────────
+@keyframes hintBtnPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(29, 158, 117, 0.4); }
+  50%       { box-shadow: 0 0 0 5px rgba(29, 158, 117, 0); }
+}
+
+.toolbar-btn--hint-loading {
+  animation: hintBtnPulse 1.2s ease-in-out infinite;
+  cursor: not-allowed;
+}
+
+// Exhausted state — greyed out, no hover
+.toolbar-btn--hint-exhausted {
+  background: $ivory2 !important;
+  color: $muted !important;
+  border-color: $border !important;
+  opacity: 0.65;
+  cursor: not-allowed;
+
+  &:hover {
+    background: $ivory2 !important;
+    border-color: $border !important;
+    filter: none !important;
+  }
+}
+
+// ── Codify tab hint count badge ───────────────────────────────────────────────
+.tab-hint-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  margin-left: 6px;
+  background: $teal;
+  color: $white;
+  font-family: $ff-mono;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 20px;
+  line-height: 1;
+  animation: fadeIn 0.2s ease-out both;
+}
+
+// ── Editor textarea hint highlight ────────────────────────────────────────────
+// Copilot-style soft green flash on the whole textarea (800ms)
+
+@keyframes hintHighlight {
+  0%   { background-color: #1e1e1e; }
+  15%  { background-color: rgba(29, 158, 117, 0.14); }
+  100% { background-color: #1e1e1e; }
+}
+
+.editor-textarea--highlight {
+  animation: hintHighlight 0.8s ease-out both;
+}
+
+// ── Hint explanation overlay card ─────────────────────────────────────────────
+// Positioned at the bottom-left of .right-panel-content (which is position:relative
+// via the existing flex column layout — we need to confirm it has position context).
+
+@keyframes hintOverlaySlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hint-overlay-card {
+  position: absolute;
+  bottom: 44px;          // sits just above the status bar (44px tall)
+  left: 16px;
+  width: 300px;
+  max-width: calc(100% - 32px);
+  background: $white;
+  border: 1px solid rgba(29, 158, 117, 0.3);
+  border-radius: $r;
+  box-shadow: $shadow-lg;
+  z-index: 50;
+  overflow: hidden;
+  animation: hintOverlaySlideUp 0.2s ease-out both;
+}
+
+.hint-overlay-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px 6px;
+  gap: 8px;
+}
+
+.hint-overlay-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: $ff-body;
+  font-size: 11px;
+  font-weight: 700;
+  color: $teal;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+
+  svg { flex-shrink: 0; }
+}
+
+.hint-overlay-dismiss {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: $muted;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  margin-left: auto;
+
+  &:hover {
+    background: $ivory2;
+    color: $navy;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+}
+
+.hint-overlay-text {
+  font-family: $ff-body;
+  font-size: 13px;
+  line-height: 1.6;
+  color: $charcoal;
+  margin: 0;
+  padding: 0 12px 10px;
+  // Clamp to 4 lines — full text visible in the Codify tab
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.hint-overlay-chat-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: $ff-body;
+  font-size: 12px;
+  font-weight: 600;
+  color: $teal;
+  background: $teal-lt;
+  border: none;
+  border-top: 1px solid rgba(29, 158, 117, 0.15);
+  width: 100%;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+  text-align: left;
+
+  svg { flex-shrink: 0; margin-left: auto; }
+
+  &:hover {
+    background: darken($teal-lt, 4%);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $teal;
+    outline-offset: -2px;
+  }
+}
+
+// Countdown progress bar at bottom of overlay
+.hint-overlay-progress {
+  height: 3px;
+  background: rgba(29, 158, 117, 0.12);
+  width: 100%;
+}
+
+.hint-overlay-progress-bar {
+  height: 100%;
+  background: $teal;
+  transition: width 0.1s linear; // matches the 100ms interval tick
+}
+
+// ── Hint timeline entry animation (Codify tab) ────────────────────────────────
+// Each new entry fades in independently without re-rendering the list.
+// The @for loop in the template renders one item per history entry;
+// the newest item always has animation: fadeIn on it.
+
+.hint-item {
+  animation: fadeIn 0.15s ease-out both;
+}
+
+// ── right-panel-content needs position:relative for the overlay ───────────────
+// The existing class definition sets flex layout but not position.
+// Adding it here without touching the original definition.
+.right-panel-content {
+  position: relative;
+}
+
+// ── Responsive: hide overlay on mobile (too cramped) ─────────────────────────
+@media (max-width: $mobile) {
+  .hint-overlay-card {
+    display: none;
+  }
+}
+
+// ── prefers-reduced-motion ────────────────────────────────────────────────────
+@media (prefers-reduced-motion: reduce) {
+  .toolbar-btn--hint-loading { animation: none; }
+  .hint-overlay-card         { animation: none; }
+  .editor-textarea--highlight { animation: none; }
+  .tab-hint-count             { animation: none; }
+  .hint-item                  { animation: none; }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CHUNK 9: Validation, toast, verdict badge colors, a11y polish
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ── Inline submit validation message ─────────────────────────────────────────
+// Sits in the toolbar-center flex row, immediately after the Submit button.
+
+@keyframes validationSlideIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.submit-validation-msg {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: $ff-body;
+  font-size: 12px;
+  font-weight: 500;
+  color: $red;
+  background: $red-lt;
+  border: 1px solid rgba(198, 40, 40, 0.2);
+  border-radius: $r;
+  padding: 4px 10px;
+  white-space: nowrap;
+  animation: validationSlideIn 0.15s ease-out both;
+
+  svg { flex-shrink: 0; }
+}
+
+@media (max-width: $mobile) {
+  // Hide on mobile — toolbar-center is hidden anyway
+  .submit-validation-msg { display: none; }
+}
+
+// ── Verdict banner badge — full status color set ──────────────────────────────
+// Wrong Answer and error cases must feel distinct from Accepted.
+
+.result-banner--rejected {
+  // RuntimeError / TimeLimitExceeded — amber
+  &[data-status="RuntimeError"],
+  &[data-status="TimeLimitExceeded"] {
+    background: $orange-lt;
+    border-bottom-color: rgba(230, 126, 34, 0.25);
+
+    .result-banner-label { color: $orange; }
+    .result-banner-icon  { color: $orange; }
+  }
+
+  // CompileError — purple tint
+  &[data-status="CompileError"] {
+    background: $purple-lt;
+    border-bottom-color: rgba(142, 36, 170, 0.2);
+
+    .result-banner-label { color: $purple; }
+    .result-banner-icon  { color: $purple; }
+  }
+}
+
+// Verdict card — same extended color set
+.result-verdict--rejected {
+  &[data-status="RuntimeError"],
+  &[data-status="TimeLimitExceeded"] {
+    border-color: rgba(230, 126, 34, 0.35);
+    background: $orange-lt;
+
+    .result-verdict-header,
+    .result-verdict-label { color: $orange; }
+  }
+
+  &[data-status="CompileError"] {
+    border-color: rgba(142, 36, 170, 0.25);
+    background: $purple-lt;
+
+    .result-verdict-header,
+    .result-verdict-label { color: $purple; }
+  }
+}
+
+// ── Toast notification ────────────────────────────────────────────────────────
+
+@keyframes toastSlideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: $navy;
+  color: $white;
+  font-family: $ff-body;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: $r;
+  box-shadow: $shadow-lg;
+  max-width: calc(100vw - 32px);
+  animation: toastSlideUp 0.2s ease-out both;
+  pointer-events: all;
+}
+
+.toast-text {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toast-dismiss {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+  padding: 0;
+
+  &:hover {
+    color: $white;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $white;
+    outline-offset: 2px;
+  }
+}
+
+// Mobile: full-width, above action bar
+@media (max-width: $mobile) {
+  .toast {
+    bottom: calc(64px + env(safe-area-inset-bottom) + 8px);
+    left: 16px;
+    right: 16px;
+    transform: none;
+    max-width: none;
+  }
+}
+
+// ── prefers-reduced-motion: strip new animations ──────────────────────────────
+@media (prefers-reduced-motion: reduce) {
+  .submit-validation-msg { animation: none; }
+  .toast                 { animation: none; }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CHUNK 3 & 4: AI Feedback tab — tab button + dot indicator
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ── Feedback tab button ───────────────────────────────────────────────────────
+// Separated from the test-case tabs by a left border acting as the visual
+// divider — no extra element needed.
+
+.test-case-tab--feedback {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;   // push to right end, same as --result
+  padding: 8px 14px;
+  border-left: 1px solid $border;
+  font-weight: 500;
+  white-space: nowrap;
+
+  // Active state reuses the base active underline
+  &.test-case-tab--active {
+    color: $teal;
+    font-weight: 600;
+
+    &::after {
+      background: $teal;
+    }
+  }
+}
+
+// ── Feedback dot indicator ────────────────────────────────────────────────────
+// Small 8px dot that sits before the "AI Feedback" label.
+// Follows the same size/shape as .result-tab-dot already in the file.
+
+.feedback-tab-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+
+  // Loading — pulsing orange
+  &--loading {
+    background: $orange;
+    animation: feedbackDotPulse 1.1s ease-in-out infinite;
+  }
+
+  // Ready — solid green
+  &--ready {
+    background: $teal;
+  }
+
+  // Error — solid red
+  &--error {
+    background: $red;
+  }
+}
+
+@keyframes feedbackDotPulse {
+  0%, 100% { opacity: 1;    transform: scale(1);    }
+  50%       { opacity: 0.4;  transform: scale(0.85); }
+}
+
+// ── Feedback panel shell ──────────────────────────────────────────────────────
+// Flex column that grows to fill the available space in .bottom-panel-content.
+// Chunk 5 will add the inner layout (score ring, item list, filter bar).
+
+.feedback-panel {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+// ── prefers-reduced-motion ────────────────────────────────────────────────────
+@media (prefers-reduced-motion: reduce) {
+  .feedback-tab-dot--loading { animation: none; }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CHUNK 5: Feedback panel content area
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ── Shimmer skeleton ──────────────────────────────────────────────────────────
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.skeleton {
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    $ivory  25%,
+    $ivory2 50%,
+    $ivory  75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.feedback-skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.feedback-skeleton-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid $border;
+  border-radius: $r;
+}
+
+.skeleton--badge  { height: 20px; width: 72px; border-radius: 20px; }
+.skeleton--title  { height: 14px; width: 55%; }
+.skeleton--body   { height: 12px; width: 100%; }
+.skeleton--body-short { width: 70%; }
+
+// ── Empty state ───────────────────────────────────────────────────────────────
+
+.feedback-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex: 1;
+  padding: 28px 20px;
+  text-align: center;
+}
+
+.feedback-empty-icon {
+  color: $muted;
+  opacity: 0.5;
+}
+
+.feedback-empty-title {
+  font-family: $ff-body;
+  font-size: 14px;
+  font-weight: 600;
+  color: $navy2;
+  margin: 0;
+}
+
+.feedback-empty-sub {
+  font-family: $ff-body;
+  font-size: 13px;
+  color: $muted;
+  line-height: 1.6;
+  margin: 0;
+}
+
+// ── Error state ───────────────────────────────────────────────────────────────
+
+.feedback-error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex: 1;
+  padding: 28px 20px;
+  text-align: center;
+}
+
+.feedback-error-icon {
+  color: $orange;
+  opacity: 0.8;
+}
+
+.feedback-error-msg {
+  font-family: $ff-body;
+  font-size: 14px;
+  font-weight: 600;
+  color: $navy2;
+  margin: 0;
+}
+
+.feedback-retry-btn {
+  font-size: 13px;
+  padding: 6px 16px;
+  margin-top: 4px;
+}
+
+// ── Score header ──────────────────────────────────────────────────────────────
+
+.feedback-score-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-bottom: 10px;
+  border-bottom: 1px solid $border;
+}
+
+.feedback-score-left {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.feedback-score-number {
+  font-family: $ff-mono;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+
+  &.score--high { color: $teal; }
+  &.score--mid  { color: $orange; }
+  &.score--low  { color: $red; }
+}
+
+.feedback-score-denom {
+  font-family: $ff-mono;
+  font-size: 14px;
+  color: $muted;
+}
+
+.feedback-score-label {
+  font-family: $ff-body;
+  font-size: 12px;
+  font-weight: 600;
+  color: $muted;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-left: 4px;
+}
+
+// Type count chips next to the score
+.feedback-type-counts {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.feedback-type-chip {
+  display: inline-flex;
+  align-items: center;
+  font-family: $ff-mono;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+
+  &--quality      { background: $blue-lt;   color: $blue; }
+  &--optimization { background: $gold-lt;   color: darken($gold, 10%); }
+  &--anomaly      { background: $red-lt;    color: $red; }
+}
+
+// ── Summary line ──────────────────────────────────────────────────────────────
+
+.feedback-summary {
+  font-family: $ff-body;
+  font-size: 13px;
+  color: $muted;
+  line-height: 1.6;
+  margin: 8px 0 0;
+}
+
+// ── Filter pills ──────────────────────────────────────────────────────────────
+
+.feedback-filters {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.feedback-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  font-family: $ff-body;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid $border;
+  background: $ivory;
+  color: $navy2;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+
+  &:hover {
+    background: $ivory2;
+    border-color: $navy2;
+    color: $navy;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+
+  // Active base (All pill)
+  &--active {
+    background: $navy;
+    border-color: $navy;
+    color: $white;
+
+    &:hover {
+      background: darken($navy, 6%);
+      border-color: darken($navy, 6%);
+      color: $white;
+    }
+  }
+
+  // Typed active states override color
+  &--quality#{&}--active {
+    background: $blue;
+    border-color: $blue;
+  }
+
+  &--optimization#{&}--active {
+    background: darken($gold, 8%);
+    border-color: darken($gold, 8%);
+  }
+
+  &--anomaly#{&}--active {
+    background: $red;
+    border-color: $red;
+  }
+}
+
+// ── Feedback item cards ───────────────────────────────────────────────────────
+
+.feedback-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.feedback-item-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid $border;
+  border-radius: $r;
+  background: $white;
+  transition: box-shadow 0.15s;
+
+  &:hover {
+    box-shadow: $shadow;
+  }
+}
+
+// Top row: type badge + severity badge + line range
+.feedback-item-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+// Shared badge base
+.feedback-badge {
+  display: inline-flex;
+  align-items: center;
+  font-family: $ff-mono;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+// Type badge colors
+.feedback-badge--quality      { background: $blue-lt;   color: $blue;              }
+.feedback-badge--optimization { background: $gold-lt;   color: darken($gold, 10%); }
+.feedback-badge--anomaly      { background: $red-lt;    color: $red;               }
+
+// Severity badge colors
+.feedback-badge--low    { background: $ivory2; color: $muted;              }
+.feedback-badge--medium { background: $gold-lt; color: darken($gold, 10%); }
+.feedback-badge--high   { background: $red-lt;  color: $red;               }
+
+// Line range label
+.feedback-item-line {
+  font-family: $ff-mono;
+  font-size: 11px;
+  color: $muted;
+  margin-left: auto;   // push to right end of the row
+}
+
+// Title
+.feedback-item-title {
+  font-family: $ff-body;
+  font-size: 13px;
+  font-weight: 600;
+  color: $navy;
+  margin: 0;
+  line-height: 1.4;
+}
+
+// Description
+.feedback-item-desc {
+  font-family: $ff-body;
+  font-size: 13px;
+  color: $charcoal;
+  line-height: 1.6;
+  margin: 0;
+}
+
+// Jump to line button
+.feedback-jump-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  align-self: flex-start;
+  font-family: $ff-body;
+  font-size: 12px;
+  font-weight: 600;
+  color: $blue;
+  background: $blue-lt;
+  border: none;
+  border-radius: $r;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  margin-top: 2px;
+
+  svg { flex-shrink: 0; }
+
+  &:hover {
+    background: darken($blue-lt, 6%);
+    color: darken($blue, 8%);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+}
+
+// Empty filter result message
+.feedback-filter-empty {
+  font-family: $ff-body;
+  font-size: 13px;
+  color: $muted;
+  font-style: italic;
+  text-align: center;
+  padding: 20px 0;
+  margin: 0;
+}
+
+// ── Responsive: compact on mobile ─────────────────────────────────────────────
+@media (max-width: $mobile) {
+  .feedback-score-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .feedback-filter-pill {
+    font-size: 11px;
+    padding: 3px 10px;
+  }
+
+  .feedback-item-line {
+    margin-left: 0;  // wrap naturally on small screens
+  }
+}
+
+// ── prefers-reduced-motion ────────────────────────────────────────────────────
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CHUNK 6 & 7: Feedback panel polish — animations, high-severity strip,
+//              zero-items clean state, zero-count pill dimming, dot transition
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ── Perfect score decoration ──────────────────────────────────────────────────
+.feedback-score-perfect {
+  font-size: 18px;
+  line-height: 1;
+  margin-left: 2px;
+  animation: perfectScorePop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+
+@keyframes perfectScorePop {
+  0%   { transform: scale(0) rotate(-20deg); opacity: 0; }
+  100% { transform: scale(1) rotate(0deg);   opacity: 1; }
+}
+
+// ── High severity warning strip ───────────────────────────────────────────────
+// Amber background, amber text — no hex values.
+.feedback-severity-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: $gold-lt;
+  border: 1px solid rgba(200, 169, 81, 0.35);
+  border-radius: $r;
+  font-family: $ff-body;
+  font-size: 12px;
+  font-weight: 600;
+  color: darken($gold, 14%);
+  margin-top: 8px;
+  animation: fadeIn 0.2s ease-out both;
+
+  svg {
+    flex-shrink: 0;
+    color: darken($gold, 14%);
+  }
+}
+
+// ── Zero-items clean state ────────────────────────────────────────────────────
+.feedback-clean-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  background: $teal-lt;
+  border: 1px solid rgba(29, 158, 117, 0.25);
+  border-radius: $r;
+  font-family: $ff-body;
+  font-size: 13px;
+  font-weight: 600;
+  color: $teal;
+  margin-top: 8px;
+
+  svg {
+    flex-shrink: 0;
+  }
+}
+
+// ── Zero-count filter pills — visually dimmed, still rendered ─────────────────
+.feedback-filter-pill--zero {
+  opacity: 0.45;
+  cursor: default;
+
+  &:hover {
+    background: $ivory;
+    border-color: $border;
+    color: $navy2;
+    transform: none;
+  }
+}
+
+// ── Feedback item card stagger entrance ───────────────────────────────────────
+// Each card uses animation-delay set via [style.animation-delay] in the template.
+// fill-mode: both means the card stays hidden before its delay fires.
+
+@keyframes feedbackItemIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.feedback-item-card {
+  animation: feedbackItemIn 0.22s ease-out both;
+}
+
+// ── Feedback tab dot smooth color transition ──────────────────────────────────
+// The dot already has modifier classes (--loading → --ready/--error).
+// We add a background-color transition so the swap from orange to green/red
+// is a smooth fade rather than an instant swap.
+.feedback-tab-dot {
+  transition: background-color 0.35s ease, opacity 0.35s ease;
+}
+
+// ── prefers-reduced-motion overrides ─────────────────────────────────────────
+@media (prefers-reduced-motion: reduce) {
+  .feedback-item-card   { animation: none; }
+  .feedback-score-perfect { animation: none; }
+  .feedback-severity-strip { animation: none; }
+  .feedback-tab-dot     { transition: none; }
 }
