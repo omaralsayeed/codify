@@ -191,6 +191,94 @@
 
       </section>
 
+      <!-- ── Focus Areas (weak topic spotlight) ──────────────────────────── -->
+      <section class="prog-card focus-section" aria-label="Focus areas">
+
+        <div class="prog-card__header">
+          <div>
+            <h2 class="prog-card__title">⚠️ Focus Areas</h2>
+            <p class="prog-card__sub">Topics where targeted practice will have the biggest impact on your score.</p>
+          </div>
+        </div>
+
+        <!-- Empty state -->
+        @if (weakSpotlightTopics.length === 0) {
+          <div class="focus-empty" role="status">
+            <span class="focus-empty__emoji" aria-hidden="true">🎉</span>
+            <p class="focus-empty__msg">No weak topics right now — keep it up!</p>
+          </div>
+        }
+
+        <!-- Cards row -->
+        @if (weakSpotlightTopics.length > 0) {
+          <div class="focus-cards" role="list" aria-label="Weak topic focus cards">
+            @for (topic of weakSpotlightTopics; track topic.topicId; let i = $index) {
+              <article class="focus-card"
+                       role="listitem"
+                       [class.focus-card--visible]="focusCardVisible[i]"
+                       [attr.aria-label]="topic.topicName + ' focus area'">
+
+                <!-- Card header: name + badge -->
+                <div class="focus-card__top">
+                  <span class="focus-card__name">{{ topic.topicName }}</span>
+                  <span class="strength-badge strength-badge--weak">weak</span>
+                </div>
+
+                <!-- Mini strength bar -->
+                <div class="focus-card__bar-row">
+                  <div class="topic-bar focus-card__bar"
+                       role="progressbar"
+                       [attr.aria-valuenow]="topic.strengthScore"
+                       aria-valuemin="0" aria-valuemax="100">
+                    <div class="topic-bar__fill topic-bar__fill--weak"
+                         [style.width.%]="barWidth(topic)">
+                    </div>
+                  </div>
+                  <span class="focus-card__score">{{ topic.strengthScore }} / 100</span>
+                </div>
+
+                <!-- Attempted / Solved counts -->
+                <div class="focus-card__stats">
+                  <span class="focus-card__stat">
+                    <span class="focus-card__stat-val">{{ topic.attempted }}</span>
+                    Attempted
+                  </span>
+                  <span class="focus-card__stat-sep" aria-hidden="true">·</span>
+                  <span class="focus-card__stat">
+                    <span class="focus-card__stat-val">{{ topic.solved }}</span>
+                    Solved
+                  </span>
+                </div>
+
+                <!-- AI insight quote -->
+                @if (topic.aiInsight) {
+                  <blockquote class="focus-card__insight"
+                              [attr.aria-label]="'AI insight: ' + topic.aiInsight">
+                    <span class="focus-card__insight-icon" aria-hidden="true">💡</span>
+                    <p>{{ topic.aiInsight }}</p>
+                  </blockquote>
+                }
+
+                <!-- CTA -->
+                <button class="focus-card__cta btn btn--primary"
+                        (click)="practiceRoute(topic)"
+                        [attr.aria-label]="'Practice ' + topic.topicName + ' problems'">
+                  Practice Now
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="2.5"
+                       stroke-linecap="round" stroke-linejoin="round"
+                       aria-hidden="true">
+                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                  </svg>
+                </button>
+
+              </article>
+            }
+          </div>
+        }
+
+      </section>
+
       <!-- Further sections added in subsequent chunks -->
 
     }<!-- /loaded -->

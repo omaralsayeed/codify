@@ -6,6 +6,7 @@ import {
   ChangeDetectorRef,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 
 import { AnalyticsService }  from '../../core/services/analytics.service';
@@ -39,6 +40,7 @@ export class StudentProgressComponent implements OnInit, OnDestroy {
   private readonly analyticsService = inject(AnalyticsService);
   readonly authService              = inject(AuthService);
   private readonly cdr              = inject(ChangeDetectorRef);
+  private readonly router           = inject(Router);
 
   // ── Page state ──────────────────────────────────────────────────────────────
   analytics: StudentAnalytics | null = null;
@@ -60,10 +62,14 @@ export class StudentProgressComponent implements OnInit, OnDestroy {
   // ── Topic bar animation: width currently displayed per topic (by topicId) ──
   barWidths: Record<string, number> = {};
 
+  // ── Focus-card stagger visibility (index → visible) ────────────────────────
+  focusCardVisible: boolean[] = [];
+
   // ── Timer handles ───────────────────────────────────────────────────────────
-  private counterIds: (ReturnType<typeof setInterval> | null)[] = [];
-  private dotTimerIds: (ReturnType<typeof setTimeout> | null)[] = [];
-  private barTimerId: ReturnType<typeof setTimeout> | null = null;
+  private counterIds:      (ReturnType<typeof setInterval> | null)[] = [];
+  private dotTimerIds:     (ReturnType<typeof setTimeout>  | null)[] = [];
+  private barTimerId:       ReturnType<typeof setTimeout>  | null    = null;
+  private focusTimerIds:   (ReturnType<typeof setTimeout>  | null)[] = [];
 
   // Teardown
   private readonly destroy$ = new Subject<void>();
@@ -79,6 +85,7 @@ export class StudentProgressComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
     this.clearAllCounters();
     this.clearAllDotTimers();
+    this.clearFocusTimers();
     if (this.barTimerId !== null) clearTimeout(this.barTimerId);
   }
 
@@ -94,8 +101,10 @@ export class StudentProgressComponent implements OnInit, OnDestroy {
     this.displayedStreak      = 0;
     this.dotVisible           = Array(7).fill(false);
     this.barWidths            = {};
+    this.focusCardVisible     = [];
     this.clearAllCounters();
     this.clearAllDotTimers();
+    this.clearFocusTimers();
 
     this.analyticsService
       .getStudentAnalytics()
@@ -116,6 +125,17 @@ export class StudentProgressComponent implements OnInit, OnDestroy {
             });
             this.cdr.detectChanges();
           }, 120);
+
+          // Stagger focus cards in after bars animate (offset 300ms)
+          const weak = this.weakSpotlightTopics;
+          this.focusCardVisible = new Array(weak.length).fill(false);
+          weak.forEach((_, i) => {
+            const id = setTimeout(() => {
+              this.focusCardVisible[i] = true;
+              this.cdr.detectChanges();
+            }, 300 + i * 120);
+            this.focusTimerIds[i] = id;
+          });
         },
         error: () => {
           this.error     = 'Could not load your progress. Please try again.';
@@ -195,6 +215,32 @@ export class StudentProgressComponent implements OnInit, OnDestroy {
       setter(Math.min(target, Math.round(eased * target)));
       if (tick >= totalTicks) setter(target);
     }, COUNT_UP_TICK_MS);
+  }
+
+  // ── Weak spotlight ──────────────────────────────────────────────────────────
+
+  /** Up to 3 weak topics, sorted weakest-first — drives the Focus Areas section. */
+  get weakSpotlightTopics(): TopicPerformance[] {
+    return [...(this.analytics?.topics ?? [])]
+      .filter(t => t.strength === 'weak')
+      .sort((a, b) => a.strengthScore - b.strengthScore)
+      .slice(0, 3);
+  }
+
+  /**
+   * Maps a topicName to a query-param slug for /problems?topic=...
+   * Uses lowercase + hyphen, matching the Topic enum values already in the project.
+   */
+  practiceRoute(topic: TopicPerformance): void {
+    const slug = topic.topicName.toLowerCase().replace(/\s+/g, '-');
+    this.router.navigate(['/problems'], { queryParams: { topic: slug } });
+  }
+
+  // ── Cleanup helpers ──────────────────────────────────────────────────────────
+
+  private clearFocusTimers(): void {
+    this.focusTimerIds.forEach(id => { if (id !== null) clearTimeout(id); });
+    this.focusTimerIds = [];
   }
 
   private clearAllCounters(): void {
