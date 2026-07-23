@@ -313,6 +313,8 @@ public:
   private readonly MIN_PANEL_HEIGHT = 120;
   private readonly MAX_PANEL_HEIGHT = 600;
   private isBottomDragging = false;
+  private bottomDragStartY = 0;
+  private bottomDragStartHeight = 0;
   private originalStarterCode = '';
 
   /** Completes on ngOnDestroy — all HTTP subscriptions use takeUntil(destroy$) */
@@ -936,6 +938,8 @@ public:
     event.preventDefault();
     event.stopPropagation();
     this.isBottomDragging = true;
+    this.bottomDragStartY = event.clientY;
+    this.bottomDragStartHeight = this.testPanelHeight;
     document.body.style.cursor     = 'row-resize';
     document.body.style.userSelect = 'none';
     if (!this.isBottomPanelOpen) {
@@ -953,11 +957,9 @@ public:
       this.splitPosition = Math.max(this.MIN_PANEL_WIDTH, Math.min(this.MAX_PANEL_WIDTH, pct));
     }
     if (this.isBottomDragging) {
-      const container = document.querySelector('.right-panel-content') as HTMLElement;
-      if (!container) return;
-      const rect = container.getBoundingClientRect();
-      // Distance from cursor up to the bottom of the container = desired panel height
-      const newHeight = rect.bottom - event.clientY;
+      // Dragging up (negative delta) → panel grows; dragging down → shrinks
+      const delta = this.bottomDragStartY - event.clientY;
+      const newHeight = this.bottomDragStartHeight + delta;
       this.testPanelHeight = Math.max(this.MIN_PANEL_HEIGHT, Math.min(this.MAX_PANEL_HEIGHT, newHeight));
     }
   }

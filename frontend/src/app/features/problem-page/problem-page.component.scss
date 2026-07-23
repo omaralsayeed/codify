@@ -1804,10 +1804,7 @@
     top: 12px;
   }
 
-  // Bottom panel adjustments
-  .bottom-panel-container--open {
-    max-height: 240px; // slightly smaller on tablet
-  }
+  // Bottom panel adjustments — height driven by JS binding, no max-height override needed
 
   .test-case-outputs {
     grid-template-columns: repeat(2, 1fr); // 2 columns instead of 3
@@ -2380,11 +2377,8 @@
   transition: background 0.2s ease, color 0.2s ease !important;
 }
 
-// ── Bottom panel: taller when banner is visible ───────────────────────────────
-// Banner adds ~40px; we need room for banner + top bar + content + actions.
-.bottom-panel-container--open {
-  max-height: 340px; // was 280px — +60px for banner row
-}
+// ── Bottom panel: height is driven entirely by [style.height.px] binding ─────
+// No max-height override needed here — the JS clamps to MIN/MAX_PANEL_HEIGHT.
 
 // ── Result banner ─────────────────────────────────────────────────────────────
 // Sits between the panel toggle handle and the tab row.
