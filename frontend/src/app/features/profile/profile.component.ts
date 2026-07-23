@@ -16,11 +16,12 @@ import {
   RecentSubmission,
 } from '../../core/models/analytics.model';
 import { ActivityHeatmapComponent } from './activity-heatmap.component';
+import { SolvedRingComponent, RingDifficultyData } from './solved-ring.component';
 
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [CommonModule, RouterLink, ActivityHeatmapComponent],
+  imports: [CommonModule, RouterLink, ActivityHeatmapComponent, SolvedRingComponent],
   templateUrl: './profile.component.html',
   styleUrl:    './profile.component.scss',
 })
@@ -121,5 +122,24 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   trackByTopic(_i: number, t: TopicPerformance): string {
     return t.topicId;
+  }
+
+  // ── Solved ring data ─────────────────────────────────────────────────────
+
+  get ringData(): RingDifficultyData | null {
+    if (!this.profile) return null;
+    const p = this.profile;
+    return {
+      easySolved:       p.difficultyBreakdown.easy,
+      mediumSolved:     p.difficultyBreakdown.medium,
+      hardSolved:       p.difficultyBreakdown.hard,
+      easyTotal:        p.difficultyTotals.easy,
+      mediumTotal:      p.difficultyTotals.medium,
+      hardTotal:        p.difficultyTotals.hard,
+      totalSolved:      p.totalSolved,
+      totalAttempted:   p.totalAttempted,
+      acceptanceRate:   p.successRate,
+      totalSubmissions: p.streak.totalSubmissionsLastYear,
+    };
   }
 }

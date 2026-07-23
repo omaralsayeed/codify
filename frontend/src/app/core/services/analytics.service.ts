@@ -29,6 +29,7 @@ import {
   PublicProfileData,
   ActivityDay,
   LanguageStat,
+  DifficultyTotals,
 } from '../models/analytics.model';
 import { ServiceError } from '../models/submission.model';
 
@@ -400,6 +401,7 @@ export class AnalyticsService {
       successRate:    66,
       streak: { currentStreak, longestStreak, totalActiveDays, totalSubmissionsLastYear: totalSubmissions },
       difficultyBreakdown: { easy: 18, medium: 10, hard: 3 },
+      difficultyTotals:    { easy: 955, medium: 1813, hard: 843 },
       languageStats: [
         { language: 'Python',     solved: 22 },
         { language: 'C#',         solved:  7 },

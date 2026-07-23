@@ -65,50 +65,13 @@
           </div>
         </div>
 
-        <hr class="sidebar-divider" aria-hidden="true" />
-
-        <!-- Difficulty breakdown -->
+        <!-- Difficulty breakdown — solved ring -->
         <div class="sidebar-section" aria-label="Problems solved by difficulty">
           <h2 class="sidebar-section__title">Problems Solved</h2>
 
-          <!-- Solved ring summary -->
-          <div class="solved-summary">
-            <div class="solved-total">
-              <span class="solved-total__num">{{ profile.totalSolved }}</span>
-              <span class="solved-total__denom">/ {{ profile.totalAttempted }}</span>
-            </div>
-            <span class="solved-total__lbl">Solved</span>
-          </div>
-
-          <div class="diff-bars">
-            <div class="diff-row">
-              <span class="diff-row__label diff-row__label--easy">Easy</span>
-              <div class="diff-row__track">
-                <div class="diff-row__fill diff-row__fill--easy"
-                     [style.width.%]="difficultyPercent(profile.difficultyBreakdown.easy, profile.totalSolved)">
-                </div>
-              </div>
-              <span class="diff-row__count">{{ profile.difficultyBreakdown.easy }}</span>
-            </div>
-            <div class="diff-row">
-              <span class="diff-row__label diff-row__label--medium">Medium</span>
-              <div class="diff-row__track">
-                <div class="diff-row__fill diff-row__fill--medium"
-                     [style.width.%]="difficultyPercent(profile.difficultyBreakdown.medium, profile.totalSolved)">
-                </div>
-              </div>
-              <span class="diff-row__count">{{ profile.difficultyBreakdown.medium }}</span>
-            </div>
-            <div class="diff-row">
-              <span class="diff-row__label diff-row__label--hard">Hard</span>
-              <div class="diff-row__track">
-                <div class="diff-row__fill diff-row__fill--hard"
-                     [style.width.%]="difficultyPercent(profile.difficultyBreakdown.hard, profile.totalSolved)">
-                </div>
-              </div>
-              <span class="diff-row__count">{{ profile.difficultyBreakdown.hard }}</span>
-            </div>
-          </div>
+          @if (ringData) {
+            <app-solved-ring [data]="ringData" />
+          }
         </div>
 
         <hr class="sidebar-divider" aria-hidden="true" />
