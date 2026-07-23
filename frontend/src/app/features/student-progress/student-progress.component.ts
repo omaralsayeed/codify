@@ -4,6 +4,7 @@ import {
   OnDestroy,
   inject,
   ChangeDetectorRef,
+  ViewChild,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
@@ -17,7 +18,9 @@ import {
   TopicPerformance,
   TopicStrength,
 } from '../../core/models/analytics.model';
-import { TopicRadarChartComponent } from './topic-radar-chart.component';
+import { TopicRadarChartComponent }     from './topic-radar-chart.component';
+import { SuccessRateChartComponent }    from './success-rate-chart.component';
+import { DifficultyDonutChartComponent } from './difficulty-donut-chart.component';
 
 // ── countUp config ────────────────────────────────────────────────────────────
 const COUNT_UP_DURATION_MS = 800;
@@ -31,7 +34,7 @@ const STRENGTH_ORDER: Record<TopicStrength, number> = {
 @Component({
   selector: 'app-student-progress',
   standalone: true,
-  imports: [CommonModule, TopicRadarChartComponent],
+  imports: [CommonModule, TopicRadarChartComponent, SuccessRateChartComponent, DifficultyDonutChartComponent],
   templateUrl: './student-progress.component.html',
   styleUrl: './student-progress.component.scss',
 })
@@ -42,12 +45,21 @@ export class StudentProgressComponent implements OnInit, OnDestroy {
   private readonly cdr              = inject(ChangeDetectorRef);
   private readonly router           = inject(Router);
 
+  // ── Chart refs ──────────────────────────────────────────────────────────────
+  @ViewChild(SuccessRateChartComponent)
+  private srChart?: SuccessRateChartComponent;
+
   // ── Page state ──────────────────────────────────────────────────────────────
   analytics: StudentAnalytics | null = null;
   isLoading = true;
   error: string | null = null;
 
-  // Time-range toggle — drives chart section (built in later chunks)
+  // Time-range toggle options
+  readonly timeRanges: { label: string; value: '7d' | '30d' | '3m' }[] = [
+    { label: '7 Days', value: '7d'  },
+    { label: '30 Days', value: '30d' },
+    { label: '3 Months', value: '3m' },
+  ];
   activeTimeRange: '7d' | '30d' | '3m' = '7d';
 
   // ── Hero countUp display values ─────────────────────────────────────────────
@@ -147,7 +159,13 @@ export class StudentProgressComponent implements OnInit, OnDestroy {
   // ── Time-range toggle ───────────────────────────────────────────────────────
 
   setTimeRange(range: '7d' | '30d' | '3m'): void {
+    if (this.activeTimeRange === range) return;
     this.activeTimeRange = range;
+    // Re-render chart with smooth transition.
+    // Currently all ranges share the same mock data; the backend will
+    // return different slices per range once the endpoint is live.
+    this.cdr.detectChanges();
+    this.srChart?.refresh();
   }
 
   // ── Sorted topics ───────────────────────────────────────────────────────────
@@ -283,5 +301,53 @@ export class StudentProgressComponent implements OnInit, OnDestroy {
 
   isToday(day: DailyActivity): boolean {
     return day.date === new Date().toISOString().slice(0, 10);
+  }
+
+  // ── Submissions helpers ──────────────────────────────────────────────────────
+
+  submissionStatusClass(status: string): string {
+    const map: Record<string, string> = {
+      'Accepted':           'sub-status sub-status--accepted',
+      'Wrong Answer':       'sub-status sub-status--wrong',
+      'Runtime Error':      'sub-status sub-status--error',
+      'Time Limit Exceeded':'sub-status sub-status--tle',
+    };
+    return map[status] ?? 'sub-status';
+  }
+
+  submissionStatusIcon(status: string): string {
+    const map: Record<string, string> = {
+      'Accepted':            '✓',
+      'Wrong Answer':        '✗',
+      'Runtime Error':       '⚡',
+      'Time Limit Exceeded': '⏱',
+    };
+    return map[status] ?? '•';
+  }
+
+  difficultyBadgeClass(d: string): string {
+    const cls = d.toLowerCase();
+    return `badge badge--${cls}`;
+  }
+
+  relativeTime(iso: string): string {
+    const diff = Date.now() - new Date(iso).getTime();
+    const mins  = Math.floor(diff / 60000);
+    if (mins < 1)   return 'just now';
+    if (mins < 60)  return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs  < 24)  return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    return `${days}d ago`;
+  }
+
+  trackBySubmissionId(_i: number, s: { submissionId: string }): string {
+    return s.submissionId;
+  }
+
+  // ── Recommendations helpers ──────────────────────────────────────────────────
+
+  trackByProblemId(_i: number, r: { problemId: string }): string {
+    return r.problemId;
   }
 }

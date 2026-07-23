@@ -279,7 +279,174 @@
 
       </section>
 
-      <!-- Further sections added in subsequent chunks -->
+      <!-- ── Charts: Success Rate + Difficulty Donut ────────────────────── -->
+      <div class="charts-row">
+
+        <!-- LEFT — Success Rate line chart -->
+        <section class="prog-card charts-row__card" aria-label="Success rate over time">
+          <div class="prog-card__header">
+            <div>
+              <h2 class="prog-card__title">Success Rate</h2>
+              <p class="prog-card__sub">How often your submissions passed over time.</p>
+            </div>
+
+            <!-- Time-range toggle -->
+            <div class="time-toggle" role="group" aria-label="Time range">
+              @for (range of timeRanges; track range.value) {
+                <button class="time-toggle__btn"
+                        [class.time-toggle__btn--active]="activeTimeRange === range.value"
+                        (click)="setTimeRange(range.value)"
+                        [attr.aria-pressed]="activeTimeRange === range.value"
+                        [attr.aria-label]="'Show ' + range.label">
+                  {{ range.label }}
+                </button>
+              }
+            </div>
+          </div>
+
+          <app-success-rate-chart
+            [dataPoints]="analytics.successRateHistory">
+          </app-success-rate-chart>
+        </section>
+
+        <!-- RIGHT — Difficulty Donut -->
+        <section class="prog-card charts-row__card charts-row__card--donut"
+                 aria-label="Problems solved by difficulty">
+          <div class="prog-card__header">
+            <div>
+              <h2 class="prog-card__title">Difficulty Mix</h2>
+              <p class="prog-card__sub">Breakdown of all problems you've solved.</p>
+            </div>
+          </div>
+
+          <app-difficulty-donut-chart
+            [breakdown]="analytics.difficultyBreakdown">
+          </app-difficulty-donut-chart>
+        </section>
+
+      </div>
+
+      <!-- ── Chunk 8: Recent Submissions ──────────────────────────────────── -->
+      <section class="prog-card" aria-label="Recent submissions">
+        <div class="prog-card__header">
+          <div>
+            <h2 class="prog-card__title">Recent Submissions</h2>
+            <p class="prog-card__sub">Your last {{ analytics.recentSubmissions.length }} attempts.</p>
+          </div>
+        </div>
+
+        <div class="sub-table-wrap">
+          <table class="sub-table" aria-label="Recent submissions table">
+            <thead>
+              <tr>
+                <th scope="col">Problem</th>
+                <th scope="col">Difficulty</th>
+                <th scope="col">Status</th>
+                <th scope="col">Language</th>
+                <th scope="col">When</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (sub of analytics.recentSubmissions; track trackBySubmissionId($index, sub)) {
+                <tr>
+                  <td class="sub-table__title">{{ sub.problemTitle }}</td>
+                  <td>
+                    <span [class]="difficultyBadgeClass(sub.difficulty)">
+                      {{ sub.difficulty }}
+                    </span>
+                  </td>
+                  <td>
+                    <span [class]="submissionStatusClass(sub.status)"
+                          [attr.aria-label]="sub.status">
+                      <span class="sub-status__icon" aria-hidden="true">
+                        {{ submissionStatusIcon(sub.status) }}
+                      </span>
+                      {{ sub.status }}
+                    </span>
+                  </td>
+                  <td class="sub-table__lang">{{ sub.language }}</td>
+                  <td class="sub-table__time">{{ relativeTime(sub.submittedAt) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ── Chunk 9a: Recommendations ─────────────────────────────────────── -->
+      <section class="prog-card" aria-label="Recommended problems">
+        <div class="prog-card__header">
+          <div>
+            <h2 class="prog-card__title">🎯 Recommended for You</h2>
+            <p class="prog-card__sub">Personalised by the Analytics Agent based on your weak spots.</p>
+          </div>
+        </div>
+
+        <div class="rec-list" role="list">
+          @for (rec of analytics.recommendations; track trackByProblemId($index, rec)) {
+            <div class="rec-item" role="listitem">
+
+              <div class="rec-item__left">
+                <span [class]="difficultyBadgeClass(rec.difficulty)">
+                  {{ rec.difficulty }}
+                </span>
+                <span class="rec-item__title">{{ rec.title }}</span>
+                <span class="rec-item__topic">{{ rec.topic }}</span>
+              </div>
+
+              <div class="rec-item__right">
+                <span class="rec-item__reason">{{ rec.reason }}</span>
+                <button class="btn btn--ghost rec-item__btn"
+                        (click)="practiceRoute({ topicName: rec.topic, topicId: '', attempted: 0, solved: 0, strengthScore: 0, strength: 'weak', aiInsight: null })"
+                        [attr.aria-label]="'Practice ' + rec.title">
+                  Practice
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="2.5"
+                       stroke-linecap="round" stroke-linejoin="round"
+                       aria-hidden="true">
+                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                  </svg>
+                </button>
+              </div>
+
+            </div>
+          }
+        </div>
+      </section>
+
+      <!-- ── Chunk 9b: Hint Usage ───────────────────────────────────────────── -->
+      <section class="prog-card hint-section" aria-label="Hint usage statistics">
+        <div class="prog-card__header">
+          <div>
+            <h2 class="prog-card__title">💡 Hint Usage</h2>
+            <p class="prog-card__sub">How much you're relying on hints — less is more.</p>
+          </div>
+        </div>
+
+        <div class="hint-stats-grid" role="list">
+
+          <div class="hint-stat" role="listitem">
+            <span class="hint-stat__val">{{ analytics.hintUsage.totalHintsUsed }}</span>
+            <span class="hint-stat__lbl">Total Hints Used</span>
+          </div>
+
+          <div class="hint-stat" role="listitem">
+            <span class="hint-stat__val">{{ analytics.hintUsage.averageHintsPerProblem | number:'1.1-1' }}</span>
+            <span class="hint-stat__lbl">Avg per Problem</span>
+          </div>
+
+          <div class="hint-stat hint-stat--good" role="listitem">
+            <span class="hint-stat__val">{{ analytics.hintUsage.solvedWithZeroHints }}</span>
+            <span class="hint-stat__lbl">Solved Without Hints</span>
+          </div>
+
+          <div class="hint-stat hint-stat--warn" role="listitem">
+            <span class="hint-stat__val">{{ analytics.hintUsage.solvedUsingAllHints }}</span>
+            <span class="hint-stat__lbl">Used All 3 Hints</span>
+          </div>
+
+        </div>
+      </section>
 
     }<!-- /loaded -->
 
