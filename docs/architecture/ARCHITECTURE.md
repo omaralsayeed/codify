@@ -4,31 +4,27 @@ Codify is currently implemented as a modular monolith: one ASP.NET Core Web API 
 
 ## High-Level Diagram
 
-```mermaid
-flowchart LR
-   UI[Angular SPA\nStudent and instructor UI]
+```text
+Angular SPA
+   [Student and instructor UI]
+            |
+            | HTTP / REST
+            v
+ASP.NET Core Web API
+   - Controllers: Auth, Problems, Submissions, Execution, AI, Tags
+   - Middleware: ExceptionMiddleware, JWT bearer auth, CORS, rate limiting, Swagger
+   - Application layer: AuthService, ProblemService, SubmissionService,
+      ExecutionService, ConceptTagService, AiHintService
+   - AI runtime: TutorAgent, PromptLoader, OpenAiChatClient, PromptTemplate
+   - Infrastructure: EF Core DbContext, repositories, JwtService
+            |
+            +--> SQL Server
+            |
+            +--> OpenAI API
 
-   subgraph API[ASP.NET Core Web API]
-      CTRL[Controllers\nAuth, Problems, Submissions, Execution, AI, Tags]
-      MID[Middleware and platform plumbing\nExceptionMiddleware\nJWT bearer auth\nCORS\nRate limiting\nSwagger]
-      APP[Application layer\nAuthService\nProblemService\nSubmissionService\nExecutionService\nConceptTagService\nAiHintService]
-      AI[AI runtime\nTutorAgent\nPromptLoader\nOpenAiChatClient\nPromptTemplate]
-      INF[Infrastructure\nEF Core DbContext\nRepositories\nJwtService]
-   end
-
-   DB[(SQL Server)]
-   OPENAI[(OpenAI API)]
-
-   UI -->|HTTP / REST| CTRL
-   CTRL --> MID
-   CTRL --> APP
-   APP --> INF
-   INF --> DB
-   APP --> AI
-   AI --> OPENAI
-
-   CTRL -. current placeholder route collision .- HINTS[HintsController\nPOST /api/ai/hints returns 501]
-   APP -. future work .- FUTURE[Execution sandbox\nnot implemented yet]
+Notes:
+- HintsController is a placeholder and overlaps with the active /api/ai/hints route.
+- The execution sandbox is not implemented yet.
 ```
 
 ## Current Modules
@@ -97,3 +93,5 @@ Infrastructure provides SQL Server EF Core persistence, repository implementatio
 - [AI flow diagram](./AI_FLOW.md)
 - [Data model](../database/DATA_MODEL.md)
 - [ER diagram](../database/ER-Diagram.md)
+
+![Architecture](../images/ARCHITECTURE.png)

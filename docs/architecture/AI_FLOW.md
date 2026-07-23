@@ -4,30 +4,26 @@ This document describes the AI hint pipeline that is currently implemented in co
 
 ## Current Flow
 
-```mermaid
-flowchart TD
-    A[Student clicks Get Hint] --> B[POST /api/ai/hints]
-    B --> C{Authorize as Student?}
-    C -- no --> X[403 Forbidden]
-    C -- yes --> D[AiController]
-    D --> E[AiHintService.GetHintAsync]
-    E --> F{Hint level valid?}
-    F -- no --> Y[400 Validation error]
-    F -- yes --> G[Load problem with tags from repository]
-    G --> H[Build TutorAgentInput]
-    H --> I[TutorAgent]
-    I --> J[PromptLoader loads tutor-agent-system.txt]
-    J --> K[PromptTemplate.Render]
-    K --> L[OpenAiChatClient.CompleteAsync]
-    L --> M[OpenAI Chat Completions API]
-    M --> N[Raw JSON response]
-    N --> O{JSON parse and validation pass?}
-    O -- yes --> P[HintResponse returned to API]
-    O -- no --> Q[Fallback hint response]
-    L -- exception --> Q
-    P --> R[ApiResponse.Ok]
-    Q --> R
-    R --> S[HTTP 200 response]
+```text
+Student clicks Get Hint
+  -> POST /api/ai/hints
+  -> AiController
+  -> AiHintService.GetHintAsync
+  -> validate hint level
+      -> invalid: 400 Validation error
+  -> load problem with tags from repository
+  -> build TutorAgentInput
+  -> TutorAgent
+  -> PromptLoader loads tutor-agent-system.txt
+  -> PromptTemplate.Render
+  -> OpenAiChatClient.CompleteAsync
+  -> OpenAI Chat Completions API
+  -> raw JSON response
+  -> parse and validate response
+      -> valid: HintResponse returned to API
+      -> invalid or exception: fallback hint response
+  -> ApiResponse.Ok
+  -> HTTP 200 response
 ```
 
 ## Inputs To The Model
@@ -83,3 +79,5 @@ The fallback response is a short generic hint that nudges the student back to th
 - No hint-history persistence is active yet.
 - No secondary code-checker or analytics agent is wired into runtime.
 - `HintsController` is a placeholder route that overlaps with the active controller route and should be treated as a temporary leftover.
+
+![AI Workflow](../images/AI_FLOW.png)
