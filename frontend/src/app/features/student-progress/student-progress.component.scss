@@ -1017,3 +1017,65 @@
     .hint-stat__val { color: $orange; }
   }
 }
+
+// ── Hint tile tooltip ─────────────────────────────────────────────────────────
+
+.hint-stat {
+  position: relative;  // needed for tooltip absolute positioning
+
+  &__tooltip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: $navy;
+    color: $white;
+    font-family: $ff-body;
+    font-size: 11px;
+    line-height: 1.4;
+    padding: 6px 10px;
+    border-radius: $r;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 10;
+    box-shadow: $shadow;
+
+    // Caret
+    &::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-top-color: $navy;
+    }
+  }
+
+  // Show tooltip on hover/focus for the warn tile
+  &--warn:hover &__tooltip,
+  &--warn:focus-within &__tooltip {
+    display: block;
+  }
+}
+
+// ── Scroll-fade (Chunk 11) ────────────────────────────────────────────────────
+
+// Every direct section/div child in the loaded state carries this class.
+// JS (IntersectionObserver) adds --visible when the element enters the viewport.
+.section-fade {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.45s ease, transform 0.45s ease;
+
+  &--visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Ensure the charts-row div (not a section) also participates
+.charts-row.section-fade {
+  // same rules inherited — just making intent explicit
+}

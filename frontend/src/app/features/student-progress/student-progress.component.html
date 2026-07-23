@@ -40,7 +40,7 @@
     @if (!isLoading && !error && analytics) {
 
       <!-- ── Hero strip ─────────────────────────────────────────────────── -->
-      <section class="hero-strip" aria-label="Performance summary">
+      <section class="hero-strip section-fade" aria-label="Performance summary">
 
         <!-- Greeting + name -->
         <div class="hero-strip__top">
@@ -132,7 +132,7 @@
       </section><!-- /hero-strip -->
 
       <!-- ── Topic Strength Breakdown ────────────────────────────────────── -->
-      <section class="prog-card topic-section" aria-label="Topic strength breakdown">
+      <section class="prog-card topic-section section-fade" aria-label="Topic strength breakdown">
 
         <!-- Card header -->
         <div class="prog-card__header">
@@ -192,7 +192,7 @@
       </section>
 
       <!-- ── Focus Areas (weak topic spotlight) ──────────────────────────── -->
-      <section class="prog-card focus-section" aria-label="Focus areas">
+      <section class="prog-card focus-section section-fade" aria-label="Focus areas">
 
         <div class="prog-card__header">
           <div>
@@ -280,7 +280,7 @@
       </section>
 
       <!-- ── Charts: Success Rate + Difficulty Donut ────────────────────── -->
-      <div class="charts-row">
+      <div class="charts-row section-fade">
 
         <!-- LEFT — Success Rate line chart -->
         <section class="prog-card charts-row__card" aria-label="Success rate over time">
@@ -327,7 +327,7 @@
       </div>
 
       <!-- ── Recent Activity ────────────────────────────────────────────── -->
-      <section class="prog-card" aria-label="Recent activity">
+      <section class="prog-card section-fade" aria-label="Recent activity">
         <div class="prog-card__header">
           <div>
             <h2 class="prog-card__title">Recent Activity</h2>
@@ -375,7 +375,7 @@
       </section>
 
       <!-- ── Recommended for You ───────────────────────────────────────── -->
-      <section class="prog-card rec-section" aria-label="Recommended problems">
+      <section class="prog-card rec-section section-fade" aria-label="Recommended problems">
         <div class="prog-card__header">
           <div>
             <h2 class="prog-card__title">🎯 Recommended for You</h2>
@@ -440,8 +440,8 @@
 
       </section>
 
-      <!-- ── Chunk 9b: Hint Usage ───────────────────────────────────────────── -->
-      <section class="prog-card hint-section" aria-label="Hint usage statistics">
+      <!-- ── Hint Usage ─────────────────────────────────────────────────── -->
+      <section class="prog-card hint-section section-fade" aria-label="Hint usage statistics">
         <div class="prog-card__header">
           <div>
             <h2 class="prog-card__title">💡 Hint Usage</h2>
@@ -452,23 +452,29 @@
         <div class="hint-stats-grid" role="list">
 
           <div class="hint-stat" role="listitem">
-            <span class="hint-stat__val">{{ analytics.hintUsage.totalHintsUsed }}</span>
+            <span class="hint-stat__val">{{ displayedTotalHints }}</span>
             <span class="hint-stat__lbl">Total Hints Used</span>
           </div>
 
           <div class="hint-stat" role="listitem">
-            <span class="hint-stat__val">{{ analytics.hintUsage.averageHintsPerProblem | number:'1.1-1' }}</span>
+            <span class="hint-stat__val">{{ (displayedAvgHints / 10) | number:'1.1-1' }}</span>
             <span class="hint-stat__lbl">Avg per Problem</span>
           </div>
 
-          <div class="hint-stat hint-stat--good" role="listitem">
-            <span class="hint-stat__val">{{ analytics.hintUsage.solvedWithZeroHints }}</span>
-            <span class="hint-stat__lbl">Solved Without Hints</span>
+          <div class="hint-stat hint-stat--good" role="listitem"
+               aria-label="{{ displayedSolvedClean }} problems solved without hints">
+            <span class="hint-stat__val">{{ displayedSolvedClean }}</span>
+            <span class="hint-stat__lbl">Solved Clean 💪</span>
           </div>
 
-          <div class="hint-stat hint-stat--warn" role="listitem">
-            <span class="hint-stat__val">{{ analytics.hintUsage.solvedUsingAllHints }}</span>
-            <span class="hint-stat__lbl">Used All 3 Hints</span>
+          <div class="hint-stat hint-stat--warn" role="listitem"
+               title="Consider revisiting these topics"
+               aria-label="{{ displayedSolvedAllHints }} problems solved using all hints — consider revisiting these topics">
+            <span class="hint-stat__val">{{ displayedSolvedAllHints }}</span>
+            <span class="hint-stat__lbl">Used All Hints 📚</span>
+            <span class="hint-stat__tooltip" aria-hidden="true">
+              Consider revisiting these topics
+            </span>
           </div>
 
         </div>

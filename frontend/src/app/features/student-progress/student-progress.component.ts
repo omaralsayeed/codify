@@ -2,9 +2,11 @@ import {
   Component,
   OnInit,
   OnDestroy,
+  AfterViewInit,
   inject,
   ChangeDetectorRef,
   ViewChild,
+  ElementRef,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
@@ -38,12 +40,13 @@ const STRENGTH_ORDER: Record<TopicStrength, number> = {
   templateUrl: './student-progress.component.html',
   styleUrl: './student-progress.component.scss',
 })
-export class StudentProgressComponent implements OnInit, OnDestroy {
+export class StudentProgressComponent implements OnInit, AfterViewInit, OnDestroy {
   // ── DI ─────────────────────────────────────────────────────────────────────
   private readonly analyticsService = inject(AnalyticsService);
   readonly authService              = inject(AuthService);
   private readonly cdr              = inject(ChangeDetectorRef);
   private readonly router           = inject(Router);
+  private readonly host             = inject(ElementRef);
 
   // ── Chart refs ──────────────────────────────────────────────────────────────
   @ViewChild(SuccessRateChartComponent)
@@ -80,12 +83,21 @@ export class StudentProgressComponent implements OnInit, OnDestroy {
   // ── Rec-card stagger visibility (index → visible) ──────────────────────────
   recCardVisible: boolean[] = [];
 
+  // ── Hint countUp display values ─────────────────────────────────────────────
+  displayedTotalHints      = 0;
+  displayedAvgHints        = 0;   // stored ×10 so we can integer-animate, divide in template
+  displayedSolvedClean     = 0;
+  displayedSolvedAllHints  = 0;
+
   // ── Timer handles ───────────────────────────────────────────────────────────
   private counterIds:      (ReturnType<typeof setInterval> | null)[] = [];
   private dotTimerIds:     (ReturnType<typeof setTimeout>  | null)[] = [];
   private barTimerId:       ReturnType<typeof setTimeout>  | null    = null;
   private focusTimerIds:   (ReturnType<typeof setTimeout>  | null)[] = [];
   private recTimerIds:     (ReturnType<typeof setTimeout>  | null)[] = [];
+
+  // ── IntersectionObserver for scroll-fade ────────────────────────────────────
+  private sectionObserver?: IntersectionObserver;
 
   // Teardown
   private readonly destroy$ = new Subject<void>();
@@ -96,6 +108,10 @@ export class StudentProgressComponent implements OnInit, OnDestroy {
     this.load();
   }
 
+  ngAfterViewInit(): void {
+    this.initSectionObserver();
+  }
+
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
@@ -104,6 +120,7 @@ export class StudentProgressComponent implements OnInit, OnDestroy {
     this.clearFocusTimers();
     this.clearRecTimers();
     if (this.barTimerId !== null) clearTimeout(this.barTimerId);
+    this.sectionObserver?.disconnect();
   }
 
   // ── Data loading ────────────────────────────────────────────────────────────
@@ -120,6 +137,10 @@ export class StudentProgressComponent implements OnInit, OnDestroy {
     this.barWidths            = {};
     this.focusCardVisible     = [];
     this.recCardVisible       = [];
+    this.displayedTotalHints     = 0;
+    this.displayedAvgHints       = 0;
+    this.displayedSolvedClean    = 0;
+    this.displayedSolvedAllHints = 0;
     this.clearAllCounters();
     this.clearAllDotTimers();
     this.clearFocusTimers();
@@ -136,6 +157,9 @@ export class StudentProgressComponent implements OnInit, OnDestroy {
           data.topics.forEach(t => { this.barWidths[t.topicId] = 0; });
           this.cdr.detectChanges();
           this.startHeroAnimations(data);
+          // Re-attach the scroll-fade observer now that content is in the DOM
+          this.sectionObserver?.disconnect();
+          this.initSectionObserver();
           // Small delay so the DOM paints the 0-width bars first,
           // then we set real widths and the CSS transition animates them
           this.barTimerId = setTimeout(() => {
@@ -217,11 +241,19 @@ export class StudentProgressComponent implements OnInit, OnDestroy {
 
   private startHeroAnimations(data: StudentAnalytics): void {
     const s = data.summary;
+    const h = data.hintUsage;
 
+    // Hero stats
     this.counterIds[0] = this.countUp(s.totalAttempted,       v => { this.displayedAttempted   = v; this.cdr.detectChanges(); });
     this.counterIds[1] = this.countUp(s.totalSolved,          v => { this.displayedSolved      = v; this.cdr.detectChanges(); });
     this.counterIds[2] = this.countUp(s.successRate,          v => { this.displayedSuccessRate = v; this.cdr.detectChanges(); });
     this.counterIds[3] = this.countUp(s.streak.currentStreak, v => { this.displayedStreak      = v; this.cdr.detectChanges(); });
+
+    // Hint stats — avg stored ×10 so integer animation stays smooth
+    this.counterIds[4] = this.countUp(h.totalHintsUsed,                  v => { this.displayedTotalHints     = v; this.cdr.detectChanges(); });
+    this.counterIds[5] = this.countUp(Math.round(h.averageHintsPerProblem * 10), v => { this.displayedAvgHints = v; this.cdr.detectChanges(); });
+    this.counterIds[6] = this.countUp(h.solvedWithZeroHints,             v => { this.displayedSolvedClean    = v; this.cdr.detectChanges(); });
+    this.counterIds[7] = this.countUp(h.solvedUsingAllHints,             v => { this.displayedSolvedAllHints = v; this.cdr.detectChanges(); });
 
     s.streak.lastSevenDays.forEach((_, i) => {
       const id = setTimeout(() => {
@@ -291,6 +323,44 @@ export class StudentProgressComponent implements OnInit, OnDestroy {
   private clearAllDotTimers(): void {
     this.dotTimerIds.forEach(id => { if (id !== null) clearTimeout(id); });
     this.dotTimerIds = [];
+  }
+
+  // ── Scroll-fade via IntersectionObserver ────────────────────────────────────
+
+  /**
+   * Observes every .section-fade element inside the host.
+   * - Elements already visible on first paint get the class immediately (no flash).
+   * - Elements that scroll into view get the class with a 100 ms stagger based
+   *   on their order among the currently-intersecting batch.
+   * - prefers-reduced-motion: all sections become visible instantly.
+   */
+  private initSectionObserver(): void {
+    if (this.prefersReducedMotion()) {
+      const all = this.host.nativeElement.querySelectorAll('.section-fade') as NodeListOf<HTMLElement>;
+      all.forEach((el: HTMLElement) => el.classList.add('section-fade--visible'));
+      return;
+    }
+
+    let batchDelay = 0;
+
+    this.sectionObserver = new IntersectionObserver(
+      (entries) => {
+        let inView = 0;
+        entries.forEach(entry => {
+          if (!entry.isIntersecting) return;
+          const el = entry.target as HTMLElement;
+          const delay = batchDelay + inView * 100;
+          inView++;
+          setTimeout(() => el.classList.add('section-fade--visible'), delay);
+          this.sectionObserver!.unobserve(el);
+        });
+        if (inView > 0) batchDelay = 0;
+      },
+      { threshold: 0.08 },
+    );
+
+    const sections = this.host.nativeElement.querySelectorAll('.section-fade') as NodeListOf<HTMLElement>;
+    sections.forEach((el: HTMLElement) => this.sectionObserver!.observe(el));
   }
 
   private prefersReducedMotion(): boolean {
