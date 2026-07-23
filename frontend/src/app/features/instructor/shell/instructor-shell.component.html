@@ -1,0 +1,42 @@
+<div class="inst-dashboard">
+  <div class="inst-topbar">
+    <a routerLink="/" class="inst-logo">Codify</a>
+    <div class="inst-topbar-right">
+      <span class="inst-badge">Instructor view</span>
+      <span class="inst-user">{{ auth.user()?.name }}</span>
+    </div>
+  </div>
+
+  <div class="inst-body">
+    <nav class="inst-sidebar" aria-label="Instructor dashboard navigation">
+      <a
+        routerLink="overview"
+        routerLinkActive="active"
+        class="nav-item"
+      >
+        <span class="nav-icon" aria-hidden="true">⊞</span>
+        Overview
+      </a>
+      <a
+        routerLink="students"
+        routerLinkActive="active"
+        class="nav-item"
+      >
+        <span class="nav-icon" aria-hidden="true">◻</span>
+        Students
+      </a>
+      <a
+        routerLink="integrity"
+        routerLinkActive="active"
+        class="nav-item"
+      >
+        <span class="nav-icon" aria-hidden="true">⚑</span>
+        Integrity
+      </a>
+    </nav>
+
+    <div class="inst-main">
+      <router-outlet />
+    </div>
+  </div>
+</div>

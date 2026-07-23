@@ -1,0 +1,140 @@
+@use '../../../styles/variables' as *;
+
+.integrity {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+// ── Header ────────────────────────────────────────────────────────────────────
+
+.page-title {
+  font-family: $ff-display;
+  font-size: 22px;
+  color: $navy;
+  margin: 0;
+}
+
+.page-sub {
+  font-size: 13px;
+  color: $muted;
+  margin: 4px 0 0;
+}
+
+// ── Flags list ────────────────────────────────────────────────────────────────
+
+.flags-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.flag-card {
+  display: flex;
+  align-items: stretch;
+  background: $white;
+  border: 1px solid $border;
+  border-radius: $r;
+  box-shadow: $shadow;
+  overflow: hidden;
+  transition: box-shadow 0.15s;
+
+  &:hover { box-shadow: $shadow-lg; }
+}
+
+// ── Severity stripe (left border accent) ──────────────────────────────────────
+
+.severity-stripe {
+  width: 4px;
+  flex-shrink: 0;
+
+  &.badge--high   { background: $red;    }
+  &.badge--medium { background: $gold;   }
+  &.badge--low    { background: $blue;   }
+}
+
+// ── Flag body ─────────────────────────────────────────────────────────────────
+
+.flag-body {
+  flex: 1;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.flag-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.student-link {
+  font-size: 14px;
+  font-weight: 600;
+  color: $blue;
+  text-decoration: none;
+
+  &:hover { text-decoration: underline; }
+}
+
+// ── Severity badge ────────────────────────────────────────────────────────────
+
+.severity-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+
+  &.badge--high   { background: $red-lt;    color: $red;    }
+  &.badge--medium { background: $gold-lt;   color: $gold;   }
+  &.badge--low    { background: $blue-lt;   color: $blue;   }
+}
+
+// ── Reason ────────────────────────────────────────────────────────────────────
+
+.flag-reason {
+  font-size: 13px;
+  color: $charcoal;
+  margin: 0;
+  line-height: 1.5;
+}
+
+// ── Date ──────────────────────────────────────────────────────────────────────
+
+.flag-date {
+  font-size: 11px;
+  color: $muted;
+}
+
+// ── Empty state ───────────────────────────────────────────────────────────────
+
+.empty-state {
+  text-align: center;
+  padding: 56px 24px;
+  background: $white;
+  border: 1px solid $border;
+  border-radius: $r;
+}
+
+.empty-icon {
+  font-size: 36px;
+  display: block;
+  margin-bottom: 12px;
+}
+
+.empty-text {
+  font-size: 14px;
+  color: $muted;
+  margin: 0;
+}

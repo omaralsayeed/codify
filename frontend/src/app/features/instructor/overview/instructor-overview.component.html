@@ -1,0 +1,46 @@
+<section class="overview">
+
+  <!-- Page header -->
+  <h1 class="page-title">Class Overview</h1>
+  <p class="page-sub">Real-time snapshot of your cohort's performance.</p>
+
+  <!-- Metric cards -->
+  <div class="metrics-grid">
+    @for (m of metrics; track m.label) {
+      <div class="metric-card" [ngClass]="m.colorClass">
+        <span class="metric-icon" aria-hidden="true">{{ m.icon }}</span>
+        <div class="metric-body">
+          <span class="metric-value">{{ m.value }}</span>
+          <span class="metric-label">{{ m.label }}</span>
+          <span class="metric-sub">{{ m.sub }}</span>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Topic mastery -->
+  <div class="section-card">
+    <h2 class="section-title">Topic Performance</h2>
+    <p class="section-sub">Average mastery across all students by topic.</p>
+
+    <ul class="topic-list" aria-label="Topic mastery percentages">
+      @for (t of progress.topicMastery; track t.topic) {
+        <li class="topic-row">
+          <span class="topic-name">{{ t.topic }}</span>
+          <div class="bar-track" role="progressbar"
+               [attr.aria-valuenow]="t.percentage"
+               aria-valuemin="0" aria-valuemax="100"
+               [attr.aria-label]="t.topic + ': ' + t.percentage + '%'">
+            <div
+              class="bar-fill"
+              [ngClass]="barColor(t.percentage)"
+              [style.width.%]="t.percentage">
+            </div>
+          </div>
+          <span class="topic-pct">{{ t.percentage }}%</span>
+        </li>
+      }
+    </ul>
+  </div>
+
+</section>

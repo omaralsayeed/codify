@@ -1,0 +1,110 @@
+@use '../../../styles/variables' as *;
+
+.inst-dashboard {
+  min-height: calc(100vh - 120px);
+  margin: 24px auto;
+  max-width: 1200px;
+  border: 1px solid $border;
+  border-radius: $r-lg;
+  overflow: hidden;
+  box-shadow: $shadow-lg;
+  background: $ivory;
+
+  @media (max-width: $mobile) {
+    margin: 16px;
+    border-radius: $r;
+  }
+}
+
+.inst-topbar {
+  background: $navy2;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.inst-logo {
+  font-family: $ff-display;
+  font-size: 18px;
+  color: $ivory;
+  text-decoration: none;
+}
+
+.inst-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.inst-badge {
+  font-family: $ff-mono;
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: rgba(200, 169, 81, 0.2);
+  color: $gold;
+}
+
+.inst-user {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.inst-body {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  min-height: 560px;
+
+  @media (max-width: $tablet) {
+    grid-template-columns: 160px 1fr;
+  }
+
+  @media (max-width: $mobile) {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+}
+
+.inst-sidebar {
+  background: $navy2;
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  @media (max-width: $mobile) {
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 12px;
+  }
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+  text-decoration: none;
+  white-space: nowrap;
+
+  &.active,
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: $ivory;
+  }
+}
+
+.nav-icon {
+  width: 16px;
+  text-align: center;
+}
+
+.inst-main {
+  background: $ivory;
+  padding: 24px;
+  overflow: hidden;
+}
