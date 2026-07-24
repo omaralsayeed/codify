@@ -124,6 +124,14 @@ export class ProfileComponent implements OnInit, OnDestroy {
     return t.topicId;
   }
 
+  // ── Streak helpers ───────────────────────────────────────────────────────
+
+  get isPersonalBest(): boolean {
+    if (!this.profile) return false;
+    return this.profile.streak.currentStreak > 0 &&
+           this.profile.streak.currentStreak >= this.profile.streak.longestStreak;
+  }
+
   // ── Solved ring data ─────────────────────────────────────────────────────
 
   get ringData(): RingDifficultyData | null {

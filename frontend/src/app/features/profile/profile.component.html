@@ -113,25 +113,51 @@
 
         <!-- Summary row -->
         <section class="summary-row" aria-label="Overall statistics">
+
+          <!-- Solved -->
           <div class="summary-stat">
             <span class="summary-stat__val">{{ profile.totalSolved }}</span>
             <span class="summary-stat__lbl">Solved</span>
           </div>
+
           <div class="summary-sep" aria-hidden="true"></div>
+
+          <!-- Attempted -->
           <div class="summary-stat">
             <span class="summary-stat__val">{{ profile.totalAttempted }}</span>
             <span class="summary-stat__lbl">Attempted</span>
           </div>
+
           <div class="summary-sep" aria-hidden="true"></div>
+
+          <!-- Success Rate -->
           <div class="summary-stat">
-            <span class="summary-stat__val">{{ profile.successRate }}<span class="summary-stat__unit">%</span></span>
+            <span class="summary-stat__val">
+              {{ profile.successRate }}<span class="summary-stat__unit">%</span>
+            </span>
             <span class="summary-stat__lbl">Success Rate</span>
           </div>
+
           <div class="summary-sep" aria-hidden="true"></div>
-          <div class="summary-stat">
-            <span class="summary-stat__val">{{ profile.streak.longestStreak }}</span>
-            <span class="summary-stat__lbl">Best Streak</span>
+
+          <!-- Best Streak -->
+          <div class="summary-stat summary-stat--streak"
+               [attr.aria-label]="'Best streak: ' + profile.streak.longestStreak + ' days' + (isPersonalBest ? ', personal best' : '') + '. Current streak: ' + profile.streak.currentStreak + ' days'">
+            <span class="summary-stat__val">
+              <span class="summary-stat__emoji" aria-hidden="true">🔥</span>{{ profile.streak.currentStreak }}
+            </span>
+            <span class="summary-stat__lbl">Current Streak</span>
+            @if (isPersonalBest) {
+              <span class="summary-stat__sub summary-stat__sub--best" aria-hidden="true">
+                🏆 Personal best!
+              </span>
+            } @else {
+              <span class="summary-stat__sub" aria-hidden="true">
+                Best: {{ profile.streak.longestStreak }} days
+              </span>
+            }
           </div>
+
         </section>
 
         <!-- Difficulty pills -->

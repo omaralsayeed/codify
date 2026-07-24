@@ -284,25 +284,54 @@
 
   &__val {
     font-family: $ff-display;
-    font-size: clamp(28px, 3.5vw, 42px);
+    font-size: clamp(26px, 3vw, 42px);
     color: $navy;
     line-height: 1;
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+  }
+
+  &__emoji {
+    font-size: clamp(18px, 2vw, 28px);
+    line-height: 1;
+    // Nudge emoji to sit on the same baseline as the number
+    position: relative;
+    top: 0.05em;
   }
 
   &__unit {
-    font-size: 0.5em;
+    font-size: 0.48em;
     font-family: $ff-body;
     color: $navy2;
     font-weight: 500;
+    align-self: flex-end;
+    margin-bottom: 0.1em;
   }
 
   &__lbl {
-    font-size: 12px;
+    font-size: 11px;
     font-family: $ff-body;
     color: $muted;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.06em;
     font-weight: 600;
+    margin-top: 2px;
+  }
+
+  // Sub-line — "Best: 15 days" or personal-best badge
+  &__sub {
+    font-size: 11px;
+    font-family: $ff-body;
+    color: $muted;
+    font-weight: 400;
+    margin-top: 1px;
+    white-space: nowrap;
+
+    &--best {
+      color: $gold-dark;
+      font-weight: 600;
+    }
   }
 }
 
