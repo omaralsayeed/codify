@@ -12,6 +12,7 @@ import { AnalyticsService } from '../../core/services/analytics.service';
 import { AuthService }      from '../../core/services/auth.service';
 import {
   PublicProfileData,
+  ActivityDay,
   TopicPerformance,
   TopicStrength,
   RecentSubmission,
@@ -40,6 +41,11 @@ export class ProfileComponent implements OnInit, OnDestroy {
   isLoading = false;
   error: string | null = null;
 
+  // ── Year filter ───────────────────────────────────────────────────────────────
+  /** null = "All years" */
+  selectedYear: number | null = null;
+  availableYears: number[] = [];
+
   private readonly destroy$ = new Subject<void>();
 
   // ── Lifecycle ────────────────────────────────────────────────────────────────
@@ -62,13 +68,59 @@ export class ProfileComponent implements OnInit, OnDestroy {
       .getPublicProfile(username)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next:  p => { this.profile = p; },
+        next: p => {
+          this.profile        = p;
+          this.availableYears = this.computeAvailableYears(p.activityGrid);
+          // Default to current calendar year
+          const currentYear = new Date().getFullYear();
+          this.selectedYear = this.availableYears.includes(currentYear)
+            ? currentYear
+            : (this.availableYears[this.availableYears.length - 1] ?? null);
+        },
         error: () => { this.error = 'Could not load profile.'; },
       });
   }
 
+  selectYear(year: number | null): void {
+    this.selectedYear = year;
+  }
+
+  // ── Year filter helpers ───────────────────────────────────────────────────────
+
+  private computeAvailableYears(grid: ActivityDay[]): number[] {
+    const years = new Set<number>();
+    for (const d of grid) years.add(parseInt(d.date.slice(0, 4), 10));
+    return Array.from(years).sort((a, b) => a - b);
+  }
+
+  get filteredDays(): ActivityDay[] {
+    if (!this.profile) return [];
+    if (this.selectedYear === null) return this.profile.activityGrid;
+    return this.profile.activityGrid.filter(d => d.date.startsWith(String(this.selectedYear)));
+  }
+
+  get filteredSubmissions(): number {
+    return this.filteredDays.reduce((s, d) => s + d.count, 0);
+  }
+
+  get filteredActiveDays(): number {
+    return this.filteredDays.filter(d => d.count > 0).length;
+  }
+
+  get filteredMaxStreak(): number {
+    let max = 0, run = 0;
+    for (const d of this.filteredDays) {
+      if (d.count > 0) { run++; max = Math.max(max, run); }
+      else run = 0;
+    }
+    return max;
+  }
+
+  get statsLabel(): string {
+    return this.selectedYear === null ? 'all time' : String(this.selectedYear);
+  }
+
   // ── Own-profile detection ────────────────────────────────────────────────────
-  // True only when a logged-in user is viewing their own profile page
 
   get isOwnProfile(): boolean {
     const u = this.authService.currentUser();
@@ -98,7 +150,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     return max === 0 ? 0 : Math.round((solved / max) * 100);
   }
 
-  // ── Difficulty bar width (solved / total-platform) ───────────────────────────
+  // ── Difficulty bar width ──────────────────────────────────────────────────────
 
   diffBarWidth(solved: number, total: number): number {
     return total === 0 ? 0 : Math.round((solved / total) * 100);
@@ -131,7 +183,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     };
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────────────
+  // ── Misc helpers ──────────────────────────────────────────────────────────────
 
   avatarColor(initials: string): string {
     const palette = ['#2E86AB', '#1D9E75', '#C8A951', '#7B1FA2', '#E65100'];
@@ -148,7 +200,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   relativeTime(iso: string): string {
-    const date = new Date(iso);
+    const date  = new Date(iso);
     const diff  = Date.now() - date.getTime();
     const mins  = Math.floor(diff / 60_000);
     if (mins < 1)   return 'just now';

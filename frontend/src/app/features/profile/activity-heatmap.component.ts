@@ -43,7 +43,8 @@ interface Tooltip {
     <div class="heatmap-scroll" #scrollWrap>
 
       <!-- Fixed-width inner that never reflows -->
-      <div class="heatmap-inner">
+      <div class="heatmap-inner"
+           [style.--heatmap-cols]="totalCols">
 
         <!-- Month labels row -->
         <div class="heatmap-months" aria-hidden="true">
@@ -122,10 +123,13 @@ interface Tooltip {
   styles: [`
     /* ── Scroll container ──────────────────────────────────────────── */
     .heatmap-scroll {
+      /* Takes only as much width as the grid needs on desktop.
+         On mobile the parent is narrower so overflow-x kicks in. */
+      display: block;
+      width: fit-content;
+      max-width: 100%;
       overflow-x: auto;
-      overflow-y: visible;
       -webkit-overflow-scrolling: touch;
-      /* Extra bottom padding so the legend isn't clipped on scroll */
       padding-bottom: 4px;
     }
 
@@ -134,8 +138,7 @@ interface Tooltip {
       display: flex;
       flex-direction: column;
       gap: 4px;
-      /* 28px day-label gutter + 53 cells + 52 gaps between cells */
-      min-width: calc(28px + 53 * 11px + 52 * 2px);
+      width: fit-content;   /* shrink-wraps to exact grid width — no trailing gap */
     }
 
     /* ── Month label row ───────────────────────────────────────────── */
@@ -151,9 +154,8 @@ interface Tooltip {
 
     /* Sits over the grid columns — same template-columns as the grid */
     .heatmap-months__labels {
-      flex: 1;
       display: grid;
-      grid-template-columns: repeat(53, 11px);
+      grid-template-columns: repeat(var(--heatmap-cols, 53), 11px);
       gap: 2px;
     }
 
@@ -193,10 +195,10 @@ interface Tooltip {
       position: relative;
     }
 
-    /* Main grid — 53 cols × 7 rows, filled column-first */
+    /* Main grid — dynamic cols × 7 rows, filled column-first */
     .heatmap-grid {
       display: grid;
-      grid-template-columns: repeat(53, 11px);
+      grid-template-columns: repeat(var(--heatmap-cols, 53), 11px);
       grid-template-rows: repeat(7, 11px);
       grid-auto-flow: column;
       gap: 2px;
@@ -288,7 +290,7 @@ export class ActivityHeatmapComponent implements OnChanges {
   tooltip      = signal<Tooltip | null>(null);
 
   // Total columns (weeks) in the padded grid — recalculated in buildGrid
-  private totalCols = 53;
+  totalCols = 53;
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['days'] && this.days.length) {
@@ -320,7 +322,10 @@ export class ActivityHeatmapComponent implements OnChanges {
   // ── Grid builder ──────────────────────────────────────────────────────────
 
   private buildGrid(): void {
-    const raw = [...this.days].slice(-365);
+    // Use all passed days — the parent already filters by year if needed
+    const raw = [...this.days];
+
+    if (!raw.length) return;
 
     // Pad front so the first cell lands on Sunday (0)
     const firstDate = new Date(raw[0].date + 'T00:00:00');
@@ -334,7 +339,7 @@ export class ActivityHeatmapComponent implements OnChanges {
     // Pad tail to complete the final week
     while (padded.length % 7 !== 0) padded.push(null);
 
-    this.totalCols  = padded.length / 7;
+    this.totalCols   = padded.length / 7;
     this.totalActive = raw.filter(d => d.count > 0).length;
 
     this.cells = padded.map((d, idx) => {

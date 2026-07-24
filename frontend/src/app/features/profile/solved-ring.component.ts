@@ -313,9 +313,9 @@ const COLOR_TRACK  = '#ECE9E1';
       cursor: default;
       border-radius: 7px;
       padding: 4px 6px;
-      transition: background 0.14s;
+      transition: background 0.14s, box-shadow 0.14s;
 
-      &:hover {
+      &:not(.ring-stat--fire):hover {
         background: rgba(26, 43, 74, 0.04);
       }
     }
@@ -326,11 +326,39 @@ const COLOR_TRACK  = '#ECE9E1';
       gap: 7px;
     }
 
-    @keyframes emberPulse {
-      0%, 100% { box-shadow: 0 0 4px 1px rgba(255,80,0,0.5); }
-      50%       { box-shadow: 0 0 10px 3px rgba(255,120,0,0.85), 0 0 18px 4px rgba(255,60,0,0.4); }
+    /* ── Hard row — fire box effect on hover ─────────────────────── */
+    @keyframes fireBox {
+      0%   {
+        box-shadow: 0 0 0px 0px rgba(255,80,0,0),
+                    inset 0 0 0px rgba(255,80,0,0);
+        background: rgba(26,43,74,0.04);
+      }
+      35%  {
+        box-shadow: 0 0 8px 2px rgba(255,100,0,0.35),
+                    0 0 18px 4px rgba(255,60,0,0.18),
+                    inset 0 0 10px rgba(255,120,0,0.07);
+        background: rgba(255,69,0,0.06);
+      }
+      65%  {
+        box-shadow: 0 0 12px 3px rgba(255,130,0,0.45),
+                    0 0 24px 6px rgba(255,60,0,0.22),
+                    inset 0 0 14px rgba(255,160,0,0.09);
+        background: rgba(255,100,0,0.09);
+      }
+      100% {
+        box-shadow: 0 0 8px 2px rgba(255,80,0,0.30),
+                    0 0 18px 4px rgba(255,60,0,0.15),
+                    inset 0 0 10px rgba(255,120,0,0.06);
+        background: rgba(255,69,0,0.05);
+      }
     }
 
+    .ring-stat--fire {
+      animation: fireBox 1.6s ease-in-out infinite;
+      border-radius: 7px;
+    }
+
+    /* Dot just brightens slightly — no extra animation needed */
     .ring-stat__dot {
       width: 8px;
       height: 8px;
@@ -338,13 +366,11 @@ const COLOR_TRACK  = '#ECE9E1';
       flex-shrink: 0;
       transition: box-shadow 0.3s ease;
 
-      &--hard {
-        background: #D32F2F;
-      }
+      &--hard { background: #D32F2F; }
     }
 
     .ring-stat--fire .ring-stat__dot--hard {
-      animation: emberPulse 1.4s ease-in-out infinite;
+      box-shadow: 0 0 5px 1px rgba(255,80,0,0.6);
     }
 
     .ring-stat__label {
@@ -354,23 +380,15 @@ const COLOR_TRACK  = '#ECE9E1';
       color: var(--charcoal);
       width: 28px;
       flex-shrink: 0;
-      transition: color 0.15s;
-    }
-
-    /* Hard label — fire flicker on hover */
-    @keyframes fireGlow {
-      0%   { text-shadow: 0 0 4px rgba(255,69,0,0.6),  0 0 10px rgba(255,69,0,0.3);  }
-      50%  { text-shadow: 0 0 10px rgba(255,120,0,0.9), 0 0 22px rgba(255,200,0,0.5), 0 0 36px rgba(255,69,0,0.3); }
-      100% { text-shadow: 0 0 4px rgba(255,69,0,0.6),  0 0 10px rgba(255,69,0,0.3);  }
     }
 
     .ring-stat__label--hard {
       color: #D32F2F;
     }
 
+    /* Label just shifts to orange when box is on fire — no text-shadow */
     .ring-stat--fire .ring-stat__label--hard {
       color: #ff4500;
-      animation: fireGlow 1.4s ease-in-out infinite;
     }
 
     .ring-stat__count {

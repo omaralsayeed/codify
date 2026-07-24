@@ -285,18 +285,42 @@
 
         <!-- ③ Activity heatmap -->
         <section class="heatmap-section" aria-label="Submission activity">
+
+          <!-- Stats + year selector row -->
           <div class="heatmap-header">
             <span class="heatmap-header__stat">
-              <strong>{{ profile.streak.totalSubmissionsLastYear }}</strong> submissions in the past year
+              <strong>{{ filteredSubmissions }}</strong> submissions in {{ statsLabel }}
             </span>
             <span class="heatmap-header__meta">
-              Active days: {{ profile.streak.totalActiveDays }}
+              Active days: {{ filteredActiveDays }}
               &nbsp;·&nbsp;
-              Max streak: {{ profile.streak.longestStreak }} days
+              Max streak: {{ filteredMaxStreak }} days
             </span>
           </div>
 
-          <app-activity-heatmap [days]="profile.activityGrid" />
+          <!-- Year filter pills -->
+          <div class="year-filter" role="group" aria-label="Filter activity by year">
+            @for (yr of availableYears; track yr) {
+              <button
+                class="year-pill"
+                [class.year-pill--active]="selectedYear === yr"
+                (click)="selectYear(yr)"
+                [attr.aria-pressed]="selectedYear === yr"
+                type="button">
+                {{ yr }}
+              </button>
+            }
+            <button
+              class="year-pill"
+              [class.year-pill--active]="selectedYear === null"
+              (click)="selectYear(null)"
+              [attr.aria-pressed]="selectedYear === null"
+              type="button">
+              All
+            </button>
+          </div>
+
+          <app-activity-heatmap [days]="filteredDays" />
         </section>
 
         <!-- ④ Recent accepted submissions -->
