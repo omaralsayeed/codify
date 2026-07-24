@@ -1,5 +1,19 @@
 @use '../../styles/variables' as *;
 
+// ── Typographic roles ─────────────────────────────────────────────────────────
+//
+//  Display  — hero numbers that dominate (streak count, solved total)
+//             font-weight: 800, font-family: $ff-body (DM Sans heavy)
+//
+//  Label    — axis / section labels, all-caps, tracked out
+//             font-weight: 600, font-size: 10–11px, letter-spacing: 0.08–0.1em
+//
+//  Body     — problem titles, bio, descriptions
+//             font-weight: 400, line-height: 1.6
+//
+//  Muted    — secondary info, totals, timestamps
+//             font-weight: 400, opacity: 0.55 on body colour (or explicit $muted)
+
 // ── Page shell ────────────────────────────────────────────────────────────────
 
 .profile-page {
@@ -107,13 +121,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: $ff-mono;
-  font-size: 28px;
-  font-weight: 700;
+  // Display role: the initials are the identity mark, not a placeholder
+  font-family: $ff-body;
+  font-size: 32px;
+  font-weight: 800;
   color: $white;
   outline: 2.5px solid $blue;
   outline-offset: 3px;
   animation: avatarGlow 3s ease-in-out infinite;
+  letter-spacing: -0.01em;
 }
 
 // ── Identity ──────────────────────────────────────────────────────────────────
@@ -123,41 +139,48 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
+  gap: 3px;
 }
 
+// Display role: the name owns the sidebar
 .sidebar-name {
   font-family: $ff-body;
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 22px;
+  font-weight: 800;
   color: $navy;
   margin: 0;
-  line-height: 1.3;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
 }
 
+// Muted role: handle is secondary, recedes
 .sidebar-username {
   font-family: $ff-mono;
   font-size: 12px;
   color: $muted;
+  opacity: 0.85;
+  margin-top: 1px;
 }
 
+// Label role: role badge is a label, not a heading
 .sidebar-role {
   display: inline-block;
-  font-size: 11px;
+  font-size: 10px;
   font-family: $ff-body;
-  font-weight: 600;
+  font-weight: 700;
   background: $blue-lt;
   color: $blue;
   padding: 2px 10px;
   border-radius: 20px;
-  letter-spacing: 0.03em;
-  margin-top: 2px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  margin-top: 4px;
 }
 
 // ── Edit profile button ───────────────────────────────────────────────────────
 
 .edit-profile-btn {
-  margin-top: 8px;
+  margin-top: 10px;
   display: inline-flex;
   align-items: center;
   height: 28px;
@@ -185,20 +208,22 @@
 }
 
 // ── Meta (streak + joined) ────────────────────────────────────────────────────
+// Muted role: these are supplementary facts, not features
 
 .sidebar-meta {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
   margin-bottom: 24px;
 
   &__row {
     display: flex;
     align-items: center;
     gap: 7px;
-    font-size: 13px;
+    font-size: 12px;
     font-family: $ff-body;
-    color: $charcoal;
+    font-weight: 400;
+    color: $muted;
   }
 }
 
@@ -211,14 +236,16 @@
 }
 
 .sidebar-section {
+  // Label role: section titles are axis labels, not headings
   &__title {
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.1em;
     color: $muted;
     font-family: $ff-body;
     margin: 0 0 12px;
+    opacity: 0.75;
   }
 }
 
@@ -239,15 +266,17 @@
 
 .diff-bar-row {
   display: grid;
-  // label | track | solved | total
   grid-template-columns: 32px 1fr auto auto;
   align-items: center;
   gap: 6px;
 
+  // Label role
   &__label {
-    font-size: 11px;
+    font-size: 10px;
     font-family: $ff-body;
-    font-weight: 600;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
 
     &--easy   { color: $teal; }
     &--medium { color: $gold; }
@@ -272,9 +301,10 @@
     &--hard   { background: $red;  }
   }
 
+  // Body role: the solved count is the important number
   &__solved {
-    font-family: $ff-mono;
-    font-size: 11px;
+    font-family: $ff-body;
+    font-size: 12px;
     font-weight: 700;
 
     &--easy   { color: $teal; }
@@ -282,10 +312,12 @@
     &--hard   { color: $red;  }
   }
 
+  // Muted role: the total recedes
   &__total {
     font-family: $ff-mono;
     font-size: 10px;
     color: $muted;
+    opacity: 0.65;
     white-space: nowrap;
   }
 }
@@ -312,6 +344,7 @@
     align-items: baseline;
   }
 
+  // Body role
   &__name {
     font-size: 12px;
     font-family: $ff-body;
@@ -319,10 +352,12 @@
     font-weight: 500;
   }
 
+  // Muted role
   &__count {
     font-family: $ff-mono;
     font-size: 11px;
     color: $muted;
+    opacity: 0.7;
   }
 
   &__track {
@@ -354,11 +389,12 @@
   flex-direction: column;
   gap: 6px;
 
+  // Label role
   &__label {
     font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.07em;
+    letter-spacing: 0.09em;
     font-family: $ff-body;
 
     &--strong { color: $teal;      }
@@ -409,18 +445,21 @@
   margin-bottom: 16px;
   text-align: center;
 
+  // Body role: headline is the user's voice
   &__headline {
     font-family: $ff-body;
     font-size: 15px;
-    font-weight: 700;
+    font-weight: 600;
     color: $navy;
     margin: 0;
     line-height: 1.4;
 
+    // Muted role: empty state recedes
     &--empty {
       color: $muted;
       font-style: italic;
       font-weight: 400;
+      opacity: 0.65;
     }
   }
 
@@ -467,9 +506,11 @@
     line-height: 1;
   }
 
+  // Muted role: bio is supplementary text
   &__bio {
     font-family: $ff-body;
-    font-size: 12px;
+    font-size: 13px;
+    font-weight: 400;
     color: $muted;
     line-height: 1.6;
     margin: 0;
@@ -515,7 +556,7 @@
   &__meta {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 16px;
     flex: 1;
     min-width: 0;
   }
@@ -527,54 +568,91 @@
   }
 }
 
-// ── Stats meta items (streak, joined) ────────────────────────────────────────
+// ── Stats meta items — the hero numbers ──────────────────────────────────────
 
 .stats-meta-item {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 
+  // Display role: this is the number that must dominate
   &__val {
-    font-family: $ff-display;
-    // Fill the available width — big enough to dominate the right column
-    font-size: clamp(32px, 4.5vw, 56px);
+    font-family: $ff-body;
+    font-size: clamp(40px, 5vw, 64px);
+    font-weight: 800;
     color: $navy;
     line-height: 1;
+    letter-spacing: -0.03em;
     display: flex;
     align-items: baseline;
-    gap: 6px;
+    gap: 5px;
   }
 
+  // The emoji in the streak number — keep it aligned but don't disturb the weight
+  &__val-emoji {
+    font-size: 0.55em;
+    line-height: 1;
+    display: inline-block;
+    transform: translateY(-0.05em);
+  }
+
+  // Muted role: "days" is a unit label, not the focus
   &__unit {
-    font-size: 0.4em;
+    font-size: 0.32em;
     font-family: $ff-body;
-    color: $navy2;
     font-weight: 500;
-    letter-spacing: 0.02em;
+    color: $navy2;
+    letter-spacing: 0.01em;
+    align-self: flex-end;
+    padding-bottom: 0.12em;
   }
 
+  // Label role: the label orients, the number commands
   &__lbl {
-    font-size: 11px;
+    font-size: 10px;
     font-family: $ff-body;
+    font-weight: 700;
     color: $muted;
     text-transform: uppercase;
-    letter-spacing: 0.07em;
-    font-weight: 600;
-    margin-top: 4px;
+    letter-spacing: 0.1em;
+    opacity: 0.75;
   }
 
+  // Muted role
   &__sub {
     font-size: 12px;
     font-family: $ff-body;
-    color: $muted;
     font-weight: 400;
-    margin-top: 2px;
+    color: $muted;
+    margin-top: 3px;
 
     &--best {
       color: $gold-dark;
       font-weight: 600;
     }
   }
+}
+
+// ── Joined / active-days row in stats card ────────────────────────────────────
+// These are Label role items — they orient, not command
+
+.stats-meta-joined {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stats-meta-joined__item {
+  font-size: 11px;
+  font-family: $ff-body;
+  font-weight: 700;
+  color: $muted;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.75;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 // ── ③ Heatmap section ────────────────────────────────────────────────────────
@@ -593,26 +671,31 @@
   margin-bottom: 12px;
   flex-wrap: wrap;
 
+  // Body role: the submission count is informational
   &__stat {
     font-size: 13px;
     font-family: $ff-body;
     font-weight: 400;
     color: $charcoal;
+    line-height: 1.4;
 
+    // The number inside gets a mild emphasis bump
     strong {
       font-weight: 700;
       color: $navy;
     }
   }
 
+  // Muted role
   &__meta {
     font-size: 12px;
     font-family: $ff-mono;
     color: $muted;
+    opacity: 0.75;
   }
 }
 
-// ── Year filter pills (for heatmap) ──────────────────────────────────────────
+// ── Year filter pills ─────────────────────────────────────────────────────────
 
 .year-filter {
   display: flex;
@@ -659,23 +742,27 @@
 // ── ④ Recent accepted ────────────────────────────────────────────────────────
 
 .recent-section {
+  // Label role: section title is an axis label
   &__title {
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
     color: $muted;
     font-family: $ff-body;
     margin: 0 0 8px;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.1em;
+    opacity: 0.75;
     display: flex;
     align-items: center;
     gap: 5px;
   }
 
+  // Muted role: the count is secondary
   &__count {
     font-weight: 400;
     letter-spacing: 0;
     text-transform: none;
+    opacity: 0.7;
   }
 }
 
@@ -708,6 +795,7 @@
     outline-offset: 2px;
   }
 
+  // Body role: problem title is the content
   &__title {
     font-size: 13px;
     font-family: $ff-body;
@@ -717,6 +805,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     min-width: 0;
+    line-height: 1.4;
   }
 
   &__badge {
@@ -744,10 +833,12 @@
     }
   }
 
+  // Muted role: timestamp recedes
   &__time {
     font-size: 11px;
     font-family: $ff-mono;
     color: $muted;
+    opacity: 0.65;
     white-space: nowrap;
     flex-shrink: 0;
     text-align: right;

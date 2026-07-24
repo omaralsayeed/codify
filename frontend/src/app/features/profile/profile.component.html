@@ -256,8 +256,7 @@
             <div class="stats-meta-item"
                  [attr.aria-label]="'Current streak: ' + profile.streak.currentStreak + ' days'">
               <span class="stats-meta-item__val">
-                <span aria-hidden="true">🔥</span>{{ profile.streak.currentStreak }}
-                <span class="stats-meta-item__unit"> days</span>
+                <span class="stats-meta-item__val-emoji" aria-hidden="true">🔥</span>{{ profile.streak.currentStreak }}<span class="stats-meta-item__unit">days</span>
               </span>
               <span class="stats-meta-item__lbl">Current Streak</span>
               @if (isPersonalBest) {
@@ -273,10 +272,14 @@
 
             <hr class="stats-card__inner-sep" aria-hidden="true" />
 
-            <div class="stats-meta-item">
-              <span class="stats-meta-item__lbl">📅 Joined {{ joinedYear(profile.user.joinedAt) }}</span>
-              <span class="stats-meta-item__lbl">
-                {{ profile.streak.totalActiveDays }} active days
+            <div class="stats-meta-joined">
+              <span class="stats-meta-joined__item">
+                <span aria-hidden="true">📅</span>
+                Joined {{ joinedYear(profile.user.joinedAt) }}
+              </span>
+              <span class="stats-meta-joined__item">
+                <span aria-hidden="true">⚡</span>
+                {{ profile.streak.totalActiveDays }} Active Days
               </span>
             </div>
           </div>

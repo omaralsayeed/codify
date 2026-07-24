@@ -30,21 +30,20 @@ interface ArcSegment {
 }
 
 const TWO_PI         = 2 * Math.PI;
-const GAP_DEG        = 4;
-const RING_RADIUS    = 68;          // ↑ was 54
+const GAP_DEG        = 3;                // exactly 3° — intentional, not arbitrary
+const RING_RADIUS    = 68;
 const STROKE_WIDTH   = 11;
 const CIRCUMFERENCE  = TWO_PI * RING_RADIUS;
 const GAP_FRAC       = GAP_DEG / 360;
 const TOTAL_GAP_FRAC = 3 * GAP_FRAC;
 
-// SVG viewBox is square: 2*(radius + strokeWidth/2 + 2px margin)
 const SVG_SIZE = Math.round(2 * (RING_RADIUS + STROKE_WIDTH / 2 + 4));  // 154
 const CX       = SVG_SIZE / 2;
 
 const COLOR_EASY   = '#1D9E75';
-const COLOR_MEDIUM = '#FFB700';   // ← updated from #C8A951
+const COLOR_MEDIUM = '#FFB700';
 const COLOR_HARD   = '#D32F2F';
-const COLOR_TRACK  = '#ECE9E1';
+const COLOR_TRACK  = '#ECE9E1';   // $ivory2 — barely visible, doesn't compete
 
 @Component({
   selector: 'app-solved-ring',
@@ -66,7 +65,7 @@ const COLOR_TRACK  = '#ECE9E1';
              [attr.viewBox]="'0 0 ' + SVG_SIZE + ' ' + SVG_SIZE"
              aria-hidden="true">
 
-          <!-- Background track -->
+          <!-- Background track — barely there, just enough to show unfilled arc -->
           <circle
             [attr.cx]="CX" [attr.cy]="CX"
             [attr.r]="RADIUS"
@@ -82,7 +81,7 @@ const COLOR_TRACK  = '#ECE9E1';
             fill="none"
             [attr.stroke]="easyArc.color"
             [attr.stroke-width]="STROKE_WIDTH"
-            stroke-linecap="butt"
+            stroke-linecap="round"
             [attr.stroke-dasharray]="easyArc.dashArray"
             [attr.stroke-dashoffset]="easyArc.dashOffset"
             [class.ring-seg--lit]="hoveredSegment === 'easy'"
@@ -96,7 +95,7 @@ const COLOR_TRACK  = '#ECE9E1';
             fill="none"
             [attr.stroke]="mediumArc.color"
             [attr.stroke-width]="STROKE_WIDTH"
-            stroke-linecap="butt"
+            stroke-linecap="round"
             [attr.stroke-dasharray]="mediumArc.dashArray"
             [attr.stroke-dashoffset]="mediumArc.dashOffset"
             [class.ring-seg--lit]="hoveredSegment === 'medium'"
@@ -110,7 +109,7 @@ const COLOR_TRACK  = '#ECE9E1';
             fill="none"
             [attr.stroke]="hardArc.color"
             [attr.stroke-width]="STROKE_WIDTH"
-            stroke-linecap="butt"
+            stroke-linecap="round"
             [attr.stroke-dasharray]="hardArc.dashArray"
             [attr.stroke-dashoffset]="hardArc.dashOffset"
             [class.ring-seg--lit]="hoveredSegment === 'hard'"
@@ -119,21 +118,29 @@ const COLOR_TRACK  = '#ECE9E1';
 
         </svg>
 
-        <!-- Centre: default (solved count) -->
+        <!--
+          Centre content: two layers, both absolutely positioned on top of each
+          other so the ring's size never changes during the crossfade.
+          Transition: opacity only, 180ms ease-out. No layout shift.
+        -->
+
+        <!-- Layer 1 — default: solved count -->
         <div class="ring-centre ring-centre--default"
-             [class.ring-centre--hidden]="hovered">
-          <span class="ring-centre__big">{{ data.totalSolved }}</span>
-          <span class="ring-centre__lbl">✓ Solved</span>
+             [class.ring-centre--out]="hovered"
+             aria-hidden="true">
+          <span class="ring-centre__num">{{ data.totalSolved }}</span>
+          <span class="ring-centre__solved-lbl">✓ Solved</span>
           <span class="ring-centre__sub">{{ data.totalAttempted }} attempted</span>
         </div>
 
-        <!-- Centre: hover (acceptance rate) -->
+        <!-- Layer 2 — hover: acceptance rate -->
         <div class="ring-centre ring-centre--hover"
-             [class.ring-centre--visible]="hovered">
-          <span class="ring-centre__big ring-centre__big--rate">
+             [class.ring-centre--in]="hovered"
+             aria-hidden="true">
+          <span class="ring-centre__num ring-centre__num--rate">
             {{ data.acceptanceRate }}<span class="ring-centre__unit">%</span>
           </span>
-          <span class="ring-centre__lbl">Acceptance</span>
+          <span class="ring-centre__rate-lbl">Acceptance</span>
           <span class="ring-centre__sub">{{ data.totalSubmissions }} submissions</span>
         </div>
 
@@ -149,8 +156,8 @@ const COLOR_TRACK  = '#ECE9E1';
           <div class="ring-stat__top">
             <span class="ring-stat__dot" style="background:#1D9E75"></span>
             <span class="ring-stat__label">Easy</span>
-            <span class="ring-stat__count ring-stat__count--easy">
-              {{ data.easySolved }}<span class="ring-stat__total">/{{ data.easyTotal }}</span>
+            <span class="ring-stat__frac ring-stat__frac--easy">
+              {{ data.easySolved }}<span class="ring-stat__frac-total">/{{ data.easyTotal }}</span>
             </span>
           </div>
           <div class="ring-stat__track" aria-hidden="true">
@@ -168,8 +175,8 @@ const COLOR_TRACK  = '#ECE9E1';
           <div class="ring-stat__top">
             <span class="ring-stat__dot" style="background:#FFB700"></span>
             <span class="ring-stat__label">Med.</span>
-            <span class="ring-stat__count ring-stat__count--medium">
-              {{ data.mediumSolved }}<span class="ring-stat__total">/{{ data.mediumTotal }}</span>
+            <span class="ring-stat__frac ring-stat__frac--medium">
+              {{ data.mediumSolved }}<span class="ring-stat__frac-total">/{{ data.mediumTotal }}</span>
             </span>
           </div>
           <div class="ring-stat__track" aria-hidden="true">
@@ -180,7 +187,7 @@ const COLOR_TRACK  = '#ECE9E1';
           </div>
         </div>
 
-        <!-- Hard — fire effect on hover -->
+        <!-- Hard -->
         <div class="ring-stat"
              [class.ring-stat--fire]="hoveredSegment === 'hard'"
              (mouseenter)="hoveredSegment = 'hard'"
@@ -188,8 +195,8 @@ const COLOR_TRACK  = '#ECE9E1';
           <div class="ring-stat__top">
             <span class="ring-stat__dot ring-stat__dot--hard"></span>
             <span class="ring-stat__label ring-stat__label--hard">Hard</span>
-            <span class="ring-stat__count ring-stat__count--hard">
-              {{ data.hardSolved }}<span class="ring-stat__total">/{{ data.hardTotal }}</span>
+            <span class="ring-stat__frac ring-stat__frac--hard">
+              {{ data.hardSolved }}<span class="ring-stat__frac-total">/{{ data.hardTotal }}</span>
             </span>
           </div>
           <div class="ring-stat__track" aria-hidden="true">
@@ -205,35 +212,44 @@ const COLOR_TRACK  = '#ECE9E1';
     </div>
   `,
   styles: [`
-    /* ── Card ─────────────────────────────────────────────────────── */
+    /* ── Card layout ───────────────────────────────────────────────── */
     .ring-card {
       display: flex;
       align-items: center;
       gap: 24px;
     }
 
-    /* ── Ring wrap ────────────────────────────────────────────────── */
+    /* ── Ring wrap ─────────────────────────────────────────────────── */
     .ring-wrap {
       position: relative;
-      width: 155px;
-      height: 155px;
+      /*
+        Width/height must exactly match SVG_SIZE (154px) so the absolutely-
+        positioned centre layers sit flush. Never let hover swap change size.
+      */
+      width: 154px;
+      height: 154px;
       flex-shrink: 0;
       cursor: default;
     }
 
     .ring-svg { display: block; }
 
-    /* Arc segment transitions */
+    /* Arc segment hover brightness */
     .ring-seg {
-      transition: opacity 0.18s ease, filter 0.18s ease;
+      transition: opacity 0.18s ease-out, filter 0.18s ease-out;
       opacity: 0.88;
     }
     .ring-seg--lit {
       opacity: 1;
-      filter: brightness(1.2);
+      filter: brightness(1.18);
     }
 
-    /* ── Centre layers ────────────────────────────────────────────── */
+    /* ── Centre layers ─────────────────────────────────────────────── */
+    /*
+      Both layers are absolute, stacked on top of each other.
+      Only opacity changes — zero layout shift, zero size change.
+      Duration: 180ms. Easing: ease-out.
+    */
     .ring-centre {
       position: absolute;
       inset: 0;
@@ -242,62 +258,81 @@ const COLOR_TRACK  = '#ECE9E1';
       align-items: center;
       justify-content: center;
       pointer-events: none;
+      gap: 2px;
     }
 
-    /* Default → fade out quickly, fade in slowly with delay */
     .ring-centre--default {
       opacity: 1;
-      transition: opacity 0.15s ease 0s;
+      transition: opacity 180ms ease-out;
     }
-    .ring-centre--hidden {
+    .ring-centre--default.ring-centre--out {
       opacity: 0;
-      transition: opacity 0.15s ease 0s;
+      transition: opacity 180ms ease-out;
     }
 
-    /* Hover → wait 0.35s before fading in (intentional pause) */
     .ring-centre--hover {
       opacity: 0;
-      transition: opacity 0.15s ease 0s;
+      transition: opacity 180ms ease-out;
     }
-    .ring-centre--visible {
+    .ring-centre--hover.ring-centre--in {
       opacity: 1;
-      transition: opacity 0.4s ease 0.35s;   /* ← delay before flip */
+      transition: opacity 180ms ease-out;
     }
 
-    /* Centre text */
-    .ring-centre__big {
-      font-family: var(--ff-display);
-      font-size: 32px;
+    /* ── Centre text roles ─────────────────────────────────────────── */
+
+    /* Display role: the hero number — DM Sans 800, dominant */
+    .ring-centre__num {
+      font-family: var(--ff-body);
+      font-size: 34px;
+      font-weight: 800;
       color: var(--navy);
       line-height: 1;
-      letter-spacing: -0.02em;
+      letter-spacing: -0.03em;
     }
-    .ring-centre__big--rate {
-      font-size: 24px;
+    .ring-centre__num--rate {
+      font-size: 26px;
     }
     .ring-centre__unit {
       font-size: 14px;
       font-family: var(--ff-body);
-      color: var(--navy2);
-      font-weight: 500;
-    }
-    .ring-centre__lbl {
-      font-size: 10px;
-      font-family: var(--ff-body);
       font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--muted);
-      margin-top: 3px;
+      color: var(--navy2);
+      letter-spacing: 0;
     }
-    .ring-centre__sub {
+
+    /* Label role (success): "✓ SOLVED" — tiny, all-caps, tracked, green */
+    .ring-centre__solved-lbl {
       font-size: 9px;
-      font-family: var(--ff-mono);
+      font-family: var(--ff-body);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #1D9E75;   /* $teal — success/green, matches easy segment */
+      margin-top: 2px;
+    }
+
+    /* Label role (neutral): "ACCEPTANCE" */
+    .ring-centre__rate-lbl {
+      font-size: 9px;
+      font-family: var(--ff-body);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
       color: var(--muted);
       margin-top: 2px;
     }
 
-    /* ── Stat rows ────────────────────────────────────────────────── */
+    /* Muted role: "47 attempted" / "n submissions" */
+    .ring-centre__sub {
+      font-size: 9px;
+      font-family: var(--ff-mono);
+      color: var(--muted);
+      opacity: 0.65;
+      white-space: nowrap;
+    }
+
+    /* ── Stat rows ─────────────────────────────────────────────────── */
     .ring-stats {
       display: flex;
       flex-direction: column;
@@ -309,7 +344,7 @@ const COLOR_TRACK  = '#ECE9E1';
     .ring-stat {
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 5px;
       cursor: default;
       border-radius: 7px;
       padding: 4px 6px;
@@ -326,7 +361,80 @@ const COLOR_TRACK  = '#ECE9E1';
       gap: 7px;
     }
 
-    /* ── Hard row — fire box effect on hover ─────────────────────── */
+    /* Coloured dot — matches the ring segment color */
+    .ring-stat__dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      transition: box-shadow 0.2s ease;
+
+      &--hard { background: #D32F2F; }
+    }
+    .ring-stat--fire .ring-stat__dot--hard {
+      box-shadow: 0 0 5px 1px rgba(255,80,0,0.6);
+    }
+
+    /* Label — body role */
+    .ring-stat__label {
+      font-size: 12px;
+      font-family: var(--ff-body);
+      font-weight: 600;
+      color: var(--charcoal);
+      width: 28px;
+      flex-shrink: 0;
+    }
+    .ring-stat__label--hard { color: #D32F2F; }
+    .ring-stat--fire .ring-stat__label--hard { color: #ff4500; }
+
+    /* Fraction — solved number is body weight, total is muted */
+    .ring-stat__frac {
+      font-family: var(--ff-mono);
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+      margin-left: auto;
+    }
+    .ring-stat__frac--easy   { color: #1D9E75; }
+    .ring-stat__frac--medium { color: #FFB700; }
+    .ring-stat__frac--hard   { color: #D32F2F; }
+
+    /* Muted role: the "/total" part recedes */
+    .ring-stat__frac-total {
+      font-weight: 400;
+      color: var(--muted);
+      font-size: 10px;
+      opacity: 0.7;
+    }
+
+    /* ── Progress bar — 4px, rounded ends, animated fill on load ──── */
+    @keyframes ringBarGrow {
+      from { transform: scaleX(0); }
+      to   { transform: scaleX(1); }
+    }
+
+    .ring-stat__track {
+      height: 4px;
+      background: var(--ivory2);
+      border-radius: 20px;   /* full pill — rounds both ends */
+      overflow: hidden;
+    }
+
+    .ring-stat__fill {
+      height: 100%;
+      border-radius: 20px;
+      transform-origin: left center;
+      /* Staggered entrance — creates visual connection between bar and ring loading */
+      animation: ringBarGrow 600ms ease-out both;
+      transition: filter 0.15s ease;
+
+      &--easy   { background: #1D9E75; animation-delay:   0ms; }
+      &--medium { background: #FFB700; animation-delay:  80ms; }
+      &--hard   { background: #D32F2F; animation-delay: 160ms; }
+      &--lit    { filter: brightness(1.18); }
+    }
+
+    /* ── Hard row fire effect ───────────────────────────────────────── */
     @keyframes fireBox {
       0%   {
         box-shadow: 0 0 0px 0px rgba(255,80,0,0),
@@ -357,92 +465,16 @@ const COLOR_TRACK  = '#ECE9E1';
       animation: fireBox 1.6s ease-in-out infinite;
       border-radius: 7px;
     }
-
-    /* Dot just brightens slightly — no extra animation needed */
-    .ring-stat__dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      flex-shrink: 0;
-      transition: box-shadow 0.3s ease;
-
-      &--hard { background: #D32F2F; }
-    }
-
-    .ring-stat--fire .ring-stat__dot--hard {
-      box-shadow: 0 0 5px 1px rgba(255,80,0,0.6);
-    }
-
-    .ring-stat__label {
-      font-size: 12px;
-      font-family: var(--ff-body);
-      font-weight: 600;
-      color: var(--charcoal);
-      width: 28px;
-      flex-shrink: 0;
-    }
-
-    .ring-stat__label--hard {
-      color: #D32F2F;
-    }
-
-    /* Label just shifts to orange when box is on fire — no text-shadow */
-    .ring-stat--fire .ring-stat__label--hard {
-      color: #ff4500;
-    }
-
-    .ring-stat__count {
-      font-family: var(--ff-mono);
-      font-size: 12px;
-      font-weight: 700;
-      white-space: nowrap;
-      margin-left: auto;
-    }
-    .ring-stat__count--easy   { color: #1D9E75; }
-    .ring-stat__count--medium { color: #FFB700; }
-    .ring-stat__count--hard   { color: #D32F2F; }
-
-    .ring-stat__total {
-      font-weight: 400;
-      color: var(--muted);
-      font-size: 10px;
-    }
-
-    /* Mini progress bar */
-    @keyframes ringBarGrow {
-      from { transform: scaleX(0); }
-      to   { transform: scaleX(1); }
-    }
-
-    .ring-stat__track {
-      height: 3px;
-      background: var(--ivory2);
-      border-radius: 20px;
-      overflow: hidden;
-    }
-
-    .ring-stat__fill {
-      height: 100%;
-      border-radius: 20px;
-      transform-origin: left center;
-      animation: ringBarGrow 600ms ease-out both;
-      transition: filter 0.15s;
-
-      &--easy   { background: #1D9E75; animation-delay:   0ms; }
-      &--medium { background: #FFB700; animation-delay:  80ms; }
-      &--hard   { background: #D32F2F; animation-delay: 160ms; }
-      &--lit    { filter: brightness(1.2); }
-    }
   `],
 })
 export class SolvedRingComponent implements OnChanges {
   @Input() data!: RingDifficultyData;
 
-  readonly RADIUS      = RING_RADIUS;
+  readonly RADIUS       = RING_RADIUS;
   readonly STROKE_WIDTH = STROKE_WIDTH;
-  readonly SVG_SIZE    = SVG_SIZE;
-  readonly CX          = CX;
-  readonly TRACK_COLOR = COLOR_TRACK;
+  readonly SVG_SIZE     = SVG_SIZE;
+  readonly CX           = CX;
+  readonly TRACK_COLOR  = COLOR_TRACK;
 
   hovered         = false;
   hoveredSegment: 'easy' | 'medium' | 'hard' | null = null;
@@ -463,12 +495,13 @@ export class SolvedRingComponent implements OnChanges {
     const { easySolved, mediumSolved, hardSolved } = this.data;
     const total  = easySolved + mediumSolved + hardSolved;
     const usable = 1 - TOTAL_GAP_FRAC;
-    const MIN_FRAC = 2 / 360;
+    const MIN_FRAC = 2 / 360;   // minimum arc so a single solve is still visible
 
     let easyFrac   = total > 0 ? (easySolved   / total) * usable : 0;
     let mediumFrac = total > 0 ? (mediumSolved  / total) * usable : 0;
     let hardFrac   = total > 0 ? (hardSolved    / total) * usable : 0;
 
+    // Clamp to minimum so even 1 solved problem shows as a visible nub
     if (easySolved   > 0 && easyFrac   < MIN_FRAC) easyFrac   = MIN_FRAC;
     if (mediumSolved > 0 && mediumFrac < MIN_FRAC) mediumFrac = MIN_FRAC;
     if (hardSolved   > 0 && hardFrac   < MIN_FRAC) hardFrac   = MIN_FRAC;
