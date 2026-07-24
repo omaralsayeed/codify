@@ -80,10 +80,18 @@
         <div class="sidebar-section" aria-label="Languages used">
           <h2 class="sidebar-section__title">Languages</h2>
           <ul class="lang-list">
-            @for (lang of profile.languageStats; track lang.language) {
+            @for (lang of profile.languageStats; track lang.language; let i = $index) {
               <li class="lang-item">
-                <span class="lang-item__name">{{ lang.language }}</span>
-                <span class="lang-item__count">{{ lang.solved }} solved</span>
+                <div class="lang-item__header">
+                  <span class="lang-item__name">{{ lang.language }}</span>
+                  <span class="lang-item__count">{{ lang.solved }}</span>
+                </div>
+                <div class="lang-item__track" aria-hidden="true">
+                  <div class="lang-item__fill"
+                       [style.width.%]="langBarWidth(lang.solved)"
+                       [style.animation-delay]="(i * 80) + 'ms'">
+                  </div>
+                </div>
               </li>
             }
           </ul>
@@ -94,14 +102,41 @@
         <!-- Topic strengths -->
         <div class="sidebar-section" aria-label="Topic strengths">
           <h2 class="sidebar-section__title">Topics</h2>
-          <ul class="topic-list">
-            @for (t of profile.topicStats; track trackByTopic($index, t)) {
-              <li class="topic-item">
-                <span class="topic-item__name">{{ t.topicName }}</span>
-                <span [class]="topicBadgeClass(t.strength)">{{ t.strength }}</span>
-              </li>
+          <div class="topic-groups">
+
+            @if (strongTopics.length) {
+              <div class="topic-group">
+                <span class="topic-group__label topic-group__label--strong">Strong</span>
+                <div class="topic-group__pills">
+                  @for (t of strongTopics; track t.topicId) {
+                    <span class="topic-badge topic-badge--strong">{{ t.topicName }}</span>
+                  }
+                </div>
+              </div>
             }
-          </ul>
+
+            @if (averageTopics.length) {
+              <div class="topic-group">
+                <div class="topic-group__pills">
+                  @for (t of averageTopics; track t.topicId) {
+                    <span class="topic-badge topic-badge--average">{{ t.topicName }}</span>
+                  }
+                </div>
+              </div>
+            }
+
+            @if (weakTopics.length) {
+              <div class="topic-group">
+                <span class="topic-group__label topic-group__label--weak">Needs Work</span>
+                <div class="topic-group__pills">
+                  @for (t of weakTopics; track t.topicId) {
+                    <span class="topic-badge topic-badge--weak">{{ t.topicName }}</span>
+                  }
+                </div>
+              </div>
+            }
+
+          </div>
         </div>
 
       </aside>
@@ -191,26 +226,36 @@
 
         <!-- Recent accepted submissions -->
         <section class="recent-section" aria-label="Recent accepted submissions">
-          <h2 class="recent-section__title">Recent AC</h2>
+          <h2 class="recent-section__title">
+            Recent Accepted
+            <span class="recent-section__count">({{ profile.recentAccepted.length }})</span>
+          </h2>
 
           <div class="recent-list" role="list">
             @for (sub of profile.recentAccepted; track trackBySubmissionId($index, sub)) {
               <a class="recent-row"
                  [routerLink]="['/problems', sub.problemId]"
                  role="listitem"
-                 [attr.aria-label]="sub.problemTitle + ', ' + sub.difficulty + ', ' + relativeTime(sub.submittedAt)">
+                 [attr.aria-label]="sub.problemTitle + ', ' + sub.difficulty + ', ' + sub.language + ', ' + relativeTime(sub.submittedAt)">
 
+                <!-- Title — truncates, takes all available space -->
                 <span class="recent-row__title">{{ sub.problemTitle }}</span>
 
-                <span class="recent-row__right">
-                  <span [class]="difficultyClass(sub.difficulty)">{{ sub.difficulty }}</span>
-                  <span class="recent-row__time">{{ relativeTime(sub.submittedAt) }}</span>
-                  <svg class="recent-row__arrow" width="14" height="14" viewBox="0 0 24 24"
-                       fill="none" stroke="currentColor" stroke-width="2"
-                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M5 12h14M12 5l7 7-7 7"/>
-                  </svg>
+                <!-- Difficulty badge -->
+                <span class="recent-row__badge recent-row__badge--diff"
+                      [class.recent-row__badge--easy]="sub.difficulty === 'Easy'"
+                      [class.recent-row__badge--medium]="sub.difficulty === 'Medium'"
+                      [class.recent-row__badge--hard]="sub.difficulty === 'Hard'">
+                  {{ sub.difficulty }}
                 </span>
+
+                <!-- Language badge -->
+                <span class="recent-row__badge recent-row__badge--lang">
+                  {{ sub.language }}
+                </span>
+
+                <!-- Relative time -->
+                <span class="recent-row__time">{{ relativeTime(sub.submittedAt) }}</span>
 
               </a>
             }

@@ -89,21 +89,30 @@
 
 // ── Avatar ────────────────────────────────────────────────────────────────────
 
+@keyframes avatarGlow {
+  0%, 100% { box-shadow: 0 0 0 3px rgba($blue, 0.25), 0 0 16px rgba($blue, 0.12); }
+  50%       { box-shadow: 0 0 0 3px rgba($blue, 0.40), 0 0 24px rgba($blue, 0.22); }
+}
+
 .avatar-wrap {
-  margin-bottom: 14px;
+  margin-bottom: 18px;
 }
 
 .avatar-circle {
-  width: 72px;
-  height: 72px;
+  width: 88px;
+  height: 88px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: $ff-mono;
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 700;
   color: $white;
+  // Ring + glow — outline sits outside the element without affecting layout
+  outline: 2.5px solid $blue;
+  outline-offset: 3px;
+  animation: avatarGlow 3s ease-in-out infinite;
 }
 
 // ── Identity ──────────────────────────────────────────────────────────────────
@@ -179,6 +188,13 @@
   }
 }
 
+// ── Bar grow animation — shared by languages and difficulty bars ──────────────
+
+@keyframes barGrow {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
 // ── Languages ─────────────────────────────────────────────────────────────────
 
 .lang-list {
@@ -187,49 +203,89 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .lang-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 13px;
-  font-family: $ff-body;
+  flex-direction: column;
+  gap: 4px;
 
-  &__name  { color: $charcoal; font-weight: 500; }
-  &__count { color: $muted; font-family: $ff-mono; font-size: 11px; }
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  &__name  {
+    font-size: 12px;
+    font-family: $ff-body;
+    color: $charcoal;
+    font-weight: 500;
+  }
+
+  &__count {
+    font-family: $ff-mono;
+    font-size: 11px;
+    color: $muted;
+  }
+
+  &__track {
+    height: 4px;
+    background: $ivory2;
+    border-radius: 20px;
+    overflow: hidden;
+  }
+
+  &__fill {
+    height: 100%;
+    border-radius: 20px;
+    background: $blue;
+    transform-origin: left center;
+    animation: barGrow 600ms ease-out both;
+    // Stagger applied via [style.animation-delay] in the template
+  }
 }
 
 // ── Topics ────────────────────────────────────────────────────────────────────
 
-.topic-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.topic-groups {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 14px;
 }
 
-.topic-item {
+.topic-group {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 13px;
-  font-family: $ff-body;
+  flex-direction: column;
+  gap: 6px;
 
-  &__name { color: $charcoal; font-weight: 500; }
+  &__label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    font-family: $ff-body;
+
+    &--strong { color: $teal;      }
+    &--weak   { color: $red;       }
+    &--avg    { color: $gold-dark; }
+  }
+
+  &__pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
 }
 
 .topic-badge {
   display: inline-block;
-  font-size: 10px;
-  font-weight: 700;
-  font-family: $ff-mono;
-  padding: 2px 7px;
+  font-size: 11px;
+  font-weight: 500;
+  font-family: $ff-body;
+  padding: 3px 9px;
   border-radius: 20px;
-  text-transform: capitalize;
 
   &--strong  { background: $teal-lt;  color: $teal;      }
   &--average { background: $gold-lt;  color: $gold-dark; }
@@ -400,7 +456,7 @@
   }
 }
 
-// ── Recent accepted — clean list ─────────────────────────────────────────────
+// ── Recent accepted — scannable 4-column list ────────────────────────────────
 
 .recent-section {
   &__title {
@@ -408,9 +464,19 @@
     font-weight: 700;
     color: $muted;
     font-family: $ff-body;
-    margin: 0 0 4px;
+    margin: 0 0 8px;
     text-transform: uppercase;
     letter-spacing: 0.08em;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  &__count {
+    font-weight: 400;
+    color: $muted;
+    letter-spacing: 0;
+    text-transform: none;
   }
 }
 
@@ -420,20 +486,23 @@
 }
 
 .recent-row {
-  display: flex;
+  // 4-column grid: title | diff badge | lang badge | time
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 13px 12px;
+  gap: 10px;
+  padding: 11px 10px;
   border-radius: $r;
   text-decoration: none;
   color: inherit;
-  transition: background 0.12s;
+  transition: background 120ms ease;
+
+  & + & {
+    border-top: 1px solid rgba(26, 43, 74, 0.05);
+  }
 
   &:hover {
     background: rgba(26, 43, 74, 0.04);
-
-    .recent-row__arrow { transform: translateX(3px); }
   }
 
   &:focus-visible {
@@ -441,42 +510,53 @@
     outline-offset: 2px;
   }
 
-  // Faint divider between rows (not a full border — just a separator)
-  & + & {
-    border-top: 1px solid rgba(26, 43, 74, 0.05);
-  }
-
   &__title {
-    font-size: 14px;
+    font-size: 13px;
     font-family: $ff-body;
-    color: $navy;
     font-weight: 500;
+    color: $navy;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    flex: 1;
     min-width: 0;
   }
 
-  &__right {
-    display: flex;
+  // Shared badge base
+  &__badge {
+    display: inline-flex;
     align-items: center;
-    gap: 10px;
+    height: 20px;
+    padding: 0 7px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-family: $ff-body;
+    font-weight: 600;
+    white-space: nowrap;
     flex-shrink: 0;
+
+    // Difficulty variants
+    &--easy   { background: $teal-lt;  color: $teal;      }
+    &--medium { background: $gold-lt;  color: $gold-dark; }
+    &--hard   { background: $red-lt;   color: $red;       }
+
+    // Language badge — neutral
+    &--lang {
+      background: rgba(26, 43, 74, 0.06);
+      color: $charcoal;
+      font-weight: 500;
+      font-family: $ff-mono;
+      font-size: 10px;
+    }
   }
 
   &__time {
-    font-size: 12px;
+    font-size: 11px;
     font-family: $ff-mono;
     color: $muted;
     white-space: nowrap;
-  }
-
-  &__arrow {
-    color: $muted;
-    transition: transform 0.15s;
     flex-shrink: 0;
-    opacity: 0.5;
+    text-align: right;
+    min-width: 52px;  // prevents layout shift as text changes length
   }
 }
 

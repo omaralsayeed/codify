@@ -142,31 +142,55 @@ const COLOR_TRACK  = '#ECE9E1';
         <div class="ring-stat ring-stat--easy"
              (mouseenter)="hoveredSegment = 'easy'"
              (mouseleave)="hoveredSegment = null">
-          <span class="ring-stat__dot" style="background: #1D9E75"></span>
-          <span class="ring-stat__label">Easy</span>
-          <span class="ring-stat__count ring-stat__count--easy">
-            {{ data.easySolved }}<span class="ring-stat__total">/{{ data.easyTotal }}</span>
-          </span>
+          <div class="ring-stat__top">
+            <span class="ring-stat__dot" style="background: #1D9E75"></span>
+            <span class="ring-stat__label">Easy</span>
+            <span class="ring-stat__count ring-stat__count--easy">
+              {{ data.easySolved }}<span class="ring-stat__total">/{{ data.easyTotal }}</span>
+            </span>
+          </div>
+          <div class="ring-stat__track" aria-hidden="true">
+            <div class="ring-stat__fill ring-stat__fill--easy"
+                 [style.width.%]="barPct(data.easySolved, data.easyTotal)"
+                 [class.ring-stat__fill--lit]="hoveredSegment === 'easy'">
+            </div>
+          </div>
         </div>
 
         <div class="ring-stat ring-stat--medium"
              (mouseenter)="hoveredSegment = 'medium'"
              (mouseleave)="hoveredSegment = null">
-          <span class="ring-stat__dot" style="background: #C8A951"></span>
-          <span class="ring-stat__label">Med.</span>
-          <span class="ring-stat__count ring-stat__count--medium">
-            {{ data.mediumSolved }}<span class="ring-stat__total">/{{ data.mediumTotal }}</span>
-          </span>
+          <div class="ring-stat__top">
+            <span class="ring-stat__dot" style="background: #C8A951"></span>
+            <span class="ring-stat__label">Med.</span>
+            <span class="ring-stat__count ring-stat__count--medium">
+              {{ data.mediumSolved }}<span class="ring-stat__total">/{{ data.mediumTotal }}</span>
+            </span>
+          </div>
+          <div class="ring-stat__track" aria-hidden="true">
+            <div class="ring-stat__fill ring-stat__fill--medium"
+                 [style.width.%]="barPct(data.mediumSolved, data.mediumTotal)"
+                 [class.ring-stat__fill--lit]="hoveredSegment === 'medium'">
+            </div>
+          </div>
         </div>
 
         <div class="ring-stat ring-stat--hard"
              (mouseenter)="hoveredSegment = 'hard'"
              (mouseleave)="hoveredSegment = null">
-          <span class="ring-stat__dot" style="background: #D32F2F"></span>
-          <span class="ring-stat__label">Hard</span>
-          <span class="ring-stat__count ring-stat__count--hard">
-            {{ data.hardSolved }}<span class="ring-stat__total">/{{ data.hardTotal }}</span>
-          </span>
+          <div class="ring-stat__top">
+            <span class="ring-stat__dot" style="background: #D32F2F"></span>
+            <span class="ring-stat__label">Hard</span>
+            <span class="ring-stat__count ring-stat__count--hard">
+              {{ data.hardSolved }}<span class="ring-stat__total">/{{ data.hardTotal }}</span>
+            </span>
+          </div>
+          <div class="ring-stat__track" aria-hidden="true">
+            <div class="ring-stat__fill ring-stat__fill--hard"
+                 [style.width.%]="barPct(data.hardSolved, data.hardTotal)"
+                 [class.ring-stat__fill--lit]="hoveredSegment === 'hard'">
+            </div>
+          </div>
         </div>
 
       </div><!-- /ring-stats -->
@@ -263,17 +287,18 @@ const COLOR_TRACK  = '#ECE9E1';
     .ring-stats {
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 8px;
       min-width: 0;
+      flex: 1;
     }
 
     .ring-stat {
       display: flex;
-      align-items: center;
-      gap: 7px;
+      flex-direction: column;
+      gap: 3px;
       cursor: default;
       border-radius: 6px;
-      padding: 4px 6px 4px 2px;
+      padding: 3px 4px;
       transition: background 0.14s;
 
       &:hover {
@@ -281,27 +306,34 @@ const COLOR_TRACK  = '#ECE9E1';
       }
     }
 
+    .ring-stat__top {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
     .ring-stat__dot {
-      width: 8px;
-      height: 8px;
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
       flex-shrink: 0;
     }
 
     .ring-stat__label {
-      font-size: 12px;
+      font-size: 11px;
       font-family: var(--ff-body);
       font-weight: 600;
       color: var(--charcoal);
-      width: 28px;
+      width: 26px;
       flex-shrink: 0;
     }
 
     .ring-stat__count {
       font-family: var(--ff-mono);
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
       white-space: nowrap;
+      margin-left: auto;
     }
 
     .ring-stat__count--easy   { color: #1D9E75; }
@@ -311,7 +343,34 @@ const COLOR_TRACK  = '#ECE9E1';
     .ring-stat__total {
       font-weight: 400;
       color: var(--muted);
-      font-size: 11px;
+      font-size: 10px;
+    }
+
+    /* Mini bar under each stat row */
+    @keyframes ringBarGrow {
+      from { transform: scaleX(0); }
+      to   { transform: scaleX(1); }
+    }
+
+    .ring-stat__track {
+      height: 3px;
+      background: var(--ivory2);
+      border-radius: 20px;
+      overflow: hidden;
+    }
+
+    .ring-stat__fill {
+      height: 100%;
+      border-radius: 20px;
+      transform-origin: left center;
+      animation: ringBarGrow 600ms ease-out both;
+      transition: filter 0.15s;
+
+      &--easy   { background: #1D9E75; animation-delay: 0ms;   }
+      &--medium { background: #C8A951; animation-delay: 80ms;  }
+      &--hard   { background: #D32F2F; animation-delay: 160ms; }
+
+      &--lit { filter: brightness(1.2); }
     }
   `],
 })
@@ -333,6 +392,10 @@ export class SolvedRingComponent implements OnChanges {
     if (this.data) {
       this.buildArcs();
     }
+  }
+
+  barPct(solved: number, total: number): number {
+    return total === 0 ? 0 : Math.round((solved / total) * 100);
   }
 
   private buildArcs(): void {
