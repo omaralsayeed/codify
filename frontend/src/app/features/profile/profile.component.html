@@ -1,9 +1,8 @@
 <div class="profile-page">
 
-  <!-- ── LOADING ──────────────────────────────────────────────────────────── -->
+  <!-- ── LOADING ─────────────────────────────────────────────────────────── -->
   @if (isLoading) {
     <div class="profile-layout">
-      <!-- Left skeleton -->
       <aside class="profile-sidebar">
         <div class="sk sk--avatar"></div>
         <div class="sk sk--line sk--name"></div>
@@ -11,16 +10,16 @@
         <div class="sk sk--block"></div>
         <div class="sk sk--block"></div>
       </aside>
-      <!-- Right skeleton -->
       <main class="profile-main">
-        <div class="sk sk--hero"></div>
+        <div class="sk sk--bio"></div>
+        <div class="sk sk--stats-card"></div>
         <div class="sk sk--heatmap"></div>
         <div class="sk sk--table"></div>
       </main>
     </div>
   }
 
-  <!-- ── ERROR ─────────────────────────────────────────────────────────────── -->
+  <!-- ── ERROR ────────────────────────────────────────────────────────────── -->
   @if (!isLoading && error) {
     <div class="profile-error" role="alert">
       <span aria-hidden="true">⚠</span>
@@ -28,16 +27,16 @@
     </div>
   }
 
-  <!-- ── LOADED ────────────────────────────────────────────────────────────── -->
+  <!-- ── LOADED ───────────────────────────────────────────────────────────── -->
   @if (!isLoading && !error && profile) {
     <div class="profile-layout">
 
-      <!-- ════════════════════════════════════════════════
+      <!-- ══════════════════════════════════════════
            LEFT SIDEBAR
-      ════════════════════════════════════════════════ -->
+      ══════════════════════════════════════════ -->
       <aside class="profile-sidebar">
 
-        <!-- Avatar -->
+        <!-- Avatar + name block -->
         <div class="avatar-wrap">
           <div class="avatar-circle"
                [style.background]="avatarColor(profile.user.avatarInitials)"
@@ -46,11 +45,16 @@
           </div>
         </div>
 
-        <!-- Identity -->
         <div class="sidebar-identity">
           <h1 class="sidebar-name">{{ profile.user.name }}</h1>
           <span class="sidebar-username">@{{ profile.user.username }}</span>
           <span class="sidebar-role">{{ profile.user.role | titlecase }}</span>
+
+          @if (isOwnProfile) {
+            <button class="edit-profile-btn" type="button" aria-label="Edit your profile">
+              Edit Profile
+            </button>
+          }
         </div>
 
         <!-- Streak + joined -->
@@ -65,13 +69,56 @@
           </div>
         </div>
 
-        <!-- Difficulty breakdown — solved ring -->
+        <!-- Problems Solved — animated difficulty bars -->
         <div class="sidebar-section" aria-label="Problems solved by difficulty">
           <h2 class="sidebar-section__title">Problems Solved</h2>
 
-          @if (ringData) {
-            <app-solved-ring [data]="ringData" />
-          }
+          <div class="diff-bars">
+            <!-- Easy -->
+            <div class="diff-bar-row">
+              <span class="diff-bar-row__label diff-bar-row__label--easy">Easy</span>
+              <div class="diff-bar-row__track" aria-hidden="true">
+                <div class="diff-bar-row__fill diff-bar-row__fill--easy"
+                     [style.width.%]="diffBarWidth(profile.difficultyBreakdown.easy, profile.difficultyTotals.easy)"
+                     [style.animation-delay]="'0ms'">
+                </div>
+              </div>
+              <span class="diff-bar-row__solved diff-bar-row__solved--easy">
+                {{ profile.difficultyBreakdown.easy }}
+              </span>
+              <span class="diff-bar-row__total">/ {{ profile.difficultyTotals.easy }}</span>
+            </div>
+
+            <!-- Medium -->
+            <div class="diff-bar-row">
+              <span class="diff-bar-row__label diff-bar-row__label--medium">Med.</span>
+              <div class="diff-bar-row__track" aria-hidden="true">
+                <div class="diff-bar-row__fill diff-bar-row__fill--medium"
+                     [style.width.%]="diffBarWidth(profile.difficultyBreakdown.medium, profile.difficultyTotals.medium)"
+                     [style.animation-delay]="'80ms'">
+                </div>
+              </div>
+              <span class="diff-bar-row__solved diff-bar-row__solved--medium">
+                {{ profile.difficultyBreakdown.medium }}
+              </span>
+              <span class="diff-bar-row__total">/ {{ profile.difficultyTotals.medium }}</span>
+            </div>
+
+            <!-- Hard -->
+            <div class="diff-bar-row">
+              <span class="diff-bar-row__label diff-bar-row__label--hard">Hard</span>
+              <div class="diff-bar-row__track" aria-hidden="true">
+                <div class="diff-bar-row__fill diff-bar-row__fill--hard"
+                     [style.width.%]="diffBarWidth(profile.difficultyBreakdown.hard, profile.difficultyTotals.hard)"
+                     [style.animation-delay]="'160ms'">
+                </div>
+              </div>
+              <span class="diff-bar-row__solved diff-bar-row__solved--hard">
+                {{ profile.difficultyBreakdown.hard }}
+              </span>
+              <span class="diff-bar-row__total">/ {{ profile.difficultyTotals.hard }}</span>
+            </div>
+          </div>
         </div>
 
         <hr class="sidebar-divider" aria-hidden="true" />
@@ -99,7 +146,7 @@
 
         <hr class="sidebar-divider" aria-hidden="true" />
 
-        <!-- Topic strengths -->
+        <!-- Topics — Strong + Average only (weak stays on /progress) -->
         <div class="sidebar-section" aria-label="Topic strengths">
           <h2 class="sidebar-section__title">Topics</h2>
           <div class="topic-groups">
@@ -125,97 +172,118 @@
               </div>
             }
 
-            @if (weakTopics.length) {
-              <div class="topic-group">
-                <span class="topic-group__label topic-group__label--weak">Needs Work</span>
-                <div class="topic-group__pills">
-                  @for (t of weakTopics; track t.topicId) {
-                    <span class="topic-badge topic-badge--weak">{{ t.topicName }}</span>
-                  }
-                </div>
-              </div>
-            }
-
           </div>
         </div>
 
       </aside>
 
-      <!-- ════════════════════════════════════════════════
+      <!-- ══════════════════════════════════════════
            RIGHT MAIN
-      ════════════════════════════════════════════════ -->
+      ══════════════════════════════════════════ -->
       <main class="profile-main">
 
-        <!-- Summary row -->
-        <section class="summary-row" aria-label="Overall statistics">
-
-          <!-- Solved -->
-          <div class="summary-stat">
-            <span class="summary-stat__val">{{ profile.totalSolved }}</span>
-            <span class="summary-stat__lbl">Solved</span>
-          </div>
-
-          <div class="summary-sep" aria-hidden="true"></div>
-
-          <!-- Attempted -->
-          <div class="summary-stat">
-            <span class="summary-stat__val">{{ profile.totalAttempted }}</span>
-            <span class="summary-stat__lbl">Attempted</span>
-          </div>
-
-          <div class="summary-sep" aria-hidden="true"></div>
-
-          <!-- Success Rate -->
-          <div class="summary-stat">
-            <span class="summary-stat__val">
-              {{ profile.successRate }}<span class="summary-stat__unit">%</span>
-            </span>
-            <span class="summary-stat__lbl">Success Rate</span>
-          </div>
-
-          <div class="summary-sep" aria-hidden="true"></div>
-
-          <!-- Best Streak -->
-          <div class="summary-stat summary-stat--streak"
-               [attr.aria-label]="'Best streak: ' + profile.streak.longestStreak + ' days' + (isPersonalBest ? ', personal best' : '') + '. Current streak: ' + profile.streak.currentStreak + ' days'">
-            <span class="summary-stat__val">
-              <span class="summary-stat__emoji" aria-hidden="true">🔥</span>{{ profile.streak.currentStreak }}
-            </span>
-            <span class="summary-stat__lbl">Current Streak</span>
-            @if (isPersonalBest) {
-              <span class="summary-stat__sub summary-stat__sub--best" aria-hidden="true">
-                🏆 Personal best!
-              </span>
+        <!-- ① Bio card -->
+        <div class="bio-card">
+          <div class="bio-card__body">
+            @if (profile.user.headline) {
+              <p class="bio-card__headline">{{ profile.user.headline }}</p>
             } @else {
-              <span class="summary-stat__sub" aria-hidden="true">
-                Best: {{ profile.streak.longestStreak }} days
-              </span>
+              <p class="bio-card__headline bio-card__headline--empty">No headline yet</p>
             }
           </div>
 
-        </section>
-
-        <!-- Difficulty pills -->
-        <div class="diff-pills" aria-label="Problems solved by difficulty">
-          <span class="diff-pill diff-pill--easy">
-            Easy <strong>{{ profile.difficultyBreakdown.easy }}</strong>
-          </span>
-          <span class="diff-pill diff-pill--medium">
-            Medium <strong>{{ profile.difficultyBreakdown.medium }}</strong>
-          </span>
-          <span class="diff-pill diff-pill--hard">
-            Hard <strong>{{ profile.difficultyBreakdown.hard }}</strong>
-          </span>
+          @if (profile.user.social) {
+            <div class="bio-card__social" aria-label="Social links">
+              @if (profile.user.social.linkedin) {
+                <a class="bio-card__social-link"
+                   [href]="profile.user.social.linkedin"
+                   target="_blank" rel="noopener noreferrer"
+                   aria-label="LinkedIn profile">
+                  <!-- LinkedIn icon -->
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M20.447 20.452H17.25v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.935V9h3.079v1.561h.042c.467-.883 1.555-1.854 3.2-1.854 3.421 0 4.052 2.246 4.052 5.168v6.576h-.001zM5.337 7.433a1.788 1.788 0 1 1 0-3.576 1.788 1.788 0 0 1 0 3.576zm1.535 13.019H3.8V9h3.072v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                  </svg>
+                </a>
+              }
+              @if (profile.user.social.github) {
+                <a class="bio-card__social-link"
+                   [href]="profile.user.social.github"
+                   target="_blank" rel="noopener noreferrer"
+                   aria-label="GitHub profile">
+                  <!-- GitHub icon -->
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.385-1.335-1.755-1.335-1.755-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
+                  </svg>
+                </a>
+              }
+              @if (profile.user.social.twitter) {
+                <a class="bio-card__social-link"
+                   [href]="profile.user.social.twitter"
+                   target="_blank" rel="noopener noreferrer"
+                   aria-label="X / Twitter profile">
+                  <!-- X icon -->
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.747l7.73-8.835L1.254 2.25H8.08l4.259 5.63L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z"/>
+                  </svg>
+                </a>
+              }
+            </div>
+          }
         </div>
 
-        <!-- Activity heatmap -->
+        <!-- ② Stats card: ring + streak/joined -->
+        <div class="stats-card" aria-label="Solving statistics">
+
+          <!-- Ring (left) -->
+          <div class="stats-card__ring">
+            @if (ringData) {
+              <app-solved-ring [data]="ringData" />
+            }
+          </div>
+
+          <!-- Divider -->
+          <div class="stats-card__sep" aria-hidden="true"></div>
+
+          <!-- Streak + meta (right) -->
+          <div class="stats-card__meta">
+            <div class="stats-meta-item"
+                 [attr.aria-label]="'Current streak: ' + profile.streak.currentStreak + ' days'">
+              <span class="stats-meta-item__val">
+                <span aria-hidden="true">🔥</span>{{ profile.streak.currentStreak }}
+                <span class="stats-meta-item__unit"> days</span>
+              </span>
+              <span class="stats-meta-item__lbl">Current Streak</span>
+              @if (isPersonalBest) {
+                <span class="stats-meta-item__sub stats-meta-item__sub--best" aria-hidden="true">
+                  🏆 Personal best!
+                </span>
+              } @else {
+                <span class="stats-meta-item__sub" aria-hidden="true">
+                  Best: {{ profile.streak.longestStreak }} days
+                </span>
+              }
+            </div>
+
+            <hr class="stats-card__inner-sep" aria-hidden="true" />
+
+            <div class="stats-meta-item">
+              <span class="stats-meta-item__lbl">📅 Joined {{ joinedYear(profile.user.joinedAt) }}</span>
+              <span class="stats-meta-item__lbl">
+                {{ profile.streak.totalActiveDays }} active days
+              </span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ③ Activity heatmap -->
         <section class="heatmap-section" aria-label="Submission activity">
           <div class="heatmap-header">
             <span class="heatmap-header__stat">
               <strong>{{ profile.streak.totalSubmissionsLastYear }}</strong> submissions in the past year
             </span>
             <span class="heatmap-header__meta">
-              Total active days: {{ profile.streak.totalActiveDays }}
+              Active days: {{ profile.streak.totalActiveDays }}
               &nbsp;·&nbsp;
               Max streak: {{ profile.streak.longestStreak }} days
             </span>
@@ -224,7 +292,7 @@
           <app-activity-heatmap [days]="profile.activityGrid" />
         </section>
 
-        <!-- Recent accepted submissions -->
+        <!-- ④ Recent accepted submissions -->
         <section class="recent-section" aria-label="Recent accepted submissions">
           <h2 class="recent-section__title">
             Recent Accepted
@@ -238,23 +306,19 @@
                  role="listitem"
                  [attr.aria-label]="sub.problemTitle + ', ' + sub.difficulty + ', ' + sub.language + ', ' + relativeTime(sub.submittedAt)">
 
-                <!-- Title — truncates, takes all available space -->
                 <span class="recent-row__title">{{ sub.problemTitle }}</span>
 
-                <!-- Difficulty badge -->
-                <span class="recent-row__badge recent-row__badge--diff"
+                <span class="recent-row__badge"
                       [class.recent-row__badge--easy]="sub.difficulty === 'Easy'"
                       [class.recent-row__badge--medium]="sub.difficulty === 'Medium'"
                       [class.recent-row__badge--hard]="sub.difficulty === 'Hard'">
                   {{ sub.difficulty }}
                 </span>
 
-                <!-- Language badge -->
                 <span class="recent-row__badge recent-row__badge--lang">
                   {{ sub.language }}
                 </span>
 
-                <!-- Relative time -->
                 <span class="recent-row__time">{{ relativeTime(sub.submittedAt) }}</span>
 
               </a>
@@ -262,7 +326,7 @@
           </div>
         </section>
 
-      </main><!-- /profile-main -->
+      </main>
 
     </div><!-- /profile-layout -->
   }

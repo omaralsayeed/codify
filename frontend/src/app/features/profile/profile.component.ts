@@ -8,16 +8,21 @@ import { CommonModule } from '@angular/common';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 
-import { AnalyticsService }  from '../../core/services/analytics.service';
+import { AnalyticsService } from '../../core/services/analytics.service';
+import { AuthService }      from '../../core/services/auth.service';
 import {
   PublicProfileData,
   TopicPerformance,
   TopicStrength,
   RecentSubmission,
-  LanguageStat,
 } from '../../core/models/analytics.model';
 import { ActivityHeatmapComponent } from './activity-heatmap.component';
 import { SolvedRingComponent, RingDifficultyData } from './solved-ring.component';
+
+/** Mirrors the slug function in app.routes.ts */
+function toSlug(name: string): string {
+  return name.trim().toLowerCase().replace(/\s+/g, '_');
+}
 
 @Component({
   selector: 'app-profile',
@@ -28,15 +33,16 @@ import { SolvedRingComponent, RingDifficultyData } from './solved-ring.component
 })
 export class ProfileComponent implements OnInit, OnDestroy {
   private readonly analyticsService = inject(AnalyticsService);
+  private readonly authService      = inject(AuthService);
   private readonly route            = inject(ActivatedRoute);
 
   profile: PublicProfileData | null = null;
-  isLoading = false;   // sync mock — no loading state needed
+  isLoading = false;
   error: string | null = null;
 
   private readonly destroy$ = new Subject<void>();
 
-  // ── Lifecycle ───────────────────────────────────────────────────────────────
+  // ── Lifecycle ────────────────────────────────────────────────────────────────
 
   ngOnInit(): void {
     const username = this.route.snapshot.paramMap.get('username') ?? '';
@@ -49,7 +55,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   load(username: string): void {
-    this.isLoading = false;  // sync — skip skeleton entirely for mock
+    this.isLoading = false;
     this.error     = null;
 
     this.analyticsService
@@ -61,74 +67,16 @@ export class ProfileComponent implements OnInit, OnDestroy {
       });
   }
 
-  // ── Helpers ─────────────────────────────────────────────────────────────────
+  // ── Own-profile detection ────────────────────────────────────────────────────
+  // True only when a logged-in user is viewing their own profile page
 
-  avatarColor(initials: string): string {
-    // Deterministic bg color from initials — picks from a small palette
-    const palette = ['#2E86AB', '#1D9E75', '#C8A951', '#7B1FA2', '#E65100'];
-    const idx = (initials.charCodeAt(0) + (initials.charCodeAt(1) || 0)) % palette.length;
-    return palette[idx];
+  get isOwnProfile(): boolean {
+    const u = this.authService.currentUser();
+    if (!u || !this.profile) return false;
+    return toSlug(u.name) === this.profile.user.username;
   }
 
-  topicBadgeClass(strength: TopicStrength): string {
-    return `topic-badge topic-badge--${strength}`;
-  }
-
-  difficultyClass(d: string): string {
-    return `badge badge--${d.toLowerCase()}`;
-  }
-
-  statusClass(status: RecentSubmission['status']): string {
-    const map: Record<string, string> = {
-      'Accepted':            'sub-status sub-status--accepted',
-      'Wrong Answer':        'sub-status sub-status--wrong',
-      'Runtime Error':       'sub-status sub-status--error',
-      'Time Limit Exceeded': 'sub-status sub-status--tle',
-    };
-    return map[status] ?? 'sub-status';
-  }
-
-  relativeTime(iso: string): string {
-    const date = new Date(iso);
-    const diff  = Date.now() - date.getTime();
-    const mins  = Math.floor(diff / 60_000);
-    if (mins < 1)   return 'just now';
-    if (mins < 60)  return `${mins}m ago`;
-    const hrs = Math.floor(mins / 60);
-    if (hrs < 24)   return `${hrs}h ago`;
-    const days = Math.floor(hrs / 24);
-    if (days === 1) return 'Yesterday';
-    if (days < 7)   return `${days} days ago`;
-    // Older than a week — show "Jul 12" or "Jul 12, 2024" if different year
-    const isCurrentYear = date.getFullYear() === new Date().getFullYear();
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day:   'numeric',
-      ...(isCurrentYear ? {} : { year: 'numeric' }),
-    });
-  }
-
-  joinedYear(iso: string): string {
-    return new Date(iso).getFullYear().toString();
-  }
-
-  difficultyPercent(solved: number, total: number): number {
-    return total === 0 ? 0 : Math.round((solved / total) * 100);
-  }
-
-  trackByDate(_i: number, item: { date: string }): string {
-    return item.date;
-  }
-
-  trackBySubmissionId(_i: number, s: RecentSubmission): string {
-    return s.submissionId;
-  }
-
-  trackByTopic(_i: number, t: TopicPerformance): string {
-    return t.topicId;
-  }
-
-  // ── Topic groups ─────────────────────────────────────────────────────────
+  // ── Topic groups ─────────────────────────────────────────────────────────────
 
   get strongTopics(): TopicPerformance[] {
     return this.profile?.topicStats.filter(t => t.strength === 'strong') ?? [];
@@ -138,11 +86,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     return this.profile?.topicStats.filter(t => t.strength === 'average') ?? [];
   }
 
-  get weakTopics(): TopicPerformance[] {
-    return this.profile?.topicStats.filter(t => t.strength === 'weak') ?? [];
-  }
-
-  // ── Language bar width ────────────────────────────────────────────────────
+  // ── Language bar width ────────────────────────────────────────────────────────
 
   private get maxLangSolved(): number {
     if (!this.profile?.languageStats.length) return 1;
@@ -154,7 +98,13 @@ export class ProfileComponent implements OnInit, OnDestroy {
     return max === 0 ? 0 : Math.round((solved / max) * 100);
   }
 
-  // ── Streak helpers ───────────────────────────────────────────────────────
+  // ── Difficulty bar width (solved / total-platform) ───────────────────────────
+
+  diffBarWidth(solved: number, total: number): number {
+    return total === 0 ? 0 : Math.round((solved / total) * 100);
+  }
+
+  // ── Streak helpers ────────────────────────────────────────────────────────────
 
   get isPersonalBest(): boolean {
     if (!this.profile) return false;
@@ -162,7 +112,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
            this.profile.streak.currentStreak >= this.profile.streak.longestStreak;
   }
 
-  // ── Solved ring data ─────────────────────────────────────────────────────
+  // ── Solved ring data ──────────────────────────────────────────────────────────
 
   get ringData(): RingDifficultyData | null {
     if (!this.profile) return null;
@@ -179,5 +129,52 @@ export class ProfileComponent implements OnInit, OnDestroy {
       acceptanceRate:   p.successRate,
       totalSubmissions: p.streak.totalSubmissionsLastYear,
     };
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────────
+
+  avatarColor(initials: string): string {
+    const palette = ['#2E86AB', '#1D9E75', '#C8A951', '#7B1FA2', '#E65100'];
+    const idx = (initials.charCodeAt(0) + (initials.charCodeAt(1) || 0)) % palette.length;
+    return palette[idx];
+  }
+
+  topicBadgeClass(strength: TopicStrength): string {
+    return `topic-badge topic-badge--${strength}`;
+  }
+
+  difficultyClass(d: string): string {
+    return `badge badge--${d.toLowerCase()}`;
+  }
+
+  relativeTime(iso: string): string {
+    const date = new Date(iso);
+    const diff  = Date.now() - date.getTime();
+    const mins  = Math.floor(diff / 60_000);
+    if (mins < 1)   return 'just now';
+    if (mins < 60)  return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24)   return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    if (days === 1) return 'Yesterday';
+    if (days < 7)   return `${days} days ago`;
+    const isCurrentYear = date.getFullYear() === new Date().getFullYear();
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day:   'numeric',
+      ...(isCurrentYear ? {} : { year: 'numeric' }),
+    });
+  }
+
+  joinedYear(iso: string): string {
+    return new Date(iso).getFullYear().toString();
+  }
+
+  trackBySubmissionId(_i: number, s: RecentSubmission): string {
+    return s.submissionId;
+  }
+
+  trackByTopic(_i: number, t: TopicPerformance): string {
+    return t.topicId;
   }
 }

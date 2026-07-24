@@ -390,11 +390,17 @@ export class AnalyticsService {
 
     return {
       user: {
-        username:      'test_student',
-        name:          'Test Student',
-        avatarInitials:'TS',
-        role:          'student',
-        joinedAt:      new Date(today.getFullYear(), 0, 15).toISOString(),
+        username:       'test_student',
+        name:           'Test Student',
+        avatarInitials: 'TS',
+        role:           'student',
+        joinedAt:       new Date(2023, 0, 15).toISOString(),
+        headline:       'SWE | 3 yrs exp · Open to opportunities',
+        social: {
+          linkedin: 'https://linkedin.com/in/test-student',
+          github:   'https://github.com/test-student',
+          twitter:  'https://twitter.com/test_student',
+        },
       },
       totalSolved:    31,
       totalAttempted: 47,

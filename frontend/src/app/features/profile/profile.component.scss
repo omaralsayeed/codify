@@ -50,13 +50,15 @@
 .sk {
   @extend %sk;
   display: block;
-  &--avatar  { width: 80px; height: 80px; border-radius: 50%; margin-bottom: 12px; }
-  &--name    { height: 20px; width: 140px; }
-  &--sub     { height: 14px; width: 100px; margin-top: 8px; }
-  &--block   { height: 100px; border-radius: $r-lg; margin-top: 16px; }
-  &--hero    { height: 72px; border-radius: $r-lg; }
-  &--heatmap { height: 140px; border-radius: $r-lg; margin-top: 20px; }
-  &--table   { height: 220px; border-radius: $r-lg; margin-top: 20px; }
+  &--avatar      { width: 88px; height: 88px; border-radius: 50%; margin-bottom: 12px; }
+  &--line        { height: 14px; border-radius: 4px; }
+  &--name        { width: 140px; margin-bottom: 8px; }
+  &--sub         { width: 100px; }
+  &--block       { height: 100px; border-radius: $r-lg; margin-top: 16px; }
+  &--bio         { height: 52px; border-radius: $r-lg; margin-bottom: 16px; }
+  &--stats-card  { height: 140px; border-radius: $r-lg; margin-bottom: 20px; }
+  &--heatmap     { height: 140px; border-radius: $r-lg; margin-bottom: 20px; }
+  &--table       { height: 220px; border-radius: $r-lg; }
 }
 
 // ── Error ─────────────────────────────────────────────────────────────────────
@@ -75,7 +77,7 @@
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// LEFT SIDEBAR — borderless, floats on the ivory background
+// LEFT SIDEBAR
 // ═════════════════════════════════════════════════════════════════════════════
 
 .profile-sidebar {
@@ -95,7 +97,7 @@
 }
 
 .avatar-wrap {
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 
 .avatar-circle {
@@ -109,7 +111,6 @@
   font-size: 28px;
   font-weight: 700;
   color: $white;
-  // Ring + glow — outline sits outside the element without affecting layout
   outline: 2.5px solid $blue;
   outline-offset: 3px;
   animation: avatarGlow 3s ease-in-out infinite;
@@ -118,7 +119,11 @@
 // ── Identity ──────────────────────────────────────────────────────────────────
 
 .sidebar-identity {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
 }
 
 .sidebar-name {
@@ -126,16 +131,14 @@
   font-size: 18px;
   font-weight: 700;
   color: $navy;
-  margin: 0 0 2px;
+  margin: 0;
   line-height: 1.3;
 }
 
 .sidebar-username {
-  display: block;
   font-family: $ff-mono;
   font-size: 12px;
   color: $muted;
-  margin-bottom: 6px;
 }
 
 .sidebar-role {
@@ -148,6 +151,37 @@
   padding: 2px 10px;
   border-radius: 20px;
   letter-spacing: 0.03em;
+  margin-top: 2px;
+}
+
+// ── Edit profile button ───────────────────────────────────────────────────────
+
+.edit-profile-btn {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 20px;
+  border: 1.5px solid rgba(26, 43, 74, 0.18);
+  background: transparent;
+  font-family: $ff-body;
+  font-size: 12px;
+  font-weight: 600;
+  color: $charcoal;
+  cursor: pointer;
+  transition: background 0.13s, border-color 0.13s, color 0.13s;
+
+  &:hover {
+    background: rgba(26, 43, 74, 0.05);
+    border-color: rgba(26, 43, 74, 0.30);
+    color: $navy;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
 }
 
 // ── Meta (streak + joined) ────────────────────────────────────────────────────
@@ -168,11 +202,11 @@
   }
 }
 
-// ── Sidebar sections — no borders, just spacing ───────────────────────────────
+// ── Sidebar section headers ────────────────────────────────────────────────────
 
 .sidebar-divider {
   border: none;
-  border-top: 1px solid rgba(26, 43, 74, 0.07);  // very faint
+  border-top: 1px solid rgba(26, 43, 74, 0.07);
   margin: 20px 0;
 }
 
@@ -188,11 +222,72 @@
   }
 }
 
-// ── Bar grow animation — shared by languages and difficulty bars ──────────────
+// ── Bar grow animation ────────────────────────────────────────────────────────
 
 @keyframes barGrow {
   from { transform: scaleX(0); }
   to   { transform: scaleX(1); }
+}
+
+// ── Difficulty bars ───────────────────────────────────────────────────────────
+
+.diff-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.diff-bar-row {
+  display: grid;
+  // label | track | solved | total
+  grid-template-columns: 32px 1fr auto auto;
+  align-items: center;
+  gap: 6px;
+
+  &__label {
+    font-size: 11px;
+    font-family: $ff-body;
+    font-weight: 600;
+
+    &--easy   { color: $teal; }
+    &--medium { color: $gold; }
+    &--hard   { color: $red;  }
+  }
+
+  &__track {
+    height: 5px;
+    background: $ivory2;
+    border-radius: 20px;
+    overflow: hidden;
+  }
+
+  &__fill {
+    height: 100%;
+    border-radius: 20px;
+    transform-origin: left center;
+    animation: barGrow 600ms ease-out both;
+
+    &--easy   { background: $teal; }
+    &--medium { background: $gold; }
+    &--hard   { background: $red;  }
+  }
+
+  &__solved {
+    font-family: $ff-mono;
+    font-size: 11px;
+    font-weight: 700;
+
+    &--easy   { color: $teal; }
+    &--medium { color: $gold; }
+    &--hard   { color: $red;  }
+  }
+
+  &__total {
+    font-family: $ff-mono;
+    font-size: 10px;
+    color: $muted;
+    white-space: nowrap;
+  }
 }
 
 // ── Languages ─────────────────────────────────────────────────────────────────
@@ -217,7 +312,7 @@
     align-items: baseline;
   }
 
-  &__name  {
+  &__name {
     font-size: 12px;
     font-family: $ff-body;
     color: $charcoal;
@@ -243,7 +338,6 @@
     background: $blue;
     transform-origin: left center;
     animation: barGrow 600ms ease-out both;
-    // Stagger applied via [style.animation-delay] in the template
   }
 }
 
@@ -252,7 +346,7 @@
 .topic-groups {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 
 .topic-group {
@@ -269,7 +363,6 @@
 
     &--strong { color: $teal;      }
     &--weak   { color: $red;       }
-    &--avg    { color: $gold-dark; }
   }
 
   &__pills {
@@ -293,76 +386,149 @@
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// RIGHT MAIN — sections float on the background, minimal separation
+// RIGHT MAIN
 // ═════════════════════════════════════════════════════════════════════════════
 
 .profile-main {
   display: flex;
   flex-direction: column;
-  gap: 0;  // sections control their own spacing via padding/margin
+  gap: 0;
 }
 
-// ── Summary stats row — large numbers, no card ────────────────────────────────
+// ── ① Bio card ────────────────────────────────────────────────────────────────
 
-.summary-row {
+.bio-card {
   display: flex;
-  align-items: flex-start;
-  gap: 0;
-  padding-bottom: 32px;
-  border-bottom: 1px solid rgba(26, 43, 74, 0.07);
-  margin-bottom: 32px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  background: $white;
+  border: 1px solid $border;
+  border-radius: $r;
+  margin-bottom: 16px;
 
-  @media (max-width: $mobile) {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
-    padding-bottom: 24px;
-    margin-bottom: 24px;
+  &__body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__headline {
+    font-family: $ff-body;
+    font-size: 13px;
+    color: $charcoal;
+    margin: 0;
+    line-height: 1.4;
+
+    &--empty {
+      color: $muted;
+      font-style: italic;
+    }
+  }
+
+  &__social {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  &__social-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    color: $muted;
+    background: transparent;
+    transition: background 0.13s, color 0.13s;
+    text-decoration: none;
+
+    &:hover {
+      background: rgba(26, 43, 74, 0.07);
+      color: $navy;
+    }
+
+    &:focus-visible {
+      outline: 2px solid $blue;
+      outline-offset: 2px;
+    }
   }
 }
 
-.summary-sep {
-  width: 1px;
-  background: rgba(26, 43, 74, 0.07);
-  align-self: stretch;
-  margin: 0 32px;
-  flex-shrink: 0;
+// ── ② Stats card ─────────────────────────────────────────────────────────────
 
-  @media (max-width: $mobile) { display: none; }
+.stats-card {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 20px 24px;
+  background: $white;
+  border: 1px solid $border;
+  border-radius: $r-lg;
+  margin-bottom: 32px;
+
+  @media (max-width: $mobile) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 16px;
+  }
+
+  &__ring {
+    flex-shrink: 0;
+  }
+
+  &__sep {
+    width: 1px;
+    align-self: stretch;
+    background: $border;
+    margin: 0 24px;
+    flex-shrink: 0;
+
+    @media (max-width: $mobile) {
+      display: none;
+    }
+  }
+
+  &__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__inner-sep {
+    border: none;
+    border-top: 1px solid $border;
+    margin: 0;
+  }
 }
 
-.summary-stat {
+// ── Stats meta items (streak, joined) ────────────────────────────────────────
+
+.stats-meta-item {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  flex: 1;
-  min-width: 0;
+  gap: 2px;
 
   &__val {
     font-family: $ff-display;
-    font-size: clamp(26px, 3vw, 42px);
+    font-size: clamp(22px, 2.5vw, 32px);
     color: $navy;
     line-height: 1;
     display: flex;
     align-items: baseline;
-    gap: 4px;
-  }
-
-  &__emoji {
-    font-size: clamp(18px, 2vw, 28px);
-    line-height: 1;
-    // Nudge emoji to sit on the same baseline as the number
-    position: relative;
-    top: 0.05em;
+    gap: 5px;
   }
 
   &__unit {
-    font-size: 0.48em;
+    font-size: 0.45em;
     font-family: $ff-body;
     color: $navy2;
     font-weight: 500;
-    align-self: flex-end;
-    margin-bottom: 0.1em;
   }
 
   &__lbl {
@@ -375,14 +541,12 @@
     margin-top: 2px;
   }
 
-  // Sub-line — "Best: 15 days" or personal-best badge
   &__sub {
     font-size: 11px;
     font-family: $ff-body;
     color: $muted;
     font-weight: 400;
     margin-top: 1px;
-    white-space: nowrap;
 
     &--best {
       color: $gold-dark;
@@ -391,42 +555,12 @@
   }
 }
 
-// ── Difficulty pills — simple, inline ─────────────────────────────────────────
-
-.diff-pills {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 40px;
-}
-
-.diff-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  font-family: $ff-body;
-  padding: 5px 14px;
-  border-radius: 20px;
-  font-weight: 500;
-
-  strong {
-    font-family: $ff-mono;
-    font-weight: 700;
-    font-size: 14px;
-  }
-
-  &--easy   { background: $teal-lt;  color: $teal;      }
-  &--medium { background: $gold-lt;  color: $gold-dark; }
-  &--hard   { background: $red-lt;   color: $red;       }
-}
-
-// ── Heatmap section — no box, just content ────────────────────────────────────
+// ── ③ Heatmap section ────────────────────────────────────────────────────────
 
 .heatmap-section {
-  padding-bottom: 40px;
+  padding-bottom: 32px;
   border-bottom: 1px solid rgba(26, 43, 74, 0.07);
-  margin-bottom: 40px;
+  margin-bottom: 32px;
 }
 
 .heatmap-header {
@@ -434,7 +568,7 @@
   justify-content: space-between;
   align-items: baseline;
   gap: 12px;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
   flex-wrap: wrap;
 
   &__stat {
@@ -456,7 +590,51 @@
   }
 }
 
-// ── Recent accepted — scannable 4-column list ────────────────────────────────
+// ── Year filter pills (for heatmap) ──────────────────────────────────────────
+
+.year-filter {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.year-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 20px;
+  border: 1px solid rgba(26, 43, 74, 0.15);
+  background: transparent;
+  font-family: $ff-mono;
+  font-size: 11px;
+  font-weight: 600;
+  color: $muted;
+  cursor: pointer;
+  transition: background 0.13s, color 0.13s, border-color 0.13s;
+  letter-spacing: 0.02em;
+
+  &:hover:not(.year-pill--active) {
+    background: rgba(26, 43, 74, 0.05);
+    color: $charcoal;
+    border-color: rgba(26, 43, 74, 0.25);
+  }
+
+  &--active {
+    background: $navy;
+    color: $white;
+    border-color: $navy;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: 2px;
+  }
+}
+
+// ── ④ Recent accepted ────────────────────────────────────────────────────────
 
 .recent-section {
   &__title {
@@ -474,7 +652,6 @@
 
   &__count {
     font-weight: 400;
-    color: $muted;
     letter-spacing: 0;
     text-transform: none;
   }
@@ -486,7 +663,6 @@
 }
 
 .recent-row {
-  // 4-column grid: title | diff badge | lang badge | time
   display: grid;
   grid-template-columns: 1fr auto auto auto;
   align-items: center;
@@ -521,7 +697,6 @@
     min-width: 0;
   }
 
-  // Shared badge base
   &__badge {
     display: inline-flex;
     align-items: center;
@@ -534,12 +709,10 @@
     white-space: nowrap;
     flex-shrink: 0;
 
-    // Difficulty variants
     &--easy   { background: $teal-lt;  color: $teal;      }
     &--medium { background: $gold-lt;  color: $gold-dark; }
     &--hard   { background: $red-lt;   color: $red;       }
 
-    // Language badge — neutral
     &--lang {
       background: rgba(26, 43, 74, 0.06);
       color: $charcoal;
@@ -556,11 +729,11 @@
     white-space: nowrap;
     flex-shrink: 0;
     text-align: right;
-    min-width: 52px;  // prevents layout shift as text changes length
+    min-width: 52px;
   }
 }
 
-// ── Shared sub-status (if needed) ─────────────────────────────────────────────
+// ── Shared ────────────────────────────────────────────────────────────────────
 
 .sub-status {
   display: inline-flex;
