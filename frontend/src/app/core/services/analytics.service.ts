@@ -396,6 +396,7 @@ export class AnalyticsService {
         role:           'student',
         joinedAt:       new Date(2023, 0, 15).toISOString(),
         headline:       'SWE | 3 yrs exp · Open to opportunities',
+        bio:            'Passionate about algorithms and clean code. Building real-world projects while sharpening problem-solving skills one problem at a time.',
         social: {
           linkedin: 'https://linkedin.com/in/test-student',
           github:   'https://github.com/test-student',

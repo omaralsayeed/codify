@@ -7,40 +7,42 @@ import {
 import { CommonModule } from '@angular/common';
 
 export interface RingDifficultyData {
-  easySolved:   number;
-  mediumSolved: number;
-  hardSolved:   number;
-  easyTotal:    number;
-  mediumTotal:  number;
-  hardTotal:    number;
-  totalSolved:  number;
-  totalAttempted: number;
-  acceptanceRate: number;  // 0–100
+  easySolved:       number;
+  mediumSolved:     number;
+  hardSolved:       number;
+  easyTotal:        number;
+  mediumTotal:      number;
+  hardTotal:        number;
+  totalSolved:      number;
+  totalAttempted:   number;
+  acceptanceRate:   number;   // 0–100
   totalSubmissions: number;
 }
 
 interface ArcSegment {
-  id:          'easy' | 'medium' | 'hard';
-  label:       string;
-  color:       string;
-  solved:      number;
-  total:       number;
-  /** stroke-dasharray value  */
-  dashArray:   string;
-  /** stroke-dashoffset value */
-  dashOffset:  string;
+  id:         'easy' | 'medium' | 'hard';
+  label:      string;
+  color:      string;
+  solved:     number;
+  total:      number;
+  dashArray:  string;
+  dashOffset: string;
 }
 
-const TWO_PI        = 2 * Math.PI;
-const GAP_DEG       = 4;         // degrees of gap between each segment
-const RING_RADIUS   = 54;        // px — centre of stroke
-const CIRCUMFERENCE = TWO_PI * RING_RADIUS;
-const GAP_FRAC      = GAP_DEG / 360;
-const TOTAL_GAP_FRAC = 3 * GAP_FRAC;  // 3 gaps total
+const TWO_PI         = 2 * Math.PI;
+const GAP_DEG        = 4;
+const RING_RADIUS    = 68;          // ↑ was 54
+const STROKE_WIDTH   = 11;
+const CIRCUMFERENCE  = TWO_PI * RING_RADIUS;
+const GAP_FRAC       = GAP_DEG / 360;
+const TOTAL_GAP_FRAC = 3 * GAP_FRAC;
 
-// Design-system colors (mirrors variables.scss)
+// SVG viewBox is square: 2*(radius + strokeWidth/2 + 2px margin)
+const SVG_SIZE = Math.round(2 * (RING_RADIUS + STROKE_WIDTH / 2 + 4));  // 154
+const CX       = SVG_SIZE / 2;
+
 const COLOR_EASY   = '#1D9E75';
-const COLOR_MEDIUM = '#C8A951';
+const COLOR_MEDIUM = '#FFB700';   // ← updated from #C8A951
 const COLOR_HARD   = '#D32F2F';
 const COLOR_TRACK  = '#ECE9E1';
 
@@ -52,71 +54,72 @@ const COLOR_TRACK  = '#ECE9E1';
   template: `
     <div class="ring-card">
 
-      <!-- ── Left: SVG ring + centre content ─────────────────────────── -->
+      <!-- ── Ring + centre ─────────────────────────────────────────── -->
       <div class="ring-wrap"
            (mouseenter)="hovered = true"
            (mouseleave)="hovered = false; hoveredSegment = null"
            [attr.aria-label]="'Problems solved: ' + data.totalSolved + ' out of ' + data.totalAttempted + ' attempted. Acceptance rate: ' + data.acceptanceRate + '%'">
 
         <svg class="ring-svg"
-             width="130" height="130"
-             viewBox="0 0 130 130"
+             [attr.width]="SVG_SIZE"
+             [attr.height]="SVG_SIZE"
+             [attr.viewBox]="'0 0 ' + SVG_SIZE + ' ' + SVG_SIZE"
              aria-hidden="true">
 
           <!-- Background track -->
           <circle
-            cx="65" cy="65"
+            [attr.cx]="CX" [attr.cy]="CX"
             [attr.r]="RADIUS"
             fill="none"
             [attr.stroke]="TRACK_COLOR"
-            stroke-width="10"
+            [attr.stroke-width]="STROKE_WIDTH"
             stroke-linecap="round"/>
 
-          <!-- Easy segment -->
+          <!-- Easy -->
           <circle
-            cx="65" cy="65"
+            [attr.cx]="CX" [attr.cy]="CX"
             [attr.r]="RADIUS"
             fill="none"
             [attr.stroke]="easyArc.color"
-            stroke-width="10"
+            [attr.stroke-width]="STROKE_WIDTH"
             stroke-linecap="butt"
             [attr.stroke-dasharray]="easyArc.dashArray"
             [attr.stroke-dashoffset]="easyArc.dashOffset"
             [class.ring-seg--lit]="hoveredSegment === 'easy'"
-            class="ring-seg ring-seg--easy"
-            transform="rotate(-90 65 65)"/>
+            class="ring-seg"
+            [attr.transform]="'rotate(-90 ' + CX + ' ' + CX + ')'"/>
 
-          <!-- Medium segment -->
+          <!-- Medium -->
           <circle
-            cx="65" cy="65"
+            [attr.cx]="CX" [attr.cy]="CX"
             [attr.r]="RADIUS"
             fill="none"
             [attr.stroke]="mediumArc.color"
-            stroke-width="10"
+            [attr.stroke-width]="STROKE_WIDTH"
             stroke-linecap="butt"
             [attr.stroke-dasharray]="mediumArc.dashArray"
             [attr.stroke-dashoffset]="mediumArc.dashOffset"
             [class.ring-seg--lit]="hoveredSegment === 'medium'"
-            class="ring-seg ring-seg--medium"
-            transform="rotate(-90 65 65)"/>
+            class="ring-seg"
+            [attr.transform]="'rotate(-90 ' + CX + ' ' + CX + ')'"/>
 
-          <!-- Hard segment -->
+          <!-- Hard -->
           <circle
-            cx="65" cy="65"
+            [attr.cx]="CX" [attr.cy]="CX"
             [attr.r]="RADIUS"
             fill="none"
             [attr.stroke]="hardArc.color"
-            stroke-width="10"
+            [attr.stroke-width]="STROKE_WIDTH"
             stroke-linecap="butt"
             [attr.stroke-dasharray]="hardArc.dashArray"
             [attr.stroke-dashoffset]="hardArc.dashOffset"
             [class.ring-seg--lit]="hoveredSegment === 'hard'"
-            class="ring-seg ring-seg--hard"
-            transform="rotate(-90 65 65)"/>
+            class="ring-seg"
+            [attr.transform]="'rotate(-90 ' + CX + ' ' + CX + ')'"/>
 
         </svg>
 
-        <!-- Centre: default state -->
+        <!-- Centre: default (solved count) -->
         <div class="ring-centre ring-centre--default"
              [class.ring-centre--hidden]="hovered">
           <span class="ring-centre__big">{{ data.totalSolved }}</span>
@@ -124,7 +127,7 @@ const COLOR_TRACK  = '#ECE9E1';
           <span class="ring-centre__sub">{{ data.totalAttempted }} attempted</span>
         </div>
 
-        <!-- Centre: hover state -->
+        <!-- Centre: hover (acceptance rate) -->
         <div class="ring-centre ring-centre--hover"
              [class.ring-centre--visible]="hovered">
           <span class="ring-centre__big ring-centre__big--rate">
@@ -134,16 +137,17 @@ const COLOR_TRACK  = '#ECE9E1';
           <span class="ring-centre__sub">{{ data.totalSubmissions }} submissions</span>
         </div>
 
-      </div><!-- /ring-wrap -->
+      </div>
 
-      <!-- ── Right: E/M/H stats ────────────────────────────────────────── -->
+      <!-- ── E / M / H stat rows ───────────────────────────────────── -->
       <div class="ring-stats">
 
-        <div class="ring-stat ring-stat--easy"
+        <!-- Easy -->
+        <div class="ring-stat"
              (mouseenter)="hoveredSegment = 'easy'"
              (mouseleave)="hoveredSegment = null">
           <div class="ring-stat__top">
-            <span class="ring-stat__dot" style="background: #1D9E75"></span>
+            <span class="ring-stat__dot" style="background:#1D9E75"></span>
             <span class="ring-stat__label">Easy</span>
             <span class="ring-stat__count ring-stat__count--easy">
               {{ data.easySolved }}<span class="ring-stat__total">/{{ data.easyTotal }}</span>
@@ -157,11 +161,12 @@ const COLOR_TRACK  = '#ECE9E1';
           </div>
         </div>
 
-        <div class="ring-stat ring-stat--medium"
+        <!-- Medium -->
+        <div class="ring-stat"
              (mouseenter)="hoveredSegment = 'medium'"
              (mouseleave)="hoveredSegment = null">
           <div class="ring-stat__top">
-            <span class="ring-stat__dot" style="background: #C8A951"></span>
+            <span class="ring-stat__dot" style="background:#FFB700"></span>
             <span class="ring-stat__label">Med.</span>
             <span class="ring-stat__count ring-stat__count--medium">
               {{ data.mediumSolved }}<span class="ring-stat__total">/{{ data.mediumTotal }}</span>
@@ -175,12 +180,14 @@ const COLOR_TRACK  = '#ECE9E1';
           </div>
         </div>
 
-        <div class="ring-stat ring-stat--hard"
+        <!-- Hard — fire effect on hover -->
+        <div class="ring-stat"
+             [class.ring-stat--fire]="hoveredSegment === 'hard'"
              (mouseenter)="hoveredSegment = 'hard'"
              (mouseleave)="hoveredSegment = null">
           <div class="ring-stat__top">
-            <span class="ring-stat__dot" style="background: #D32F2F"></span>
-            <span class="ring-stat__label">Hard</span>
+            <span class="ring-stat__dot ring-stat__dot--hard"></span>
+            <span class="ring-stat__label ring-stat__label--hard">Hard</span>
             <span class="ring-stat__count ring-stat__count--hard">
               {{ data.hardSolved }}<span class="ring-stat__total">/{{ data.hardTotal }}</span>
             </span>
@@ -193,42 +200,40 @@ const COLOR_TRACK  = '#ECE9E1';
           </div>
         </div>
 
-      </div><!-- /ring-stats -->
+      </div>
 
-    </div><!-- /ring-card -->
+    </div>
   `,
   styles: [`
-    /* ── Card shell ───────────────────────────────────────────────── */
+    /* ── Card ─────────────────────────────────────────────────────── */
     .ring-card {
       display: flex;
       align-items: center;
-      gap: 20px;
+      gap: 24px;
     }
 
-    /* ── SVG + centre overlay ─────────────────────────────────────── */
+    /* ── Ring wrap ────────────────────────────────────────────────── */
     .ring-wrap {
       position: relative;
-      width: 130px;
-      height: 130px;
+      width: 155px;
+      height: 155px;
       flex-shrink: 0;
       cursor: default;
     }
 
-    .ring-svg {
-      display: block;
-    }
+    .ring-svg { display: block; }
 
-    /* Segment brightness transition */
+    /* Arc segment transitions */
     .ring-seg {
-      transition: opacity 0.18s ease;
+      transition: opacity 0.18s ease, filter 0.18s ease;
       opacity: 0.88;
     }
     .ring-seg--lit {
       opacity: 1;
-      filter: brightness(1.18);
+      filter: brightness(1.2);
     }
 
-    /* ── Centre content ───────────────────────────────────────────── */
+    /* ── Centre layers ────────────────────────────────────────────── */
     .ring-centre {
       position: absolute;
       inset: 0;
@@ -236,36 +241,46 @@ const COLOR_TRACK  = '#ECE9E1';
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 0;
       pointer-events: none;
-      transition: opacity 0.2s ease;
     }
 
-    .ring-centre--default  { opacity: 1; }
-    .ring-centre--hidden   { opacity: 0; }
-    .ring-centre--hover    { opacity: 0; }
-    .ring-centre--visible  { opacity: 1; }
+    /* Default → fade out quickly, fade in slowly with delay */
+    .ring-centre--default {
+      opacity: 1;
+      transition: opacity 0.15s ease 0s;
+    }
+    .ring-centre--hidden {
+      opacity: 0;
+      transition: opacity 0.15s ease 0s;
+    }
 
+    /* Hover → wait 0.35s before fading in (intentional pause) */
+    .ring-centre--hover {
+      opacity: 0;
+      transition: opacity 0.15s ease 0s;
+    }
+    .ring-centre--visible {
+      opacity: 1;
+      transition: opacity 0.4s ease 0.35s;   /* ← delay before flip */
+    }
+
+    /* Centre text */
     .ring-centre__big {
       font-family: var(--ff-display);
-      font-size: 26px;
+      font-size: 32px;
       color: var(--navy);
       line-height: 1;
       letter-spacing: -0.02em;
     }
-
     .ring-centre__big--rate {
-      font-size: 19px;
-      letter-spacing: -0.01em;
+      font-size: 24px;
     }
-
     .ring-centre__unit {
-      font-size: 13px;
+      font-size: 14px;
       font-family: var(--ff-body);
       color: var(--navy2);
       font-weight: 500;
     }
-
     .ring-centre__lbl {
       font-size: 10px;
       font-family: var(--ff-body);
@@ -273,9 +288,8 @@ const COLOR_TRACK  = '#ECE9E1';
       text-transform: uppercase;
       letter-spacing: 0.06em;
       color: var(--muted);
-      margin-top: 2px;
+      margin-top: 3px;
     }
-
     .ring-centre__sub {
       font-size: 9px;
       font-family: var(--ff-mono);
@@ -283,11 +297,11 @@ const COLOR_TRACK  = '#ECE9E1';
       margin-top: 2px;
     }
 
-    /* ── Right stats column ───────────────────────────────────────── */
+    /* ── Stat rows ────────────────────────────────────────────────── */
     .ring-stats {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 10px;
       min-width: 0;
       flex: 1;
     }
@@ -295,10 +309,10 @@ const COLOR_TRACK  = '#ECE9E1';
     .ring-stat {
       display: flex;
       flex-direction: column;
-      gap: 3px;
+      gap: 4px;
       cursor: default;
-      border-radius: 6px;
-      padding: 3px 4px;
+      border-radius: 7px;
+      padding: 4px 6px;
       transition: background 0.14s;
 
       &:hover {
@@ -309,35 +323,65 @@ const COLOR_TRACK  = '#ECE9E1';
     .ring-stat__top {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 7px;
+    }
+
+    @keyframes emberPulse {
+      0%, 100% { box-shadow: 0 0 4px 1px rgba(255,80,0,0.5); }
+      50%       { box-shadow: 0 0 10px 3px rgba(255,120,0,0.85), 0 0 18px 4px rgba(255,60,0,0.4); }
     }
 
     .ring-stat__dot {
-      width: 7px;
-      height: 7px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
       flex-shrink: 0;
+      transition: box-shadow 0.3s ease;
+
+      &--hard {
+        background: #D32F2F;
+      }
+    }
+
+    .ring-stat--fire .ring-stat__dot--hard {
+      animation: emberPulse 1.4s ease-in-out infinite;
     }
 
     .ring-stat__label {
-      font-size: 11px;
+      font-size: 12px;
       font-family: var(--ff-body);
       font-weight: 600;
       color: var(--charcoal);
-      width: 26px;
+      width: 28px;
       flex-shrink: 0;
+      transition: color 0.15s;
+    }
+
+    /* Hard label — fire flicker on hover */
+    @keyframes fireGlow {
+      0%   { text-shadow: 0 0 4px rgba(255,69,0,0.6),  0 0 10px rgba(255,69,0,0.3);  }
+      50%  { text-shadow: 0 0 10px rgba(255,120,0,0.9), 0 0 22px rgba(255,200,0,0.5), 0 0 36px rgba(255,69,0,0.3); }
+      100% { text-shadow: 0 0 4px rgba(255,69,0,0.6),  0 0 10px rgba(255,69,0,0.3);  }
+    }
+
+    .ring-stat__label--hard {
+      color: #D32F2F;
+    }
+
+    .ring-stat--fire .ring-stat__label--hard {
+      color: #ff4500;
+      animation: fireGlow 1.4s ease-in-out infinite;
     }
 
     .ring-stat__count {
       font-family: var(--ff-mono);
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 700;
       white-space: nowrap;
       margin-left: auto;
     }
-
     .ring-stat__count--easy   { color: #1D9E75; }
-    .ring-stat__count--medium { color: #C8A951; }
+    .ring-stat__count--medium { color: #FFB700; }
     .ring-stat__count--hard   { color: #D32F2F; }
 
     .ring-stat__total {
@@ -346,7 +390,7 @@ const COLOR_TRACK  = '#ECE9E1';
       font-size: 10px;
     }
 
-    /* Mini bar under each stat row */
+    /* Mini progress bar */
     @keyframes ringBarGrow {
       from { transform: scaleX(0); }
       to   { transform: scaleX(1); }
@@ -366,22 +410,23 @@ const COLOR_TRACK  = '#ECE9E1';
       animation: ringBarGrow 600ms ease-out both;
       transition: filter 0.15s;
 
-      &--easy   { background: #1D9E75; animation-delay: 0ms;   }
-      &--medium { background: #C8A951; animation-delay: 80ms;  }
+      &--easy   { background: #1D9E75; animation-delay:   0ms; }
+      &--medium { background: #FFB700; animation-delay:  80ms; }
       &--hard   { background: #D32F2F; animation-delay: 160ms; }
-
-      &--lit { filter: brightness(1.2); }
+      &--lit    { filter: brightness(1.2); }
     }
   `],
 })
 export class SolvedRingComponent implements OnChanges {
   @Input() data!: RingDifficultyData;
 
-  // Expose constants to template
   readonly RADIUS      = RING_RADIUS;
+  readonly STROKE_WIDTH = STROKE_WIDTH;
+  readonly SVG_SIZE    = SVG_SIZE;
+  readonly CX          = CX;
   readonly TRACK_COLOR = COLOR_TRACK;
 
-  hovered = false;
+  hovered         = false;
   hoveredSegment: 'easy' | 'medium' | 'hard' | null = null;
 
   easyArc:   ArcSegment = this.emptyArc('easy',   'Easy',   COLOR_EASY);
@@ -389,9 +434,7 @@ export class SolvedRingComponent implements OnChanges {
   hardArc:   ArcSegment = this.emptyArc('hard',   'Hard',   COLOR_HARD);
 
   ngOnChanges(): void {
-    if (this.data) {
-      this.buildArcs();
-    }
+    if (this.data) this.buildArcs();
   }
 
   barPct(solved: number, total: number): number {
@@ -400,29 +443,18 @@ export class SolvedRingComponent implements OnChanges {
 
   private buildArcs(): void {
     const { easySolved, mediumSolved, hardSolved } = this.data;
-    const total = easySolved + mediumSolved + hardSolved;
-
-    // Available arc fraction after removing gaps
+    const total  = easySolved + mediumSolved + hardSolved;
     const usable = 1 - TOTAL_GAP_FRAC;
-
-    // Each difficulty gets a share proportional to solved count, with a
-    // minimum visible arc (2° / 360) if they have at least 1 solved problem
     const MIN_FRAC = 2 / 360;
 
     let easyFrac   = total > 0 ? (easySolved   / total) * usable : 0;
     let mediumFrac = total > 0 ? (mediumSolved  / total) * usable : 0;
     let hardFrac   = total > 0 ? (hardSolved    / total) * usable : 0;
 
-    // Enforce minimum visible arc
     if (easySolved   > 0 && easyFrac   < MIN_FRAC) easyFrac   = MIN_FRAC;
     if (mediumSolved > 0 && mediumFrac < MIN_FRAC) mediumFrac = MIN_FRAC;
     if (hardSolved   > 0 && hardFrac   < MIN_FRAC) hardFrac   = MIN_FRAC;
 
-    // Convert fractions → dasharray/dashoffset values
-    // SVG draws from the top (after rotate(-90)), each segment sits at:
-    //   easyOffset   = 0 (starts at top)
-    //   mediumOffset = easy arc + gap
-    //   hardOffset   = easy arc + gap + medium arc + gap
     const gapLen = GAP_FRAC * CIRCUMFERENCE;
 
     this.easyArc = {
@@ -430,7 +462,7 @@ export class SolvedRingComponent implements OnChanges {
       solved:     easySolved,
       total:      this.data.easyTotal,
       dashArray:  `${easyFrac * CIRCUMFERENCE} ${CIRCUMFERENCE}`,
-      dashOffset: `${0}`,
+      dashOffset: '0',
     };
 
     const mediumStart = easyFrac * CIRCUMFERENCE + gapLen;
@@ -459,8 +491,7 @@ export class SolvedRingComponent implements OnChanges {
   ): ArcSegment {
     return {
       id, label, color,
-      solved:     0,
-      total:      0,
+      solved: 0, total: 0,
       dashArray:  `0 ${CIRCUMFERENCE}`,
       dashOffset: '0',
     };
