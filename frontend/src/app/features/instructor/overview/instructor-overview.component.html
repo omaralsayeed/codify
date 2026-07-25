@@ -130,5 +130,80 @@
 
     </div>
   </div>
+  <!-- Contest participation & avg score summary (ended contests only) -->
+  @if (contestSummaries.length > 0) {
+    <div class="section-card">
+      <div class="chart-header">
+        <div>
+          <h2 class="section-title">Contest Performance</h2>
+          <p class="section-sub">Participation rate and avg score per ended contest.</p>
+        </div>
+        @if (hasMoreContests) {
+          <a class="view-all-link" routerLink="../contests">View all →</a>
+        }
+      </div>
+
+      <div class="contest-chart">
+
+        <!-- Column labels (x-axis) -->
+        <div class="contest-x-labels" aria-hidden="true">
+          @for (row of contestSummaries; track row.id) {
+            <span class="cx-label" [title]="row.title">
+              {{ row.title | slice:0:14 }}{{ row.title.length > 14 ? '…' : '' }}
+            </span>
+          }
+        </div>
+
+        <!-- Grouped bars per contest -->
+        <div class="contest-bars-wrap" role="list" aria-label="Contest participation and avg score">
+          @for (row of contestSummaries; track row.id) {
+            <div class="contest-bar-group" role="listitem" [attr.aria-label]="row.title">
+
+              <!-- Participation rate bar -->
+              <div class="bar-group-inner">
+                <div class="cbar-track">
+                  <div
+                    class="cbar-fill cbar-fill--participation"
+                    [style.height.%]="row.participationRate"
+                    [attr.aria-label]="'Participation: ' + row.participationRate + '%'"
+                    [title]="'Participation: ' + row.participantCount + '/' + row.assignedCount + ' (' + row.participationRate + '%)'"
+                  ></div>
+                </div>
+                <div class="cbar-track">
+                  <div
+                    class="cbar-fill cbar-fill--score"
+                    [style.height.%]="row.avgScore"
+                    [attr.aria-label]="'Avg score: ' + row.avgScore"
+                    [title]="'Avg score: ' + row.avgScore"
+                  ></div>
+                </div>
+              </div>
+
+              <!-- Values below bars -->
+              <div class="cbar-values">
+                <span class="cbar-val cbar-val--participation">{{ row.participationRate }}%</span>
+                <span class="cbar-val cbar-val--score">{{ row.avgScore }}</span>
+              </div>
+
+            </div>
+          }
+        </div>
+
+        <!-- Y-axis reference line at 50% -->
+        <div class="contest-yref" aria-hidden="true">
+          <span class="yref-label">100</span>
+          <span class="yref-label">50</span>
+          <span class="yref-label">0</span>
+        </div>
+
+        <!-- Legend -->
+        <div class="contest-legend" aria-hidden="true">
+          <span class="legend-dot legend-dot--participation"></span><span class="legend-text">Participation rate</span>
+          <span class="legend-dot legend-dot--score"></span><span class="legend-text">Avg score</span>
+        </div>
+
+      </div>
+    </div>
+  }
 
 </section>

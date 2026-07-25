@@ -1,7 +1,9 @@
 import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { InstructorService } from '../../../core/services/instructor.service';
 import { ProgressService } from '../../../core/services/progress.service';
+import { ContestService } from '../../../core/services/contest.service';
 import { ClassProgress, DailyActivity } from '../../../core/models/progress.model';
 
 interface TrendPoint {
@@ -11,10 +13,19 @@ interface TrendPoint {
   dayLabel: string;
 }
 
+interface ContestSummaryRow {
+  id: string;
+  title: string;
+  participationRate: number;  // %
+  participantCount: number;
+  assignedCount: number;
+  avgScore: number;
+}
+
 @Component({
   selector: 'app-instructor-overview',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './instructor-overview.component.html',
   styleUrl: './instructor-overview.component.scss',
@@ -22,6 +33,7 @@ interface TrendPoint {
 export class InstructorOverviewComponent {
   private readonly instructorSvc = inject(InstructorService);
   private readonly progressSvc   = inject(ProgressService);
+  private readonly contestSvc    = inject(ContestService);
 
   readonly progress: ClassProgress = this.instructorSvc.getClassProgress();
 
@@ -132,4 +144,35 @@ export class InstructorOverviewComponent {
     if (pct >= 40) return 'bar--gold';
     return 'bar--red';
   }
+
+  // ── Contest summary (ended only, most recent 6) ───────────────────────────
+
+  /** Max 6 most recent ended contests, newest first */
+  readonly MAX_CONTESTS = 6;
+
+  readonly contestSummaries: ContestSummaryRow[] = (() => {
+    const ended = this.contestSvc.getContests()
+      .filter(c => c.status === 'ended')
+      .sort((a, b) => new Date(b.endAt).getTime() - new Date(a.endAt).getTime())
+      .slice(0, this.MAX_CONTESTS);
+
+    return ended.map(c => {
+      const results         = this.contestSvc.getContestResults(c.id);
+      const participantCount = results.length;
+      const assignedCount    = c.assignedStudentIds.length;
+      const participationRate = assignedCount > 0
+        ? Math.round((participantCount / assignedCount) * 100)
+        : 0;
+      const avgScore = participantCount > 0
+        ? Math.round(results.reduce((s, r) => s + r.score, 0) / participantCount)
+        : 0;
+
+      return { id: c.id, title: c.title, participationRate, participantCount, assignedCount, avgScore };
+    });
+  })();
+
+  readonly totalEndedContests = this.contestSvc.getContests()
+    .filter(c => c.status === 'ended').length;
+
+  readonly hasMoreContests = this.totalEndedContests > this.MAX_CONTESTS;
 }
