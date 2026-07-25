@@ -1,0 +1,103 @@
+<section class="contests">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Contests</h1>
+      <p class="page-sub">{{ allContests.length }} contests · {{ contests().length }} shown</p>
+    </div>
+    <a class="btn-primary" routerLink="new" aria-label="Create a new contest">
+      + New Contest
+    </a>
+  </div>
+
+  <!-- Status filter pills -->
+  <div class="filter-row" role="group" aria-label="Filter contests by status">
+    @for (f of filters; track f.value) {
+      <button
+        class="filter-pill"
+        [class.active]="activeFilter() === f.value"
+        (click)="activeFilter.set(f.value)"
+        type="button"
+      >
+        {{ f.label }}
+      </button>
+    }
+  </div>
+
+  <!-- Contest cards -->
+  @if (contests().length > 0) {
+    <ul class="contest-list" aria-label="Contest list">
+      @for (contest of contests(); track contest.id) {
+        <li class="contest-card">
+
+          <!-- Left accent stripe by status -->
+          <div class="status-stripe" [ngClass]="statusClass(contest.status)" aria-hidden="true"></div>
+
+          <div class="card-body">
+            <!-- Top row: title + status badge -->
+            <div class="card-header">
+              <span class="contest-title">{{ contest.title }}</span>
+              <span class="status-badge" [ngClass]="statusClass(contest.status)">
+                {{ statusLabel(contest.status) }}
+              </span>
+            </div>
+
+            <!-- Description -->
+            @if (contest.description) {
+              <p class="contest-desc">{{ contest.description }}</p>
+            }
+
+            <!-- Meta row -->
+            <div class="card-meta">
+              <!-- Date window -->
+              <span class="meta-item">
+                <span class="meta-icon" aria-hidden="true">📅</span>
+                {{ formatDate(contest.startAt) }} · {{ formatTime(contest.startAt) }}
+                → {{ formatDate(contest.endAt) }} · {{ formatTime(contest.endAt) }}
+              </span>
+
+              <!-- Participants -->
+              <span class="meta-item">
+                <span class="meta-icon" aria-hidden="true">👥</span>
+                {{ participantCount(contest) }} student{{ participantCount(contest) !== 1 ? 's' : '' }}
+              </span>
+
+              <!-- Problems -->
+              <span class="meta-item">
+                <span class="meta-icon" aria-hidden="true">🗂️</span>
+                {{ contest.problemIds.length }} problem{{ contest.problemIds.length !== 1 ? 's' : '' }}
+              </span>
+
+              <!-- Avg score (ended only) -->
+              @if (avgScore(contest) !== null) {
+                <span class="meta-item meta-score">
+                  <span class="meta-icon" aria-hidden="true">📊</span>
+                  Avg score: <strong>{{ avgScore(contest) }}</strong>
+                </span>
+              }
+            </div>
+          </div>
+
+          <!-- Action arrow (clickable entire card via routerLink) -->
+          @if (contest.status !== 'draft') {
+            <a
+              class="card-link"
+              [routerLink]="[contest.id]"
+              [attr.aria-label]="'View analytics for ' + contest.title"
+            >
+              <span class="card-arrow" aria-hidden="true">›</span>
+            </a>
+          }
+
+        </li>
+      }
+    </ul>
+  } @else {
+    <div class="empty-state">
+      <span class="empty-icon" aria-hidden="true">🏆</span>
+      <p class="empty-text">No contests match this filter.</p>
+    </div>
+  }
+
+</section>

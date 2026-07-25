@@ -30,6 +30,21 @@ export const INSTRUCTOR_ROUTES: Routes = [
         loadComponent: () =>
           import('./integrity/instructor-integrity.component').then(m => m.InstructorIntegrityComponent),
       },
+      {
+        path: 'contests',
+        loadComponent: () =>
+          import('./contests/instructor-contests.component').then(m => m.InstructorContestsComponent),
+      },
+      {
+        path: 'contests/new',
+        loadComponent: () =>
+          import('./contest-create/instructor-contest-create.component').then(m => m.InstructorContestCreateComponent),
+      },
+      {
+        path: 'contests/:id',
+        loadComponent: () =>
+          import('./contest-detail/instructor-contest-detail.component').then(m => m.InstructorContestDetailComponent),
+      },
     ],
   },
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },

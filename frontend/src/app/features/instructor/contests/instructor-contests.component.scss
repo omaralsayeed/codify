@@ -1,0 +1,241 @@
+@use '../../../styles/variables' as *;
+
+.contests {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+// ── Page header ───────────────────────────────────────────────────────────────
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.page-title {
+  font-family: $ff-display;
+  font-size: 22px;
+  color: $navy;
+  margin: 0;
+}
+
+.page-sub {
+  font-size: 13px;
+  color: $muted;
+  margin: 4px 0 0;
+}
+
+// ── Primary button ────────────────────────────────────────────────────────────
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 16px;
+  background: $navy;
+  color: $ivory;
+  border-radius: $r;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s;
+
+  &:hover { background: $navy2; }
+}
+
+// ── Filter pills ──────────────────────────────────────────────────────────────
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filter-pill {
+  height: 30px;
+  padding: 0 14px;
+  border: 1px solid $border;
+  border-radius: 20px;
+  background: $white;
+  color: $muted;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover { border-color: $navy2; color: $navy; }
+
+  &.active {
+    background: $navy;
+    color: $ivory;
+    border-color: $navy;
+  }
+}
+
+// ── Contest list ──────────────────────────────────────────────────────────────
+
+.contest-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.contest-card {
+  display: flex;
+  align-items: stretch;
+  background: $white;
+  border: 1px solid $border;
+  border-radius: $r;
+  box-shadow: $shadow;
+  overflow: hidden;
+  transition: box-shadow 0.15s;
+
+  &:hover { box-shadow: $shadow-lg; }
+}
+
+// ── Status stripe ─────────────────────────────────────────────────────────────
+
+.status-stripe {
+  width: 4px;
+  flex-shrink: 0;
+
+  &.badge--live     { background: $teal; }
+  &.badge--upcoming { background: $blue; }
+  &.badge--ended    { background: $muted; }
+  &.badge--draft    { background: $gold; }
+}
+
+// ── Card body ─────────────────────────────────────────────────────────────────
+
+.card-body {
+  flex: 1;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.contest-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: $navy;
+}
+
+// ── Status badge ──────────────────────────────────────────────────────────────
+
+.status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+
+  &.badge--live     { background: $teal-lt; color: $teal;  }
+  &.badge--upcoming { background: $blue-lt; color: $blue;  }
+  &.badge--ended    { background: $ivory2;  color: $muted; }
+  &.badge--draft    { background: $gold-lt; color: $gold;  }
+}
+
+// ── Description ───────────────────────────────────────────────────────────────
+
+.contest-desc {
+  font-size: 13px;
+  color: $muted;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// ── Meta row ──────────────────────────────────────────────────────────────────
+
+.card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: $muted;
+}
+
+.meta-icon {
+  font-size: 12px;
+}
+
+.meta-score {
+  color: $charcoal;
+
+  strong { color: $navy; }
+}
+
+// ── Card action arrow ─────────────────────────────────────────────────────────
+
+.card-link {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  text-decoration: none;
+  color: $muted;
+  transition: color 0.15s, background 0.15s;
+  flex-shrink: 0;
+
+  &:hover {
+    background: $blue-lt;
+    color: $blue;
+  }
+}
+
+.card-arrow {
+  font-size: 20px;
+  line-height: 1;
+}
+
+// ── Empty state ───────────────────────────────────────────────────────────────
+
+.empty-state {
+  text-align: center;
+  padding: 56px 24px;
+  background: $white;
+  border: 1px solid $border;
+  border-radius: $r;
+}
+
+.empty-icon {
+  font-size: 36px;
+  display: block;
+  margin-bottom: 12px;
+}
+
+.empty-text {
+  font-size: 14px;
+  color: $muted;
+  margin: 0;
+}
