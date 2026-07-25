@@ -18,6 +18,78 @@
     }
   </div>
 
+  <!-- Activity trend chart -->
+  <div class="section-card">
+    <div class="chart-header">
+      <div>
+        <h2 class="section-title">Submission Activity</h2>
+        <p class="section-sub">Daily submissions over the last 14 days — {{ trendTotal }} total.</p>
+      </div>
+      <span class="chart-peak-label">Peak: {{ trendMax }}/day</span>
+    </div>
+
+    <div class="trend-wrap">
+      <!-- Y-axis labels -->
+      <div class="trend-yaxis" aria-hidden="true">
+        <span>{{ trendMax }}</span>
+        <span>{{ (trendMax / 2) | number:'1.0-0' }}</span>
+        <span>0</span>
+      </div>
+
+      <!-- SVG chart -->
+      <div class="trend-chart-wrap">
+        <svg
+          class="trend-svg"
+          [attr.viewBox]="'0 0 ' + trendW + ' ' + trendH"
+          preserveAspectRatio="none"
+          aria-label="Submission activity trend"
+          role="img"
+        >
+          <defs>
+            <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%"   stop-color="#2E86AB" stop-opacity="0.18"/>
+              <stop offset="100%" stop-color="#2E86AB" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+
+          <!-- Horizontal gridlines at 50% and 100% -->
+          <line [attr.x1]="0" [attr.y1]="trendH / 2"
+                [attr.x2]="trendW" [attr.y2]="trendH / 2"
+                class="trend-grid"/>
+          <line [attr.x1]="0" [attr.y1]="padY"
+                [attr.x2]="trendW" [attr.y2]="padY"
+                class="trend-grid"/>
+
+          <!-- Area fill -->
+          <path [attr.d]="trendArea" fill="url(#trendGrad)"/>
+
+          <!-- Line -->
+          <path [attr.d]="trendPath" fill="none" class="trend-line"/>
+
+          <!-- Dots -->
+          @for (pt of trendPoints; track pt.dayLabel; let i = $index) {
+            <circle
+              [attr.cx]="pt.x"
+              [attr.cy]="pt.y"
+              r="3"
+              class="trend-dot"
+              [attr.aria-label]="pt.dayLabel + ': ' + pt.submissions + ' submissions'"
+            />
+          }
+        </svg>
+
+        <!-- X-axis labels -->
+        <div class="trend-xaxis" aria-hidden="true">
+          @for (pt of trendPoints; track pt.dayLabel; let i = $index) {
+            <span class="xaxis-label" [class.xaxis-label--hidden]="!showLabel(i)">
+              {{ pt.dayLabel }}
+            </span>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Topic mastery -->
   <div class="section-card">
     <h2 class="section-title">Topic Performance</h2>
