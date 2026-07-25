@@ -35,7 +35,7 @@ Codify addresses all three through its AI agent layer.
 
 ### Primary Users
 - **Students** — solve problems, request hints, view their own progress
-- **Instructors** — monitor cohort progress, review integrity signals
+- **Instructors** — monitor cohort progress, review integrity signals, create contests and view per-contest analytics
 
 ### Secondary
 - Teaching assistants, bootcamp admins
@@ -50,7 +50,7 @@ Codify addresses all three through its AI agent layer.
 - Request AI-generated step-by-step hints (Tutor Agent)
 - Receive code quality and optimization feedback after submission (Code Checker Agent)
 - Track performance history and weak concept areas (Analytics Agent)
-- Instructor dashboard: per-student progress, topic trends, integrity flags
+- Instructor dashboard: per-student progress, topic trends, integrity flags, contest creation and analytics
 
 ---
 
@@ -58,13 +58,29 @@ Codify addresses all three through its AI agent layer.
 
 These are **hard boundaries**. Do not add these without a team decision:
 
-- ❌ Large-scale competitive judging (no Codeforces-style contests)
+- ~~❌ Large-scale competitive judging (no Codeforces-style contests)~~ — **superseded, see note below**
 - ❌ Support for many languages — MVP supports **Python and C#** only
 - ❌ Mobile application (web only)
 - ❌ Training a custom AI model from scratch (we use existing LLM providers)
 - ❌ Full recruitment marketplace or job matching
 - ❌ Real-time collaboration or pair programming
-- ❌ Social features (leaderboards, forums, comments)
+- ~~❌ Social features (leaderboards, forums, comments)~~ — leaderboard within instructor dashboard only; **see note below**
+
+> **⚠️ BOUNDARY CHANGE — approved by full team (2026-07-23)**
+>
+> Instructors may now create **Contests**: a named set of problems assigned to a
+> specific subset of students with a fixed start/end window. After a contest ends,
+> the instructor dashboard shows per-contest analytics (score distribution,
+> per-problem accuracy, leaderboard ranked by score) and per-student contest
+> history with score/rank trends.
+>
+> **Hard constraints that keep this within the educational spirit of the platform:**
+> - Contest UI is **instructor-only** — students have no contest lobby, countdown, or public leaderboard
+> - Ranking is by **score only** (no time-pressure mechanics, no Codeforces-style penalty scoring)
+> - No open/public registration — instructor explicitly selects which students participate
+> - No cross-cohort or platform-wide competition
+>
+> The original boundary against large-scale open competitive judging remains intact.
 
 ---
 
