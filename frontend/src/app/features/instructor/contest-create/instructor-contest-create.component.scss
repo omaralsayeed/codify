@@ -1,0 +1,241 @@
+@use '../../../styles/variables' as *;
+
+.create-contest {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 740px;
+}
+
+// ── Header ────────────────────────────────────────────────────────────────────
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+  color: $blue;
+  text-decoration: none;
+
+  &:hover { text-decoration: underline; }
+}
+
+.page-title {
+  font-family: $ff-display;
+  font-size: 22px;
+  color: $navy;
+  margin: 8px 0 0;
+}
+
+.page-sub {
+  font-size: 13px;
+  color: $muted;
+  margin: 4px 0 0;
+}
+
+// ── Form card ─────────────────────────────────────────────────────────────────
+
+.form-card {
+  background: $white;
+  border: 1px solid $border;
+  border-radius: $r;
+  padding: 24px;
+  box-shadow: $shadow;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+// ── Error list ────────────────────────────────────────────────────────────────
+
+.error-list {
+  margin: 0;
+  padding: 12px 16px 12px 28px;
+  background: $red-lt;
+  border: 1px solid rgba(211, 47, 47, 0.2);
+  border-radius: $r;
+  color: $red;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+// ── Fields ────────────────────────────────────────────────────────────────────
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: $charcoal;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.required { color: $red; }
+
+.field-count {
+  font-weight: 400;
+  color: $muted;
+  text-transform: none;
+  letter-spacing: 0;
+  margin-left: 4px;
+}
+
+.field-input {
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid $border;
+  border-radius: $r;
+  font-family: $ff-body;
+  font-size: 13px;
+  color: $charcoal;
+  background: $white;
+  outline: none;
+  box-sizing: border-box;
+  width: 100%;
+
+  &:focus {
+    border-color: $blue;
+    box-shadow: 0 0 0 3px rgba(46, 134, 171, 0.12);
+  }
+
+  &::placeholder { color: $muted; }
+}
+
+.field-textarea {
+  height: auto;
+  padding: 10px 12px;
+  resize: vertical;
+  min-height: 72px;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+
+  @media (max-width: $mobile) { grid-template-columns: 1fr; }
+}
+
+// ── Multi-select chips ────────────────────────────────────────────────────────
+
+.select-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.select-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid $border;
+  border-radius: $r;
+  background: $white;
+  cursor: pointer;
+  font-family: $ff-body;
+  font-size: 13px;
+  color: $charcoal;
+  transition: all 0.15s;
+
+  &:hover {
+    border-color: $navy2;
+    background: $ivory;
+  }
+
+  &.selected {
+    border-color: $navy;
+    background: $navy;
+    color: $ivory;
+
+    .chip-badge { background: rgba(255,255,255,0.15); color: $ivory; }
+    .chip-avatar { background: rgba(255,255,255,0.2); color: $ivory; }
+  }
+}
+
+.select-chip--student {
+  gap: 8px;
+}
+
+.chip-title {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.chip-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 20px;
+  text-transform: uppercase;
+
+  &.diff--easy   { background: $teal-lt; color: $teal; }
+  &.diff--medium { background: $gold-lt; color: $gold; }
+  &.diff--hard   { background: $red-lt;  color: $red;  }
+}
+
+.chip-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: $navy2;
+  color: $ivory;
+  font-size: 9px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+// ── Form actions ──────────────────────────────────────────────────────────────
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 4px;
+  border-top: 1px solid $border;
+}
+
+.btn-primary {
+  height: 38px;
+  padding: 0 20px;
+  background: $navy;
+  color: $ivory;
+  border: none;
+  border-radius: $r;
+  font-family: $ff-body;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover:not(:disabled) { background: $navy2; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+}
+
+.btn-secondary {
+  height: 38px;
+  padding: 0 16px;
+  background: transparent;
+  color: $muted;
+  border: 1px solid $border;
+  border-radius: $r;
+  font-family: $ff-body;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.15s;
+
+  &:hover { border-color: $navy2; color: $navy; }
+}
