@@ -93,26 +93,42 @@
   <!-- Topic mastery -->
   <div class="section-card">
     <h2 class="section-title">Topic Performance</h2>
-    <p class="section-sub">Average mastery across all students by topic.</p>
+    <p class="section-sub">Average mastery across all students by topic — sorted highest to lowest.</p>
 
-    <ul class="topic-list" aria-label="Topic mastery percentages">
-      @for (t of progress.topicMastery; track t.topic) {
-        <li class="topic-row">
-          <span class="topic-name">{{ t.topic }}</span>
-          <div class="bar-track" role="progressbar"
-               [attr.aria-valuenow]="t.percentage"
-               aria-valuemin="0" aria-valuemax="100"
-               [attr.aria-label]="t.topic + ': ' + t.percentage + '%'">
-            <div
-              class="bar-fill"
-              [ngClass]="barColor(t.percentage)"
-              [style.width.%]="t.percentage">
-            </div>
+    <div class="mastery-chart" aria-label="Topic mastery chart">
+
+      <!-- Grid overlay (25 / 50 / 75 / 100 vertical lines) -->
+      <div class="mastery-grid" aria-hidden="true">
+        @for (line of masteryGridLines; track line) {
+          <div class="grid-line" [style.left.%]="line">
+            <span class="grid-label">{{ line }}</span>
           </div>
-          <span class="topic-pct">{{ t.percentage }}%</span>
-        </li>
-      }
-    </ul>
+        }
+      </div>
+
+      <!-- Bars -->
+      <ul class="mastery-list">
+        @for (t of sortedTopics; track t.topic) {
+          <li class="mastery-row">
+            <span class="mastery-name">{{ t.topic }}</span>
+            <div class="mastery-bar-wrap">
+              <div
+                class="mastery-bar"
+                [ngClass]="barColor(t.percentage)"
+                [style.width.%]="t.percentage"
+                role="progressbar"
+                [attr.aria-valuenow]="t.percentage"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                [attr.aria-label]="t.topic + ': ' + t.percentage + '%'"
+              ></div>
+              <span class="mastery-pct">{{ t.percentage }}%</span>
+            </div>
+          </li>
+        }
+      </ul>
+
+    </div>
   </div>
 
 </section>

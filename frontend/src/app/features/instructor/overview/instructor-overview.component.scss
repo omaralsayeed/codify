@@ -109,30 +109,69 @@
   margin: 0 0 20px;
 }
 
-// ── Topic mastery bars ────────────────────────────────────────────────────────
+// ── Topic mastery chart ───────────────────────────────────────────────────────
 
-.topic-list {
+.mastery-chart {
+  position: relative;
+}
+
+// Grid lines sitting behind the bars
+.mastery-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  // Leave room for the topic name column
+  left: 140px;
+  // Leave room for the pct label on the right
+  right: 40px;
+
+  @media (max-width: $mobile) { left: 100px; }
+}
+
+.grid-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: $border;
+  transform: translateX(-50%);
+
+  // The 100% gridline sits at the far right — hide it to avoid double border
+  &:last-child { opacity: 0; }
+}
+
+.grid-label {
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: $muted;
+  white-space: nowrap;
+}
+
+.mastery-list {
   list-style: none;
-  margin: 0;
+  margin: 20px 0 0;   // space for grid labels
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
-.topic-row {
+.mastery-row {
   display: grid;
-  grid-template-columns: 140px 1fr 36px;
+  grid-template-columns: 140px 1fr;
   align-items: center;
   gap: 12px;
 
   @media (max-width: $mobile) {
-    grid-template-columns: 100px 1fr 32px;
+    grid-template-columns: 100px 1fr;
     gap: 8px;
   }
 }
 
-.topic-name {
+.mastery-name {
   font-size: 13px;
   color: $charcoal;
   white-space: nowrap;
@@ -140,16 +179,20 @@
   text-overflow: ellipsis;
 }
 
-.bar-track {
-  height: 8px;
-  background: $ivory2;
-  border-radius: 99px;
-  overflow: hidden;
+.mastery-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  // Scale bar to 100% of the available track width
+  position: relative;
 }
 
-.bar-fill {
-  height: 100%;
-  border-radius: 99px;
+.mastery-bar {
+  height: 18px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  // Width is set inline as percentage of parent (which is the track area)
+  min-width: 2px;
   transition: width 0.6s ease;
 
   &.bar--teal { background: $teal; }
@@ -158,12 +201,14 @@
   &.bar--red  { background: $red;  }
 }
 
-.topic-pct {
+.mastery-pct {
   font-size: 12px;
-  font-weight: 600;
-  color: $muted;
-  text-align: right;
+  font-weight: 700;
+  color: $charcoal;
+  white-space: nowrap;
+  min-width: 32px;
 }
+
 
 // ── Activity trend chart ──────────────────────────────────────────────────────
 

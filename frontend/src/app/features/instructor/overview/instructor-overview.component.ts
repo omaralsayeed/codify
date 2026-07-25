@@ -120,6 +120,12 @@ export class InstructorOverviewComponent {
 
   // ── Topic mastery ─────────────────────────────────────────────────────────
 
+  /** Topics sorted descending by mastery percentage */
+  readonly sortedTopics = [...this.progress.topicMastery]
+    .sort((a, b) => b.percentage - a.percentage);
+
+  readonly masteryGridLines = [25, 50, 75, 100];
+
   barColor(pct: number): string {
     if (pct >= 70) return 'bar--teal';
     if (pct >= 55) return 'bar--blue';
