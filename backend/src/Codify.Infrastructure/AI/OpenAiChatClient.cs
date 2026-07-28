@@ -7,17 +7,25 @@ using OpenAI.Chat;
 
 namespace Codify.Infrastructure.AI;
 
-public class OpenAiChatClient(IOptions<OpenAiOptions> options, ILogger<OpenAiChatClient> logger) : ILLMClient
+public class OpenAiChatClient(
+    IOptions<OpenAiOptions> options,
+    ILogger<OpenAiChatClient> logger) : ILLMClient
 {
     private readonly ILogger<OpenAiChatClient> _logger = logger;
-    private readonly string _model = ResolveModel(options.Value);
-    private readonly ChatClient _chatClient = CreateChatClient(options.Value);
+    private readonly OpenAiOptions _options = options.Value;
+
+    // Lazily created — we don't touch the API key until the first actual call.
+    // This means the app starts successfully even when the key is not configured,
+    // and only fails at call-time (which gets caught by each agent's try/catch).
+    private ChatClient? _chatClient;
 
     public async Task<string> CompleteAsync(
         string systemPrompt,
         string userMessage,
         CancellationToken cancellationToken = default)
     {
+        var client = GetOrCreateClient();
+
         var stopwatch = Stopwatch.StartNew();
         try
         {
@@ -27,7 +35,7 @@ public class OpenAiChatClient(IOptions<OpenAiOptions> options, ILogger<OpenAiCha
                 new UserChatMessage(userMessage)
             };
 
-            var response = await _chatClient.CompleteChatAsync(
+            var response = await client.CompleteChatAsync(
                 messages,
                 null,
                 cancellationToken);
@@ -44,31 +52,37 @@ public class OpenAiChatClient(IOptions<OpenAiOptions> options, ILogger<OpenAiCha
 
             _logger.LogInformation(
                 "LLM call success. Model={Model} InputTokens={InputTokens} OutputTokens={OutputTokens} LatencyMs={LatencyMs}",
-                _model,
-                inputTokens,
-                outputTokens,
-                stopwatch.ElapsedMilliseconds);
+                _options.Model, inputTokens, outputTokens, stopwatch.ElapsedMilliseconds);
 
             return content;
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
-            _logger.LogError(ex, "LLM call failed. Model={Model} LatencyMs={LatencyMs}", _model, stopwatch.ElapsedMilliseconds);
+            _logger.LogError(ex,
+                "LLM call failed. Model={Model} LatencyMs={LatencyMs}",
+                _options.Model, stopwatch.ElapsedMilliseconds);
             throw;
         }
     }
 
-    private static ChatClient CreateChatClient(OpenAiOptions options)
+    // ── Private ───────────────────────────────────────────────────
+
+    private ChatClient GetOrCreateClient()
     {
-        if (string.IsNullOrWhiteSpace(options.ApiKey))
-            throw new InvalidOperationException("OpenAI:ApiKey is not configured.");
+        // Validate only when actually needed — not at startup
+        if (string.IsNullOrWhiteSpace(_options.ApiKey))
+            throw new InvalidOperationException(
+                "OpenAI:ApiKey is not configured. Add it to appsettings.json under \"OpenAI\": { \"ApiKey\": \"sk-...\" }");
 
-        var client = new OpenAIClient(options.ApiKey);
-        var model = ResolveModel(options);
-        return client.GetChatClient(model);
+        if (_chatClient is not null)
+            return _chatClient;
+
+        var model = string.IsNullOrWhiteSpace(_options.Model)
+            ? OpenAiOptions.DefaultModel
+            : _options.Model;
+
+        _chatClient = new OpenAIClient(_options.ApiKey).GetChatClient(model);
+        return _chatClient;
     }
-
-    private static string ResolveModel(OpenAiOptions options) =>
-        string.IsNullOrWhiteSpace(options.Model) ? OpenAiOptions.DefaultModel : options.Model;
 }

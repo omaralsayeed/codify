@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Codify.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2ed548707c0b7b8ed54f37262e9a9bd3eccac97e")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8832152cc410003e6065bcd5cd65b75866f25fb7")]
 [assembly: System.Reflection.AssemblyProductAttribute("Codify.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Codify.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
