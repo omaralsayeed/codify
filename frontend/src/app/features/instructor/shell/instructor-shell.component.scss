@@ -1,60 +1,16 @@
 @use '../../../styles/variables' as *;
 
+// Full-page layout — no card/box, no max-width, no shadow.
+// The global navbar from app.html sits above this; we just fill the rest.
 .inst-dashboard {
-  min-height: calc(100vh - 120px);
-  margin: 24px auto;
-  max-width: 1200px;
-  border: 1px solid $border;
-  border-radius: $r-lg;
-  overflow: hidden;
-  box-shadow: $shadow-lg;
+  min-height: calc(100vh - 64px); // 64px = global navbar height
   background: $ivory;
-
-  @media (max-width: $mobile) {
-    margin: 16px;
-    border-radius: $r;
-  }
-}
-
-.inst-topbar {
-  background: $navy2;
-  padding: 12px 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.inst-logo {
-  font-family: $ff-display;
-  font-size: 18px;
-  color: $ivory;
-  text-decoration: none;
-}
-
-.inst-topbar-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.inst-badge {
-  font-family: $ff-mono;
-  font-size: 10px;
-  padding: 2px 8px;
-  border-radius: 20px;
-  background: rgba(200, 169, 81, 0.2);
-  color: $gold;
-}
-
-.inst-user {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.75);
 }
 
 .inst-body {
   display: grid;
   grid-template-columns: 200px 1fr;
-  min-height: 560px;
+  min-height: inherit;
 
   @media (max-width: $tablet) {
     grid-template-columns: 160px 1fr;
@@ -66,19 +22,50 @@
   }
 }
 
+// ── Sidebar ───────────────────────────────────────────────────────────────────
+
 .inst-sidebar {
   background: $navy2;
   padding: 16px 12px;
   display: flex;
   flex-direction: column;
   gap: 2px;
+  // Stretch full height of the page
+  min-height: calc(100vh - 64px);
 
   @media (max-width: $mobile) {
+    min-height: auto;
     flex-direction: row;
     overflow-x: auto;
     padding: 12px;
+    align-items: center;
   }
 }
+
+// ── Sidebar header (badge) ────────────────────────────────────────────────────
+
+.sidebar-header {
+  padding: 4px 4px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 6px;
+
+  @media (max-width: $mobile) {
+    display: none;
+  }
+}
+
+.inst-badge {
+  font-family: $ff-mono;
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 20px;
+  background: rgba(200, 169, 81, 0.2);
+  color: $gold;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+// ── Nav items ─────────────────────────────────────────────────────────────────
 
 .nav-item {
   display: flex;
@@ -90,6 +77,7 @@
   color: rgba(255, 255, 255, 0.5);
   text-decoration: none;
   white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
 
   &.active,
   &:hover {
@@ -101,10 +89,35 @@
 .nav-icon {
   width: 16px;
   text-align: center;
+  flex-shrink: 0;
 }
+
+// ── Sidebar footer (user name) ────────────────────────────────────────────────
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 14px 4px 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+
+  @media (max-width: $mobile) {
+    display: none;
+  }
+}
+
+.inst-user {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+// ── Main content area ─────────────────────────────────────────────────────────
 
 .inst-main {
   background: $ivory;
   padding: 24px;
   overflow: hidden;
+  min-width: 0; // prevent grid blowout on wide content
 }
