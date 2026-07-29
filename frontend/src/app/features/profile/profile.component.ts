@@ -23,6 +23,11 @@ import {
 } from '../../core/models/analytics.model';
 import { ActivityHeatmapComponent } from './activity-heatmap.component';
 import { SolvedRingComponent, RingDifficultyData } from './solved-ring.component';
+import {
+  buildHeatmapGrid,
+  activityDaysToMap,
+  HeatmapGrid,
+} from '../../utils/heatmap-calendar.util';
 
 /** Mirrors the slug function in app.routes.ts */
 function toSlug(name: string): string {
@@ -42,8 +47,6 @@ function easeOut(t: number): number {
   templateUrl: './profile.component.html',
   styleUrl:    './profile.component.scss',
   host: {
-    // reduced-motion class applied to the host element — one CSS selector
-    // disables every animation on the page without piecemeal checks
     '[class.no-anim]': 'reducedMotion',
   },
 })
@@ -58,33 +61,35 @@ export class ProfileComponent implements OnInit, OnDestroy {
   isLoading = false;
   error: string | null = null;
 
-  // ── Reduced motion — checked once, affects everything ────────────────────────
-  // One check, one flag. CSS `.no-anim` on the host bypasses all animations.
+  // ── Reduced motion ────────────────────────────────────────────────────────
   reducedMotion = false;
 
-  // ── Year filter ───────────────────────────────────────────────────────────────
-  selectedYear: number | null = null;
+  // ── Heatmap state ─────────────────────────────────────────────────────────
+  /** 'rolling' = ALL tab; 'year' = a specific year tab */
+  activeMode: 'year' | 'rolling' = 'year';
+  /** The year currently selected; null when activeMode === 'rolling' */
+  activeYear: number | null = null;
+  /** Built once from activityGrid; never mutated after that */
+  private submissionMap: Map<string, number> = new Map();
+  /** The pre-built grid passed down to the heatmap component */
+  grid: HeatmapGrid | null = null;
+  /** Year tabs shown in the UI — derived from data, current year always present */
   availableYears: number[] = [];
 
-  // ── Animated (counted-up) display values ─────────────────────────────────────
-  // These are what the template renders. They count from 0 to the real value
-  // when the stats card enters the viewport.
+  // ── Animated display values ───────────────────────────────────────────────
   displaySolved     = signal(0);
   displayStreak     = signal(0);
   displayActiveDays = signal(0);
 
-  // ── Animation state ───────────────────────────────────────────────────────────
-  // True once the countup has fired — so re-scrolling doesn't retrigger
   private countsAnimated = false;
   private intersectionObs: IntersectionObserver | null = null;
   private animTimers: ReturnType<typeof setTimeout>[] = [];
 
   private readonly destroy$ = new Subject<void>();
 
-  // ── Lifecycle ─────────────────────────────────────────────────────────────────
+  // ── Lifecycle ─────────────────────────────────────────────────────────────
 
   ngOnInit(): void {
-    // Single reduced-motion check — everything else reads this.reducedMotion
     this.reducedMotion =
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -108,17 +113,24 @@ export class ProfileComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: p => {
-          this.profile        = p;
-          this.availableYears = this.computeAvailableYears(p.activityGrid);
+          this.profile = p;
 
+          // Build the submission map once — all grid rebuilds read from this
+          this.submissionMap = activityDaysToMap(p.activityGrid);
+
+          // Derive year tabs from the actual data + always include current year
+          this.availableYears = this.computeAvailableYears();
+
+          // Default: most recent year tab (current year if data exists)
           const currentYear = new Date().getFullYear();
-          this.selectedYear = this.availableYears.includes(currentYear)
+          this.activeMode = 'year';
+          this.activeYear = this.availableYears.includes(currentYear)
             ? currentYear
-            : (this.availableYears[this.availableYears.length - 1] ?? null);
+            : (this.availableYears[this.availableYears.length - 1] ?? currentYear);
 
+          this.rebuildGrid();
           this.cdr.markForCheck();
 
-          // Wire up countup after Angular has rendered the stats card
           this.animTimers.push(setTimeout(() => this.setupCountup(p), 0));
         },
         error: () => {
@@ -128,17 +140,73 @@ export class ProfileComponent implements OnInit, OnDestroy {
       });
   }
 
+  // ── Year / mode selection ─────────────────────────────────────────────────
+
   selectYear(year: number | null): void {
-    this.selectedYear = year;
+    if (year === null) {
+      // null = ALL tab = rolling mode
+      this.activeMode = 'rolling';
+      this.activeYear = null;
+    } else {
+      this.activeMode = 'year';
+      this.activeYear = year;
+    }
+    this.rebuildGrid();
+    this.cdr.markForCheck();
   }
 
-  // ── Countup ───────────────────────────────────────────────────────────────────
-  // Fires when the stats card enters the viewport. Uses IntersectionObserver
-  // so numbers count from 0 only when visible — not on page load.
+  /** Convenience getter so the template can express "is ALL active" */
+  get selectedYear(): number | null {
+    return this.activeMode === 'rolling' ? null : this.activeYear;
+  }
+
+  // ── Grid builder ──────────────────────────────────────────────────────────
+
+  private rebuildGrid(): void {
+    this.grid = buildHeatmapGrid(
+      this.activeMode,
+      this.activeYear,
+      this.submissionMap,
+      new Date(),
+    );
+  }
+
+  // ── Stats helpers (read from grid) ───────────────────────────────────────
+
+  get heatmapSubmissions(): number {
+    return this.grid?.totalSubmissions ?? 0;
+  }
+
+  get heatmapActiveDays(): number {
+    return this.grid?.activeDays ?? 0;
+  }
+
+  get heatmapMaxStreak(): number {
+    return this.grid?.maxStreak ?? 0;
+  }
+
+  get statsLabel(): string {
+    return this.activeMode === 'rolling' ? 'last 52 weeks' : String(this.activeYear);
+  }
+
+  // ── Year tab derivation ───────────────────────────────────────────────────
+  /**
+   * Collect distinct years from the submission map.
+   * Always include the current year even if there are no submissions yet.
+   */
+  private computeAvailableYears(): number[] {
+    const currentYear = new Date().getFullYear();
+    const years = new Set<number>([currentYear]);
+    for (const iso of this.submissionMap.keys()) {
+      years.add(parseInt(iso.slice(0, 4), 10));
+    }
+    return Array.from(years).sort((a, b) => a - b);
+  }
+
+  // ── Countup ───────────────────────────────────────────────────────────────
 
   private setupCountup(p: PublicProfileData): void {
     if (this.reducedMotion) {
-      // Skip animation — jump straight to final values
       this.displaySolved.set(p.totalSolved);
       this.displayStreak.set(p.streak.currentStreak);
       this.displayActiveDays.set(p.streak.totalActiveDays);
@@ -155,20 +223,15 @@ export class ProfileComponent implements OnInit, OnDestroy {
         this.countsAnimated = true;
         this.intersectionObs?.disconnect();
 
-        this.animateCount(0, p.totalSolved,           1000, v => this.displaySolved.set(v));
-        this.animateCount(0, p.streak.currentStreak,  1000, v => this.displayStreak.set(v));
-        this.animateCount(0, p.streak.totalActiveDays,1000, v => this.displayActiveDays.set(v));
+        this.animateCount(0, p.totalSolved,            1000, v => this.displaySolved.set(v));
+        this.animateCount(0, p.streak.currentStreak,   1000, v => this.displayStreak.set(v));
+        this.animateCount(0, p.streak.totalActiveDays, 1000, v => this.displayActiveDays.set(v));
       },
       { threshold: 0.3 },
     );
     this.intersectionObs.observe(statsCard);
   }
 
-  /**
-   * Counts an integer from `from` to `to` over `duration` ms using
-   * cubic ease-out. Calls `setter` on each frame. Safe on reduced-motion
-   * (caller already skips this).
-   */
   private animateCount(
     from: number,
     to: number,
@@ -190,42 +253,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     requestAnimationFrame(tick);
   }
 
-  // ── Year filter helpers ───────────────────────────────────────────────────────
-
-  private computeAvailableYears(grid: ActivityDay[]): number[] {
-    const years = new Set<number>();
-    for (const d of grid) years.add(parseInt(d.date.slice(0, 4), 10));
-    return Array.from(years).sort((a, b) => a - b);
-  }
-
-  get filteredDays(): ActivityDay[] {
-    if (!this.profile) return [];
-    if (this.selectedYear === null) return this.profile.activityGrid;
-    return this.profile.activityGrid.filter(d => d.date.startsWith(String(this.selectedYear)));
-  }
-
-  get filteredSubmissions(): number {
-    return this.filteredDays.reduce((s, d) => s + d.count, 0);
-  }
-
-  get filteredActiveDays(): number {
-    return this.filteredDays.filter(d => d.count > 0).length;
-  }
-
-  get filteredMaxStreak(): number {
-    let max = 0, run = 0;
-    for (const d of this.filteredDays) {
-      if (d.count > 0) { run++; max = Math.max(max, run); }
-      else run = 0;
-    }
-    return max;
-  }
-
-  get statsLabel(): string {
-    return this.selectedYear === null ? 'all time' : String(this.selectedYear);
-  }
-
-  // ── Own-profile detection ────────────────────────────────────────────────────
+  // ── Own-profile detection ─────────────────────────────────────────────────
 
   get isOwnProfile(): boolean {
     const u = this.authService.currentUser();
@@ -233,7 +261,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     return toSlug(u.name) === this.profile.user.username;
   }
 
-  // ── Topic groups ─────────────────────────────────────────────────────────────
+  // ── Topic groups ──────────────────────────────────────────────────────────
 
   get strongTopics(): TopicPerformance[] {
     return this.profile?.topicStats.filter(t => t.strength === 'strong') ?? [];
@@ -243,7 +271,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     return this.profile?.topicStats.filter(t => t.strength === 'average') ?? [];
   }
 
-  // ── Language bar width ────────────────────────────────────────────────────────
+  // ── Language bar width ────────────────────────────────────────────────────
 
   private get maxLangSolved(): number {
     if (!this.profile?.languageStats.length) return 1;
@@ -255,13 +283,13 @@ export class ProfileComponent implements OnInit, OnDestroy {
     return max === 0 ? 0 : Math.round((solved / max) * 100);
   }
 
-  // ── Difficulty bar width ──────────────────────────────────────────────────────
+  // ── Difficulty bar width ──────────────────────────────────────────────────
 
   diffBarWidth(solved: number, total: number): number {
     return total === 0 ? 0 : Math.round((solved / total) * 100);
   }
 
-  // ── Streak helpers ────────────────────────────────────────────────────────────
+  // ── Streak helpers ────────────────────────────────────────────────────────
 
   get isPersonalBest(): boolean {
     if (!this.profile) return false;
@@ -269,7 +297,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
            this.profile.streak.currentStreak >= this.profile.streak.longestStreak;
   }
 
-  // ── Solved ring data ──────────────────────────────────────────────────────────
+  // ── Solved ring data ──────────────────────────────────────────────────────
 
   get ringData(): RingDifficultyData | null {
     if (!this.profile) return null;
@@ -288,7 +316,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     };
   }
 
-  // ── Misc helpers ──────────────────────────────────────────────────────────────
+  // ── Misc helpers ──────────────────────────────────────────────────────────
 
   avatarColor(initials: string): string {
     const palette = ['#2E86AB', '#1D9E75', '#C8A951', '#7B1FA2', '#E65100'];
@@ -335,7 +363,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
     return t.topicId;
   }
 
-  /** Per-row animation delay for submission list stagger */
   subRowDelay(index: number): string {
     return `${index * 35}ms`;
   }

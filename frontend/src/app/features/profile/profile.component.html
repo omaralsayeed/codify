@@ -354,12 +354,12 @@
           <!-- Stats + year selector row -->
           <div class="heatmap-header">
             <span class="heatmap-header__stat">
-              <strong>{{ filteredSubmissions }}</strong> submissions in {{ statsLabel }}
+              <strong>{{ heatmapSubmissions }}</strong> submissions in {{ statsLabel }}
             </span>
             <span class="heatmap-header__meta">
-              Active days: {{ filteredActiveDays }}
+              Active days: {{ heatmapActiveDays }}
               &nbsp;·&nbsp;
-              Max streak: {{ filteredMaxStreak }} days
+              Max streak: {{ heatmapMaxStreak }} days
             </span>
           </div>
 
@@ -385,7 +385,7 @@
             </button>
           </div>
 
-          <app-activity-heatmap [days]="filteredDays" />
+          <app-activity-heatmap [grid]="grid" />
         </section>
 
         <!-- ④ Recent accepted submissions -->
