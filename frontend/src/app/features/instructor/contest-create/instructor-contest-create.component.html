@@ -4,7 +4,7 @@
   <div class="page-header">
     <a class="back-link" routerLink="../">← Back to Contests</a>
     <h1 class="page-title">New Contest</h1>
-    <p class="page-sub">Fill in the details below. You must select at least one problem and one student.</p>
+    <p class="page-sub">Fill in the details, pick problems and assign students.</p>
   </div>
 
   <form class="form-card" (ngSubmit)="onSubmit()" novalidate>
@@ -18,118 +18,114 @@
       </ul>
     }
 
-    <!-- Title -->
-    <div class="field">
-      <label class="field-label" for="contest-title">Title <span class="required" aria-hidden="true">*</span></label>
-      <input
-        id="contest-title"
-        class="field-input"
-        type="text"
-        placeholder="e.g. Arrays & Hashing Sprint"
-        [(ngModel)]="form.title"
-        name="title"
-        maxlength="100"
-        required
-        autocomplete="off"
+    <!-- ── Section 1: Contest Information ─────────────────────────────── -->
+    <div class="form-section">
+      <h2 class="section-heading">Contest Information</h2>
+
+      <div class="field">
+        <label class="field-label" for="contest-title">
+          Title <span class="required" aria-hidden="true">*</span>
+        </label>
+        <input
+          id="contest-title"
+          class="field-input"
+          type="text"
+          placeholder="e.g. Arrays & Hashing Sprint"
+          [(ngModel)]="form.title"
+          name="title"
+          maxlength="100"
+          required
+          autocomplete="off"
+        />
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="contest-desc">Description</label>
+        <textarea
+          id="contest-desc"
+          class="field-input field-textarea"
+          placeholder="Optional — brief context for this contest."
+          [(ngModel)]="form.description"
+          name="description"
+          rows="3"
+          maxlength="400"
+        ></textarea>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label" for="start-at">
+            Start <span class="required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="start-at"
+            class="field-input"
+            type="datetime-local"
+            [(ngModel)]="form.startAt"
+            name="startAt"
+            required
+          />
+        </div>
+        <div class="field">
+          <label class="field-label" for="end-at">
+            End <span class="required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="end-at"
+            class="field-input"
+            type="datetime-local"
+            [(ngModel)]="form.endAt"
+            name="endAt"
+            required
+          />
+        </div>
+      </div>
+    </div>
+
+    <div class="form-divider" aria-hidden="true"></div>
+
+    <!-- ── Section 2: Problems ────────────────────────────────────────── -->
+    <div class="form-section">
+      <h2 class="section-heading">
+        Problems <span class="required" aria-hidden="true">*</span>
+      </h2>
+      <p class="section-hint">Search by title or topic. Select at least one.</p>
+
+      <app-search-select
+        label="Problems"
+        placeholder="Search problems…"
+        [searchFn]="searchProblems"
+        [selected]="selectedProblems()"
+        (selectItem)="addProblem($event)"
+        (deselectItem)="removeProblem($event)"
       />
     </div>
 
-    <!-- Description -->
-    <div class="field">
-      <label class="field-label" for="contest-desc">Description</label>
-      <textarea
-        id="contest-desc"
-        class="field-input field-textarea"
-        placeholder="Optional — brief context for this contest."
-        [(ngModel)]="form.description"
-        name="description"
-        rows="3"
-        maxlength="400"
-      ></textarea>
-    </div>
+    <div class="form-divider" aria-hidden="true"></div>
 
-    <!-- Date/time row -->
-    <div class="field-row">
-      <div class="field">
-        <label class="field-label" for="start-at">Start <span class="required" aria-hidden="true">*</span></label>
-        <input
-          id="start-at"
-          class="field-input"
-          type="datetime-local"
-          [(ngModel)]="form.startAt"
-          name="startAt"
-          required
-        />
-      </div>
-      <div class="field">
-        <label class="field-label" for="end-at">End <span class="required" aria-hidden="true">*</span></label>
-        <input
-          id="end-at"
-          class="field-input"
-          type="datetime-local"
-          [(ngModel)]="form.endAt"
-          name="endAt"
-          required
-        />
-      </div>
-    </div>
-
-    <!-- Problem multi-select -->
-    <div class="field">
-      <label class="field-label">
-        Problems <span class="required" aria-hidden="true">*</span>
-        <span class="field-count">({{ selectedProblemIds().size }} selected)</span>
-      </label>
-      <div class="select-grid" role="group" aria-label="Select problems">
-        @for (p of problems; track p.id) {
-          <button
-            type="button"
-            class="select-chip"
-            [class.selected]="isProblemSelected(p.id)"
-            (click)="toggleProblem(p.id)"
-            [attr.aria-pressed]="isProblemSelected(p.id)"
-            [attr.aria-label]="p.title + ' (' + p.difficulty + ')'"
-          >
-            <span class="chip-title">{{ p.title }}</span>
-            <span class="chip-badge" [ngClass]="difficultyClass(p.difficulty)">
-              {{ p.difficulty }}
-            </span>
-          </button>
-        }
-      </div>
-    </div>
-
-    <!-- Student multi-select -->
-    <div class="field">
-      <label class="field-label">
+    <!-- ── Section 3: Students ────────────────────────────────────────── -->
+    <div class="form-section">
+      <h2 class="section-heading">
         Assign Students <span class="required" aria-hidden="true">*</span>
-        <span class="field-count">({{ selectedStudentIds().size }} of {{ students.length }} selected)</span>
-      </label>
-      <div class="select-grid" role="group" aria-label="Assign students">
-        @for (s of students; track s.id) {
-          <button
-            type="button"
-            class="select-chip select-chip--student"
-            [class.selected]="isStudentSelected(s.id)"
-            (click)="toggleStudent(s.id)"
-            [attr.aria-pressed]="isStudentSelected(s.id)"
-            [attr.aria-label]="s.name"
-          >
-            <span class="chip-avatar" aria-hidden="true">{{ s.initials }}</span>
-            <span class="chip-title">{{ s.name }}</span>
-          </button>
-        }
-      </div>
+      </h2>
+      <p class="section-hint">Search by name. Select at least one student.</p>
+
+      <app-search-select
+        label="Students"
+        placeholder="Search students…"
+        [searchFn]="searchStudents"
+        [selected]="selectedStudents()"
+        (selectItem)="addStudent($event)"
+        (deselectItem)="removeStudent($event)"
+      />
     </div>
 
-    <!-- Form actions -->
+    <div class="form-divider" aria-hidden="true"></div>
+
+    <!-- ── Section 4: Actions ─────────────────────────────────────────── -->
     <div class="form-actions">
       <a class="btn-secondary" routerLink="../">Cancel</a>
-      <button
-        class="btn-primary"
-        type="submit"
-        [disabled]="submitting()"
-      >
+      <button class="btn-primary" type="submit" [disabled]="submitting()">
         {{ submitting() ? 'Creating…' : 'Create Contest' }}
       </button>
     </div>

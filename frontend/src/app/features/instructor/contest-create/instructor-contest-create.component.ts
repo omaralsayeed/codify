@@ -7,8 +7,7 @@ import { Router, RouterLink } from '@angular/router';
 import { ContestService } from '../../../core/services/contest.service';
 import { ProblemService } from '../../../core/services/problem.service';
 import { InstructorService } from '../../../core/services/instructor.service';
-import { Problem } from '../../../core/models/problem.model';
-import { InstructorStudentSummary } from '../../../core/models/instructor.model';
+import { SearchSelectComponent, SelectItem } from '../../../shared/components/search-select/search-select.component';
 
 interface FormState {
   title: string;
@@ -20,7 +19,7 @@ interface FormState {
 @Component({
   selector: 'app-instructor-contest-create',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, SearchSelectComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './instructor-contest-create.component.html',
   styleUrl: './instructor-contest-create.component.scss',
@@ -31,11 +30,8 @@ export class InstructorContestCreateComponent {
   private readonly problemSvc    = inject(ProblemService);
   private readonly instructorSvc = inject(InstructorService);
 
-  // ── Source data ───────────────────────────────────────────────────────────
-  readonly problems:  Problem[]                   = this.problemSvc.getAll();
-  readonly students:  InstructorStudentSummary[]  = this.instructorSvc.getStudents();
-
   // ── Form fields ───────────────────────────────────────────────────────────
+
   form: FormState = {
     title:       '',
     description: '',
@@ -43,49 +39,66 @@ export class InstructorContestCreateComponent {
     endAt:       '',
   };
 
-  selectedProblemIds  = signal<Set<string>>(new Set());
-  selectedStudentIds  = signal<Set<string>>(new Set());
+  // ── Selected items (SelectItem shape for the shared component) ────────────
+
+  readonly selectedProblems  = signal<SelectItem[]>([]);
+  readonly selectedStudents  = signal<SelectItem[]>([]);
 
   // ── UI state ──────────────────────────────────────────────────────────────
+
   readonly submitting = signal(false);
   readonly errors     = signal<string[]>([]);
 
-  // ── Multi-select toggle helpers ───────────────────────────────────────────
+  // ── Search functions (passed to SearchSelectComponent via @Input) ─────────
+  // Arrow functions so `this` is bound correctly when passed as a reference.
 
-  toggleProblem(id: string): void {
-    this.selectedProblemIds.update(s => {
-      const next = new Set(s);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
+  readonly searchProblems = (query: string): SelectItem[] =>
+    this.problemSvc.search(query).map(p => ({
+      id:         p.id,
+      label:      p.title,
+      badge:      p.difficulty,
+      badgeClass: `diff--${p.difficulty}`,
+    }));
+
+  readonly searchStudents = (query: string): SelectItem[] =>
+    this.instructorSvc.searchStudents(query).map(s => ({
+      id:         s.id,
+      label:      s.name,
+      badge:      s.initials,
+      badgeClass: 'avatar-badge',
+    }));
+
+  // ── Selection handlers ────────────────────────────────────────────────────
+
+  addProblem(item: SelectItem): void {
+    this.selectedProblems.update(list =>
+      list.find(x => x.id === item.id) ? list : [...list, item]
+    );
   }
 
-  toggleStudent(id: string): void {
-    this.selectedStudentIds.update(s => {
-      const next = new Set(s);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
+  removeProblem(item: SelectItem): void {
+    this.selectedProblems.update(list => list.filter(x => x.id !== item.id));
   }
 
-  isProblemSelected(id: string):  boolean { return this.selectedProblemIds().has(id); }
-  isStudentSelected(id: string):  boolean { return this.selectedStudentIds().has(id); }
+  addStudent(item: SelectItem): void {
+    this.selectedStudents.update(list =>
+      list.find(x => x.id === item.id) ? list : [...list, item]
+    );
+  }
 
-  difficultyClass(d: string): string {
-    if (d === 'easy')   return 'diff--easy';
-    if (d === 'medium') return 'diff--medium';
-    return 'diff--hard';
+  removeStudent(item: SelectItem): void {
+    this.selectedStudents.update(list => list.filter(x => x.id !== item.id));
   }
 
   // ── Validation ────────────────────────────────────────────────────────────
 
   private validate(): string[] {
     const errs: string[] = [];
-    if (!this.form.title.trim())               errs.push('Title is required.');
-    if (this.selectedProblemIds().size === 0)  errs.push('Select at least one problem.');
-    if (this.selectedStudentIds().size === 0)  errs.push('Assign to at least one student.');
-    if (!this.form.startAt)                    errs.push('Start date/time is required.');
-    if (!this.form.endAt)                      errs.push('End date/time is required.');
+    if (!this.form.title.trim())                    errs.push('Title is required.');
+    if (this.selectedProblems().length === 0)       errs.push('Select at least one problem.');
+    if (this.selectedStudents().length === 0)       errs.push('Assign to at least one student.');
+    if (!this.form.startAt)                         errs.push('Start date/time is required.');
+    if (!this.form.endAt)                           errs.push('End date/time is required.');
     if (this.form.startAt && this.form.endAt &&
         new Date(this.form.endAt) <= new Date(this.form.startAt)) {
       errs.push('End date/time must be after start.');
@@ -109,13 +122,12 @@ export class InstructorContestCreateComponent {
       const created = this.contestSvc.createContest({
         title:              this.form.title.trim(),
         description:        this.form.description.trim(),
-        problemIds:         [...this.selectedProblemIds()],
-        assignedStudentIds: [...this.selectedStudentIds()],
+        problemIds:         this.selectedProblems().map(p => p.id),
+        assignedStudentIds: this.selectedStudents().map(s => s.id),
         startAt:            new Date(this.form.startAt).toISOString(),
         endAt:              new Date(this.form.endAt).toISOString(),
       });
 
-      // Navigate to the new contest's detail view
       this.router.navigate(['instructor', 'dashboard', 'contests', created.id]);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Something went wrong.';

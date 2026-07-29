@@ -19,6 +19,16 @@ export class InstructorService {
     return MOCK_STUDENTS;
   }
 
+  /**
+   * Search students by name (case-insensitive).
+   * Structured as a method call so it can later be replaced with an HTTP call.
+   */
+  searchStudents(query: string): InstructorStudentSummary[] {
+    const q = query.toLowerCase().trim();
+    if (!q) return [];
+    return MOCK_STUDENTS.filter(s => s.name.toLowerCase().includes(q));
+  }
+
   getStudentById(id: string): InstructorStudentDetail | undefined {
     return MOCK_STUDENT_DETAILS.find(student => student.id === id);
   }
