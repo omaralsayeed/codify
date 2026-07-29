@@ -1,13 +1,26 @@
 @use '../../../styles/variables' as *;
 
+// ── Centered page container ───────────────────────────────────────────────────
+//
+// The shell's .inst-main already has 24px padding on all sides, which acts as
+// a minimum gutter. Inside that, .create-contest centers itself with a max-width
+// and auto margins — matching the GitHub / Stripe / Vercel pattern.
+
 .create-contest {
+  width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  max-width: 680px;
+  gap: 0;
 }
 
-// ── Header ────────────────────────────────────────────────────────────────────
+// ── Page header (back link + title) ──────────────────────────────────────────
+
+.page-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 16px;  // tight attachment to the card below
+}
 
 .back-link {
   display: inline-flex;
@@ -15,21 +28,23 @@
   font-size: 13px;
   color: $blue;
   text-decoration: none;
+  margin-bottom: 4px;
 
   &:hover { text-decoration: underline; }
 }
 
 .page-title {
   font-family: $ff-display;
-  font-size: 22px;
+  font-size: 24px;
   color: $navy;
-  margin: 8px 0 0;
+  margin: 0;
+  line-height: 1.2;
 }
 
 .page-sub {
-  font-size: 13px;
+  font-size: 14px;
   color: $muted;
-  margin: 4px 0 0;
+  margin: 0;
 }
 
 // ── Form card ─────────────────────────────────────────────────────────────────
@@ -38,18 +53,18 @@
   background: $white;
   border: 1px solid $border;
   border-radius: $r;
-  padding: 0;        // sections handle their own padding
+  padding: 0;           // sections own their padding
   box-shadow: $shadow;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-// ── Error list ────────────────────────────────────────────────────────────────
+// ── Validation errors ─────────────────────────────────────────────────────────
 
 .error-list {
   margin: 0;
-  padding: 12px 24px 12px 40px;
+  padding: 14px 32px 14px 44px;
   background: $red-lt;
   border-bottom: 1px solid rgba(211, 47, 47, 0.2);
   color: $red;
@@ -62,10 +77,10 @@
 // ── Form sections ─────────────────────────────────────────────────────────────
 
 .form-section {
-  padding: 20px 24px;
+  padding: 28px 32px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 18px;
 }
 
 .form-divider {
@@ -76,15 +91,16 @@
 
 .section-heading {
   font-family: $ff-display;
-  font-size: 15px;
+  font-size: 16px;
+  font-weight: 600;
   color: $navy;
   margin: 0;
 }
 
 .section-hint {
-  font-size: 12px;
+  font-size: 13px;
   color: $muted;
-  margin: -8px 0 0;
+  margin: -10px 0 0;
 }
 
 // ── Fields ────────────────────────────────────────────────────────────────────
@@ -106,17 +122,18 @@
 .required { color: $red; }
 
 .field-input {
-  height: 38px;
-  padding: 0 12px;
+  height: 40px;
+  padding: 0 14px;
   border: 1px solid $border;
   border-radius: $r;
   font-family: $ff-body;
-  font-size: 13px;
+  font-size: 14px;
   color: $charcoal;
   background: $white;
   outline: none;
   box-sizing: border-box;
   width: 100%;
+  transition: border-color 0.15s, box-shadow 0.15s;
 
   &:focus {
     border-color: $blue;
@@ -128,38 +145,38 @@
 
 .field-textarea {
   height: auto;
-  padding: 10px 12px;
+  padding: 12px 14px;
   resize: vertical;
-  min-height: 72px;
+  min-height: 80px;
 }
 
 .field-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 20px;
 
   @media (max-width: $mobile) { grid-template-columns: 1fr; }
 }
 
-// ── Actions ───────────────────────────────────────────────────────────────────
+// ── Actions row ───────────────────────────────────────────────────────────────
 
 .form-actions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 10px;
-  padding: 16px 24px;
+  gap: 12px;
+  padding: 20px 32px;
 }
 
 .btn-primary {
-  height: 38px;
-  padding: 0 20px;
+  height: 40px;
+  padding: 0 24px;
   background: $navy;
   color: $ivory;
   border: none;
   border-radius: $r;
   font-family: $ff-body;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.15s;
@@ -169,19 +186,19 @@
 }
 
 .btn-secondary {
-  height: 38px;
-  padding: 0 16px;
+  height: 40px;
+  padding: 0 20px;
   background: transparent;
   color: $muted;
   border: 1px solid $border;
   border-radius: $r;
   font-family: $ff-body;
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
   text-decoration: none;
   display: inline-flex;
   align-items: center;
-  transition: all 0.15s;
+  transition: border-color 0.15s, color 0.15s;
 
   &:hover { border-color: $navy2; color: $navy; }
 }
