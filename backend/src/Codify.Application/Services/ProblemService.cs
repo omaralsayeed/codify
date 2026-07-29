@@ -99,7 +99,7 @@ public class ProblemService(
         var problem = await problemRepo.GetByIdWithDetailsAsync(id)
             ?? throw new NotFoundException($"Problem {id} not found.");
 
-        problem.Deactivate();
+        problem.SoftDelete();
         await problemRepo.SaveChangesAsync();
     }
 

@@ -1,54 +1,45 @@
-# API_SPEC.md
 # Codify — API Specification
 
-> Base URL: `https://localhost:5001/api` (development)
-> All requests and responses use `application/json`.
-> All protected routes require `Authorization: Bearer <token>` header.
+Base URL: `https://localhost:5001/api` in development. All endpoints use JSON. Protected endpoints require `Authorization: Bearer <token>`.
 
----
+## Response Envelope
 
-## Standard Response Envelope
-
-Every API response uses this shape:
+The API returns the following envelope:
 
 ```json
-// Success
 {
   "success": true,
-  "data": { ... },
-  "message": "Optional message"
-}
-
-// Error
-{
-  "success": false,
-  "errorCode": "VALIDATION_ERROR",
-  "message": "Human-readable error",
-  "details": { "field": "reason" }
+  "data": { }
 }
 ```
 
-**Standard Error Codes:**
+Errors are returned through the same envelope:
 
-| Code | Meaning |
-|------|---------|
-| `UNAUTHORIZED` | Missing or invalid JWT |
-| `FORBIDDEN` | Valid JWT but wrong role |
-| `NOT_FOUND` | Resource doesn't exist |
-| `VALIDATION_ERROR` | Request body failed validation |
-| `EXECUTION_TIMEOUT` | Code ran longer than allowed |
-| `AI_UNAVAILABLE` | LLM or vector DB is down |
-| `UNSUPPORTED_LANGUAGE` | Submitted language not supported |
+```json
+{
+  "success": false,
+  "errorCode": "VALIDATION_ERROR",
+  "message": "Human-readable error"
+}
+```
 
----
+## Error Codes
 
-## Auth Endpoints
+| Code | Source |
+|---|---|
+| `NOT_FOUND` | `NotFoundException` |
+| `FORBIDDEN` | `ForbiddenException` |
+| `VALIDATION_ERROR` | `ValidationException` or model validation |
+| `INTERNAL_ERROR` | Unhandled exception |
+
+## Auth Module
 
 ### POST /auth/register
-Register a new user.
 
-**Access:** Public  
-**Body:**
+Public registration endpoint.
+
+Request body:
+
 ```json
 {
   "fullName": "Ahmed Hassan",
@@ -57,7 +48,16 @@ Register a new user.
   "role": "Student"
 }
 ```
-**Response 201:**
+
+Validation:
+
+- `fullName` required, max 200 characters
+- `email` required, valid email, max 320 characters
+- `password` required, minimum 8 characters
+- `role` required and must be a valid `UserRole`
+
+Success response: `201 Created`
+
 ```json
 {
   "success": true,
@@ -69,26 +69,27 @@ Register a new user.
 }
 ```
 
----
-
 ### POST /auth/login
-Authenticate and receive a JWT.
 
-**Access:** Public  
-**Body:**
+Public login endpoint.
+
+Request body:
+
 ```json
 {
   "email": "ahmed@example.com",
   "password": "min8chars"
 }
 ```
-**Response 200:**
+
+Success response: `200 OK`
+
 ```json
 {
   "success": true,
   "data": {
-    "token": "eyJhbGci...",
-    "expiresAt": "2025-01-01T12:00:00Z",
+    "token": "eyJhbGciOi...",
+    "expiresAt": "2026-07-23T14:00:00Z",
     "user": {
       "userId": "uuid",
       "fullName": "Ahmed Hassan",
@@ -98,21 +99,18 @@ Authenticate and receive a JWT.
 }
 ```
 
----
-
 ### POST /auth/logout
-Invalidate the current session (client-side token removal).
 
-**Access:** Authenticated  
-**Response 200:** `{ "success": true }`
+Authenticated endpoint. Logout is stateless; the server does not revoke tokens.
 
----
+Success response: `200 OK`
 
 ### GET /auth/me
-Get the currently authenticated user's profile.
 
-**Access:** Authenticated  
-**Response 200:**
+Authenticated endpoint that returns the current user profile.
+
+Success response: `200 OK`
+
 ```json
 {
   "success": true,
@@ -121,27 +119,29 @@ Get the currently authenticated user's profile.
     "fullName": "Ahmed Hassan",
     "email": "ahmed@example.com",
     "role": "Student",
-    "createdAt": "2025-01-01T00:00:00Z"
+    "createdAt": "2026-07-23T00:00:00Z"
   }
 }
 ```
 
----
+## Problems Module
 
-## Problem Endpoints
+All problem routes require authentication.
 
 ### GET /problems
-List all active problems. Students see active only; instructors see all.
 
-**Access:** Authenticated  
-**Query params:**
-- `difficulty` — `Easy`, `Medium`, `Hard`
-- `tag` — concept tag name
-- `search` — keyword in title
-- `page` — default 1
-- `pageSize` — default 20
+Returns a paged list of problems.
 
-**Response 200:**
+Query parameters:
+
+- `difficulty` optional `Easy | Medium | Hard`
+- `tag` optional concept tag name
+- `search` optional title search string
+- `page` default `1`
+- `pageSize` default `20`
+
+Success response:
+
 ```json
 {
   "success": true,
@@ -155,45 +155,57 @@ List all active problems. Students see active only; instructors see all.
         "isActive": true
       }
     ],
-    "totalCount": 42,
+    "totalCount": 1,
     "page": 1,
     "pageSize": 20
   }
 }
 ```
 
----
-
 ### GET /problems/{id}
-Get full problem detail including sample test cases.
 
-**Access:** Authenticated  
-**Response 200:**
+Returns the full problem detail including sample test cases.
+
+Path parameters:
+
+- `id` required GUID
+
+Success response:
+
 ```json
 {
   "success": true,
   "data": {
     "id": "uuid",
     "title": "Two Sum",
+    "slug": "two-sum",
     "statement": "Given an array of integers...",
     "difficulty": "Easy",
     "constraints": "1 <= nums.length <= 10^4",
     "languageSupport": ["Python", "CSharp"],
     "tags": ["Arrays & Hashing"],
     "sampleTestCases": [
-      { "input": "[2,7,11,15]\n9", "expectedOutput": "[0,1]" }
-    ]
+      {
+        "input": "2 7 11 15\n9",
+        "expectedOutput": "0 1"
+      }
+    ],
+    "isActive": true,
+    "isPublic": true,
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 256,
+    "acceptedSubmissionsCount": 0,
+    "totalSubmissionsCount": 0
   }
 }
 ```
 
----
-
 ### POST /problems
-Create a new problem.
 
-**Access:** Instructor only  
-**Body:**
+Instructor-only endpoint that creates a problem.
+
+Request body:
+
 ```json
 {
   "title": "Two Sum",
@@ -204,42 +216,62 @@ Create a new problem.
   "tagIds": ["uuid1", "uuid2"],
   "testCases": [
     {
-      "inputData": "[2,7,11,15]\n9",
-      "expectedOutput": "[0,1]",
+      "inputData": "2 7 11 15\n9",
+      "expectedOutput": "0 1",
       "isSample": true,
       "visibilityMode": "Public"
     }
-  ]
+  ],
+  "timeLimitMs": 2000,
+  "memoryLimitMb": 256
 }
 ```
-**Response 201:** Full problem object
 
----
+Validation:
+
+- `title` required, max 300 characters
+- `statement` required
+- `difficulty` required
+- `timeLimitMs` must be between 100 and 30000
+- `memoryLimitMb` must be between 16 and 1024
+
+Success response: `201 Created`
 
 ### PUT /problems/{id}
-Update an existing problem.
 
-**Access:** Instructor only  
-**Body:** Same shape as POST, all fields optional.  
-**Response 200:** Updated problem object
+Instructor-only endpoint that updates a problem. All fields are optional.
 
----
+Request body fields:
+
+- `title`
+- `statement`
+- `difficulty`
+- `constraints`
+- `languageSupport`
+- `tagIds`
+
+Success response: `200 OK`
 
 ### DELETE /problems/{id}
-Soft-delete a problem (sets `IsActive = false`).
 
-**Access:** Instructor only  
-**Response 200:** `{ "success": true }`
+Instructor-only soft delete. The problem is marked deleted and hidden by the query filter.
 
----
+Success response: `200 OK`
 
-## Submission Endpoints
+### GET /problems/{id}/submissions
+
+Returns submissions for a problem. Students see their own submissions; instructors see all submissions for the problem.
+
+Success response: `200 OK`
+
+## Submissions Module
 
 ### POST /submissions
-Submit code for a problem.
 
-**Access:** Student only  
-**Body:**
+Student-only endpoint that creates a submission.
+
+Request body:
+
 ```json
 {
   "problemId": "uuid",
@@ -247,156 +279,79 @@ Submit code for a problem.
   "language": "Python"
 }
 ```
-**Response 202:** (Accepted — execution is async)
+
+Validation:
+
+- `problemId` required
+- `code` required
+- `language` required and must be a valid `SubmissionLanguage`
+
+Success response: `202 Accepted`
+
 ```json
 {
   "success": true,
   "data": {
     "submissionId": "uuid",
+    "problemId": "uuid",
+    "userId": "uuid",
     "status": "Pending"
   }
 }
 ```
 
----
-
 ### GET /submissions/{id}
-Get the result of a specific submission.
 
-**Access:** Owner student or Instructor  
-**Response 200:**
+Returns a submission and its result details.
+
+Permissions:
+
+- owner student
+- instructor
+
+Success response:
+
 ```json
 {
   "success": true,
   "data": {
     "submissionId": "uuid",
+    "problemId": "uuid",
+    "userId": "uuid",
+    "code": "...",
+    "language": "Python",
     "status": "Accepted",
+    "submittedAt": "2026-07-23T00:00:00Z",
     "executionTimeMs": 42,
     "memoryUsedKb": 8192,
+    "passedTestCases": 10,
+    "totalTestCases": 10,
+    "score": 100,
     "result": {
       "passedTestCount": 10,
       "failedTestCount": 0,
-      "totalTestCount": 10
+      "totalTestCount": 10,
+      "errorMessage": null,
+      "outputSummary": null
     },
     "aiFeedback": [
       {
-        "type": "CodeQuality",
-        "message": "Consider using a hash map for O(n) lookup..."
+        "type": "Optimization",
+        "message": "Consider using a hash map for O(n) lookup."
       }
     ]
   }
 }
 ```
 
----
-
-### GET /problems/{id}/submissions
-List all submissions by the current student for a problem.
-
-**Access:** Authenticated (students see own, instructors see all)  
-**Response 200:** Array of submission summaries
-
----
-
-## AI / Hint Endpoints
-
-### POST /ai/hints
-Request a hint for the current problem.
-
-**Access:** Student only  
-**Body:**
-```json
-{
-  "problemId": "uuid"
-}
-```
-**Response 200:**
-```json
-{
-  "success": true,
-  "data": {
-    "hintLevel": 1,
-    "hintText": "Think about what data structure allows O(1) lookups...",
-    "hasMoreHints": true
-  }
-}
-```
-
-**Notes:**
-- Each call increments the hint level for this user+problem.
-- At level 3, `hasMoreHints` is false.
-- Rate limit: 10 hint requests per student per hour.
-
----
-
-### GET /ai/hints/history
-Get all hints the current student has received for a problem.
-
-**Access:** Student only  
-**Query params:** `problemId` (required)  
-**Response 200:** Array of hint log entries
-
----
-
-## Analytics Endpoints
-
-### GET /analytics/student/{id}
-Get a student's performance profile.
-
-**Access:** The student themselves, or any Instructor  
-**Response 200:**
-```json
-{
-  "success": true,
-  "data": {
-    "userId": "uuid",
-    "successRate": 0.62,
-    "averageAttempts": 2.4,
-    "weakTopics": ["Dynamic Programming", "Graphs"],
-    "strongTopics": ["Arrays & Hashing", "Two Pointers"],
-    "recentActivity": [...]
-  }
-}
-```
-
----
-
-### GET /analytics/topic/{topicId}
-Get aggregate stats for a concept tag.
-
-**Access:** Instructor only  
-**Response 200:** Topic-level performance summary across all students
-
----
-
-### GET /analytics/instructor/overview
-Get a full cohort overview for the instructor's students.
-
-**Access:** Instructor only  
-**Response 200:**
-```json
-{
-  "success": true,
-  "data": {
-    "totalStudents": 45,
-    "averageSuccessRate": 0.54,
-    "mostChallengingTopic": "Dynamic Programming",
-    "integrityFlags": 3,
-    "topPerformers": [...],
-    "studentsNeedingAttention": [...]
-  }
-}
-```
-
----
-
-## Execution Endpoint
+## Execution Module
 
 ### POST /execution/run
-Run code against sample test cases only (not full evaluation — used for "Run" before submitting).
 
-**Access:** Student only  
-**Body:**
+Student-only endpoint for the pre-submit run flow. The current implementation only returns sample-case placeholders.
+
+Request body:
+
 ```json
 {
   "problemId": "uuid",
@@ -404,35 +359,128 @@ Run code against sample test cases only (not full evaluation — used for "Run" 
   "language": "Python"
 }
 ```
-**Response 200:**
+
+Success response: `200 OK`
+
 ```json
 {
   "success": true,
   "data": {
-    "stdout": "Output here",
+    "stdout": "",
     "stderr": "",
-    "executionTimeMs": 18,
-    "status": "Accepted"
+    "executionTimeMs": 0,
+    "status": "Pending",
+    "testResults": [
+      {
+        "input": "...",
+        "expectedOutput": "...",
+        "actualOutput": "",
+        "passed": false
+      }
+    ]
   }
 }
 ```
 
----
+## AI Module
 
-## Concept Tag Endpoints
+### POST /ai/hints
+
+Student-only active hint endpoint implemented by `AiController`.
+
+Request body:
+
+```json
+{
+  "problemId": "uuid",
+  "studentCode": "def solution():\n    ...",
+  "hintLevel": 1,
+  "previousHints": ["Try thinking about lookups."],
+  "attemptCount": 2,
+  "lastSubmissionStatus": "WrongAnswer"
+}
+```
+
+Validation:
+
+- `problemId` required
+- `studentCode` required
+- `hintLevel` must be between 1 and 3
+
+Success response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "hintText": "Think about which data structure gives you constant-time lookups.",
+    "hintLevel": 1,
+    "followUpQuestion": "What would you store as the key and value?",
+    "hasMoreHints": true
+  }
+}
+```
+
+Notes:
+
+- Rate limit: 10 requests per hour per user.
+- The current runtime path does not persist hint logs yet.
+
+### POST /api/ai/hints
+
+`HintsController` also declares this route, but it currently returns `501 Not Implemented` and conflicts with the active endpoint above. Treat it as a placeholder until the duplicate controller is removed.
+
+### GET /api/ai/hints/history
+
+Declared in `HintsController` and currently returns `501 Not Implemented`.
+
+## Tags Module
 
 ### GET /tags
-List all concept tags.
 
-**Access:** Authenticated  
-**Response 200:** Array of `{ id, name, description }`
+Returns all non-deleted concept tags.
 
----
+### GET /tags/{id}
+
+Returns a single concept tag.
+
+### POST /tags
+
+Instructor-only endpoint that creates a concept tag.
+
+Request body:
+
+```json
+{
+  "name": "Dynamic Programming",
+  "description": "Breaks a problem into overlapping subproblems."
+}
+```
+
+### PUT /tags/{id}
+
+Instructor-only endpoint that updates a concept tag.
+
+### DELETE /tags/{id}
+
+Instructor-only soft delete.
+
+### GET /tags/problems/{problemId}
+
+Returns all tags applied to a problem.
+
+### POST /tags/problems/{problemId}/{conceptTagId}
+
+Instructor-only endpoint that adds a tag to a problem.
+
+### DELETE /tags/problems/{problemId}/{conceptTagId}
+
+Instructor-only endpoint that removes a tag from a problem.
 
 ## Rate Limits
 
 | Endpoint | Limit |
-|----------|-------|
-| POST /ai/hints | 10/hour per user |
+|---|---|
 | POST /submissions | 30/hour per user |
 | POST /execution/run | 60/hour per user |
+| POST /ai/hints | 10/hour per user |

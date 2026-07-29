@@ -4,6 +4,7 @@ using Codify.Application.DTOs.Submissions;
 using Codify.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Codify.API.Controllers;
 
@@ -14,9 +15,11 @@ public class SubmissionsController(ISubmissionService submissionService) : Contr
 {
     /// <summary>
     /// Submit code for a problem. Returns 202 Accepted with the pending submission.
+    /// Rate limited: 30 requests per hour per user.
     /// </summary>
     [HttpPost]
     [Authorize(Roles = "Student")]
+    [EnableRateLimiting("submissions")]
     public async Task<IActionResult> Create([FromBody] CreateSubmissionRequest request)
     {
         var userId = User.GetUserId();
