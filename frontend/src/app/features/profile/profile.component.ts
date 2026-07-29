@@ -3,6 +3,10 @@ import {
   OnInit,
   OnDestroy,
   inject,
+  signal,
+  ElementRef,
+  ChangeDetectorRef,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, ActivatedRoute } from '@angular/router';
@@ -25,32 +29,65 @@ function toSlug(name: string): string {
   return name.trim().toLowerCase().replace(/\s+/g, '_');
 }
 
+/** Eases a 0→1 progress value with cubic ease-out */
+function easeOut(t: number): number {
+  return 1 - Math.pow(1 - t, 3);
+}
+
 @Component({
   selector: 'app-profile',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, RouterLink, ActivityHeatmapComponent, SolvedRingComponent],
   templateUrl: './profile.component.html',
   styleUrl:    './profile.component.scss',
+  host: {
+    // reduced-motion class applied to the host element — one CSS selector
+    // disables every animation on the page without piecemeal checks
+    '[class.no-anim]': 'reducedMotion',
+  },
 })
 export class ProfileComponent implements OnInit, OnDestroy {
   private readonly analyticsService = inject(AnalyticsService);
   private readonly authService      = inject(AuthService);
   private readonly route            = inject(ActivatedRoute);
+  private readonly el               = inject(ElementRef);
+  private readonly cdr              = inject(ChangeDetectorRef);
 
   profile: PublicProfileData | null = null;
   isLoading = false;
   error: string | null = null;
 
+  // ── Reduced motion — checked once, affects everything ────────────────────────
+  // One check, one flag. CSS `.no-anim` on the host bypasses all animations.
+  reducedMotion = false;
+
   // ── Year filter ───────────────────────────────────────────────────────────────
-  /** null = "All years" */
   selectedYear: number | null = null;
   availableYears: number[] = [];
 
+  // ── Animated (counted-up) display values ─────────────────────────────────────
+  // These are what the template renders. They count from 0 to the real value
+  // when the stats card enters the viewport.
+  displaySolved     = signal(0);
+  displayStreak     = signal(0);
+  displayActiveDays = signal(0);
+
+  // ── Animation state ───────────────────────────────────────────────────────────
+  // True once the countup has fired — so re-scrolling doesn't retrigger
+  private countsAnimated = false;
+  private intersectionObs: IntersectionObserver | null = null;
+  private animTimers: ReturnType<typeof setTimeout>[] = [];
+
   private readonly destroy$ = new Subject<void>();
 
-  // ── Lifecycle ────────────────────────────────────────────────────────────────
+  // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
   ngOnInit(): void {
+    // Single reduced-motion check — everything else reads this.reducedMotion
+    this.reducedMotion =
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
     const username = this.route.snapshot.paramMap.get('username') ?? '';
     this.load(username);
   }
@@ -58,6 +95,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+    this.intersectionObs?.disconnect();
+    this.animTimers.forEach(t => clearTimeout(t));
   }
 
   load(username: string): void {
@@ -71,18 +110,84 @@ export class ProfileComponent implements OnInit, OnDestroy {
         next: p => {
           this.profile        = p;
           this.availableYears = this.computeAvailableYears(p.activityGrid);
-          // Default to current calendar year
+
           const currentYear = new Date().getFullYear();
           this.selectedYear = this.availableYears.includes(currentYear)
             ? currentYear
             : (this.availableYears[this.availableYears.length - 1] ?? null);
+
+          this.cdr.markForCheck();
+
+          // Wire up countup after Angular has rendered the stats card
+          this.animTimers.push(setTimeout(() => this.setupCountup(p), 0));
         },
-        error: () => { this.error = 'Could not load profile.'; },
+        error: () => {
+          this.error = 'Could not load profile.';
+          this.cdr.markForCheck();
+        },
       });
   }
 
   selectYear(year: number | null): void {
     this.selectedYear = year;
+  }
+
+  // ── Countup ───────────────────────────────────────────────────────────────────
+  // Fires when the stats card enters the viewport. Uses IntersectionObserver
+  // so numbers count from 0 only when visible — not on page load.
+
+  private setupCountup(p: PublicProfileData): void {
+    if (this.reducedMotion) {
+      // Skip animation — jump straight to final values
+      this.displaySolved.set(p.totalSolved);
+      this.displayStreak.set(p.streak.currentStreak);
+      this.displayActiveDays.set(p.streak.totalActiveDays);
+      return;
+    }
+
+    const statsCard = (this.el.nativeElement as HTMLElement)
+      .querySelector('.stats-card');
+    if (!statsCard) return;
+
+    this.intersectionObs = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0].isIntersecting || this.countsAnimated) return;
+        this.countsAnimated = true;
+        this.intersectionObs?.disconnect();
+
+        this.animateCount(0, p.totalSolved,           1000, v => this.displaySolved.set(v));
+        this.animateCount(0, p.streak.currentStreak,  1000, v => this.displayStreak.set(v));
+        this.animateCount(0, p.streak.totalActiveDays,1000, v => this.displayActiveDays.set(v));
+      },
+      { threshold: 0.3 },
+    );
+    this.intersectionObs.observe(statsCard);
+  }
+
+  /**
+   * Counts an integer from `from` to `to` over `duration` ms using
+   * cubic ease-out. Calls `setter` on each frame. Safe on reduced-motion
+   * (caller already skips this).
+   */
+  private animateCount(
+    from: number,
+    to: number,
+    duration: number,
+    setter: (v: number) => void,
+  ): void {
+    if (to === from) { setter(to); return; }
+
+    const start = performance.now();
+
+    const tick = (now: number) => {
+      const elapsed  = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      setter(Math.round(from + (to - from) * easeOut(progress)));
+      this.cdr.markForCheck();
+      if (progress < 1) requestAnimationFrame(tick);
+    };
+
+    requestAnimationFrame(tick);
   }
 
   // ── Year filter helpers ───────────────────────────────────────────────────────
@@ -229,4 +334,12 @@ export class ProfileComponent implements OnInit, OnDestroy {
   trackByTopic(_i: number, t: TopicPerformance): string {
     return t.topicId;
   }
+
+  /** Per-row animation delay for submission list stagger */
+  subRowDelay(index: number): string {
+    return `${index * 35}ms`;
+  }
+
+  /** 53 weeks × 7 days skeleton cells for the heatmap loading state */
+  readonly skCells = Array(53 * 7);
 }

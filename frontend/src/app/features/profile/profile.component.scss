@@ -26,6 +26,53 @@
   }
 }
 
+// ── Custom scrollbar — thin, project-branded ──────────────────────────────────
+// Applied page-wide. The heatmap's horizontal scroll inherits this too.
+
+.profile-page,
+.heatmap-scroll {
+  // Firefox
+  scrollbar-width: thin;
+  scrollbar-color: rgba(26, 43, 74, 0.2) transparent;
+
+  // Chrome / Safari / Edge
+  &::-webkit-scrollbar        { width: 4px; height: 4px; }
+  &::-webkit-scrollbar-track  { background: transparent; }
+  &::-webkit-scrollbar-thumb  {
+    background: rgba(26, 43, 74, 0.2);
+    border-radius: 4px;
+    &:hover { background: rgba(26, 43, 74, 0.35); }
+  }
+}
+
+// ── Text selection — intentional, not accidental ──────────────────────────────
+// Selectable: names, numbers, problem titles — things the user may want to copy.
+// Non-selectable: decorative chrome, ring, heatmap cells, badges, timestamps.
+
+.sidebar-name,
+.sidebar-username,
+.streak-block__num,
+.streak-block__unit,
+.stats-fact__val,
+.bio-card__headline,
+.bio-card__bio {
+  user-select: text;
+}
+
+.avatar-circle,
+.sidebar-role,
+.streak-block__fire,
+.streak-block__lbl,
+.stats-fact__lbl,
+.stats-card__short-sep,
+.topic-badge,
+.sidebar-section__title,
+.diff-bar-row__label,
+.diff-bar-row__track,
+.lang-item__track {
+  user-select: none;
+}
+
 // ── Two-column layout ─────────────────────────────────────────────────────────
 
 .profile-layout {
@@ -47,32 +94,276 @@
   }
 }
 
+// ── Entrance animations ───────────────────────────────────────────────────────
+//
+// Principle: animate in the order a human eye encounters the content.
+// Left column (sidebar) first, then right column, then content within each.
+// Fast enough not to be noticed. Slow enough to be felt.
+//
+// .no-anim on the host element (set when prefers-reduced-motion: reduce)
+// kills every animation/transition in one selector — no piecemeal checks.
+
+// Avatar: scale + opacity. The spring easing (0.34, 1.56, 0.64, 1) produces
+// a tiny overshoot — the avatar "pops" into place rather than just fading.
+@keyframes avatarIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1);    }
+}
+
+// Name/slug/meta: opacity only — no scale, just presence arriving
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+// Stats card + sections: rise up 8px while fading in
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+// Submission row: 6px rise — barely perceptible movement, just enough
+// to not feel like a snap
+@keyframes subRowIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+// ── Avatar entrance ───────────────────────────────────────────────────────────
+.avatar-circle {
+  animation: avatarGlow 3s ease-in-out infinite,
+             avatarIn 300ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+// ── Sidebar identity: name + username stagger in 80ms after avatar ────────────
+.sidebar-name,
+.sidebar-username {
+  animation: fadeIn 200ms ease-out both;
+  animation-delay: 80ms;
+}
+
+// ── Role badge, meta rows — stagger 50ms each after name ─────────────────────
+.sidebar-role {
+  animation: fadeIn 200ms ease-out both;
+  animation-delay: 130ms;
+}
+
+.sidebar-meta {
+  animation: fadeIn 200ms ease-out both;
+  animation-delay: 180ms;
+}
+
+// ── Sidebar sections — 230ms base, each section 50ms later ───────────────────
+.sidebar-section:nth-of-type(1) {
+  animation: fadeIn 200ms ease-out 230ms both;
+}
+.sidebar-section:nth-of-type(2) {
+  animation: fadeIn 200ms ease-out 280ms both;
+}
+.sidebar-section:nth-of-type(3) {
+  animation: fadeIn 200ms ease-out 330ms both;
+}
+
+// ── Edit profile button — after the last meta item ────────────────────────────
+.edit-profile-btn {
+  animation: fadeIn 200ms ease-out 180ms both;
+}
+
+// ── Difficulty bars — fill animates after a 200ms delay from section entry ───
+// The fill already has its barGrow animation. We add the delay here at the
+// component level so it fires after the sidebar section fades in.
+.diff-bar-row__fill {
+  &--easy   { animation-delay: 200ms;  }
+  &--medium { animation-delay: 280ms;  }
+  &--hard   { animation-delay: 360ms;  }
+}
+
+// Language bar fills — same 200ms base + 80ms stagger
+.lang-item__fill {
+  // index-based delays set inline in the template via [style.animation-delay]
+  // but minimum 200ms so they fire after section fade-in
+}
+
+// ── Main column: stats card rises in 100ms after sidebar starts ───────────────
+.stats-card {
+  animation: riseIn 350ms ease-out 100ms both;
+}
+
+// ── Heatmap section ───────────────────────────────────────────────────────────
+.heatmap-section {
+  animation: riseIn 350ms ease-out 200ms both;
+}
+
+// ── Recent section ────────────────────────────────────────────────────────────
+.recent-section {
+  animation: riseIn 350ms ease-out 250ms both;
+}
+
+// ── Submission rows — translateY(6px→0) + opacity, 35ms stagger ──────────────
+// Delay is set per-row in the template via [style.animation-delay]
+.recent-row {
+  animation: subRowIn 280ms ease-out both;
+}
+
+// ── Bio card ──────────────────────────────────────────────────────────────────
+.bio-card {
+  animation: riseIn 350ms ease-out 80ms both;
+}
+
+// ── No-motion override — one selector, all animations off ────────────────────
+// Applied to the host element via [class.no-anim]='reducedMotion'.
+// Uses * to catch all descendants — no element-level checks needed.
+:host(.no-anim) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
 // ── Skeleton ──────────────────────────────────────────────────────────────────
+// Shape-accurate: every skeleton matches the exact geometry of what it stands in for.
+// Avatar = circle. Ring = circle outline. Heatmap = grid of 11×11 cells.
 
 @keyframes shimmer {
   0%   { background-position: -600px 0; }
   100% { background-position:  600px 0; }
 }
 
-%sk {
+%sk-base {
   background: linear-gradient(90deg, $ivory2 25%, #ede9e0 50%, $ivory2 75%);
   background-size: 600px 100%;
   animation: shimmer 1.5s infinite;
-  border-radius: $r;
 }
 
 .sk {
-  @extend %sk;
+  @extend %sk-base;
   display: block;
-  &--avatar      { width: 88px; height: 88px; border-radius: 50%; margin-bottom: 12px; }
-  &--line        { height: 14px; border-radius: 4px; }
-  &--name        { width: 140px; margin-bottom: 8px; }
-  &--sub         { width: 100px; }
-  &--block       { height: 100px; border-radius: $r-lg; margin-top: 16px; }
-  &--bio         { height: 52px; border-radius: $r-lg; margin-bottom: 16px; }
-  &--stats-card  { height: 140px; border-radius: $r-lg; margin-bottom: 20px; }
-  &--heatmap     { height: 140px; border-radius: $r-lg; margin-bottom: 20px; }
-  &--table       { height: 220px; border-radius: $r-lg; }
+
+  // Circle — avatar
+  &--avatar {
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    margin-bottom: 12px;
+  }
+
+  // Generic text lines
+  &--line {
+    height: 12px;
+    border-radius: 4px;
+  }
+
+  // Section label line — short, narrow
+  &--label {
+    width: 80px;
+    height: 10px;
+    opacity: 0.7;
+  }
+
+  // Pill — role badge shape
+  &--pill {
+    width: 64px;
+    height: 20px;
+    border-radius: 20px;
+  }
+
+  // Bar — difficulty / language bar row
+  &--bar {
+    height: 12px;
+    border-radius: 4px;
+  }
+
+  // Card placeholder — bio card, generic white-card areas
+  &--card {
+    border-radius: $r-lg;
+  }
+
+  // Numeric hero — the streak number slot
+  &--num {
+    width: 80px;
+    height: 48px;
+    border-radius: 6px;
+  }
+
+  // Ring — circular outline matching the SVG ring size (154px)
+  // Uses border instead of background to mimic an arc outline
+  &--ring {
+    width: 154px;
+    height: 154px;
+    border-radius: 50%;
+    background: none !important;
+    animation: none !important;
+    border: 11px solid $ivory2;
+    flex-shrink: 0;
+    position: relative;
+
+    // Shimmer overlay as a pseudo-element
+    &::after {
+      content: '';
+      position: absolute;
+      inset: -11px;
+      border-radius: 50%;
+      border: 11px solid transparent;
+      background: linear-gradient(90deg, transparent 25%, #ede9e0 50%, transparent 75%);
+      background-size: 600px 100%;
+      animation: shimmer 1.5s infinite;
+      mask: radial-gradient(farthest-side, transparent calc(100% - 11px), black calc(100% - 11px));
+      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 11px), black calc(100% - 11px));
+    }
+  }
+
+  // Heatmap cell — 11×11 with 3px gap, matches real cells exactly
+  &--cell {
+    width: 11px;
+    height: 11px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  // Submission row skeleton
+  &--sub-row {
+    height: 38px;
+    border-radius: $r;
+    margin-bottom: 1px;
+  }
+}
+
+// Stats card skeleton wrapper — ring left, streak text right
+.sk--stats-card-wrap {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 20px 24px;
+  background: $white;
+  border: 1px solid $border;
+  border-radius: $r-lg;
+  margin-bottom: 32px;
+}
+
+.sk--stats-right {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+// Heatmap skeleton wrapper — grid of cells, same visual footprint as the real heatmap
+.sk--heatmap-wrap {
+  padding-bottom: 32px;
+  border-bottom: 1px solid rgba(26, 43, 74, 0.07);
+  margin-bottom: 32px;
+  overflow: hidden;
+}
+
+.sk--heatmap-row {
+  display: grid;
+  // 53 columns × 7 rows, column-first fill — same as the real grid
+  grid-template-columns: repeat(53, 11px);
+  grid-template-rows: repeat(7, 11px);
+  grid-auto-flow: column;
+  gap: 3px;
+  width: fit-content;
 }
 
 // ── Error ─────────────────────────────────────────────────────────────────────
@@ -94,6 +385,14 @@
 // LEFT SIDEBAR
 // ═════════════════════════════════════════════════════════════════════════════
 
+// Spacing rhythm — three values, used consistently throughout the sidebar:
+//   tight  (8px)  — between a label and what it labels
+//   medium (16px) — between related items within a group
+//   wide   (32px) — between distinct sections (no visual dividers needed)
+$sp-tight:  8px;
+$sp-medium: 16px;
+$sp-wide:   32px;
+
 .profile-sidebar {
   position: sticky;
   top: 80px;
@@ -111,7 +410,8 @@
 }
 
 .avatar-wrap {
-  margin-bottom: 16px;
+  // medium gap — avatar and name are related but visually distinct
+  margin-bottom: $sp-medium;
 }
 
 .avatar-circle {
@@ -121,21 +421,22 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  // Display role: the initials are the identity mark, not a placeholder
   font-family: $ff-body;
   font-size: 32px;
   font-weight: 800;
   color: $white;
   outline: 2.5px solid $blue;
   outline-offset: 3px;
-  animation: avatarGlow 3s ease-in-out infinite;
   letter-spacing: -0.01em;
+  // animation declared in the entrance-animations section above
+  // (avatarGlow 3s + avatarIn 300ms spring easing)
 }
 
 // ── Identity ──────────────────────────────────────────────────────────────────
 
 .sidebar-identity {
-  margin-bottom: 20px;
+  // wide gap — identity block and meta facts are distinct sections
+  margin-bottom: $sp-wide;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -178,27 +479,32 @@
 }
 
 // ── Edit profile button ───────────────────────────────────────────────────────
+// Tertiary action — visible, not demanding. Full sidebar width.
+// Outlined, accent-color fill at low opacity on hover.
 
 .edit-profile-btn {
-  margin-top: 10px;
-  display: inline-flex;
+  margin-top: $sp-medium;
+  display: flex;
   align-items: center;
-  height: 28px;
+  justify-content: center;
+  width: 100%;             // full sidebar width — tertiary but present
+  height: 32px;
   padding: 0 12px;
-  border-radius: 20px;
-  border: 1.5px solid rgba(26, 43, 74, 0.18);
+  border-radius: $r;
+  border: 1.5px solid rgba(26, 43, 74, 0.15);
   background: transparent;
   font-family: $ff-body;
   font-size: 12px;
   font-weight: 600;
-  color: $charcoal;
+  color: $muted;
   cursor: pointer;
-  transition: background 0.13s, border-color 0.13s, color 0.13s;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
 
   &:hover {
-    background: rgba(26, 43, 74, 0.05);
-    border-color: rgba(26, 43, 74, 0.30);
-    color: $navy;
+    // Accent color at low opacity — accent presence without weight
+    background: rgba($blue, 0.07);
+    border-color: rgba($blue, 0.35);
+    color: $blue;
   }
 
   &:focus-visible {
@@ -208,13 +514,13 @@
 }
 
 // ── Meta (streak + joined) ────────────────────────────────────────────────────
-// Muted role: these are supplementary facts, not features
 
 .sidebar-meta {
   display: flex;
   flex-direction: column;
   gap: 5px;
-  margin-bottom: 24px;
+  // wide gap before the first content section
+  margin-bottom: $sp-wide;
 
   &__row {
     display: flex;
@@ -227,16 +533,21 @@
   }
 }
 
-// ── Sidebar section headers ────────────────────────────────────────────────────
+// ── Sidebar section dividers and headers ──────────────────────────────────────
 
+// Replace hard dividers with wide whitespace rhythm.
+// The sidebar-divider HR is kept in HTML for accessibility/semantics
+// but rendered invisible — the wide margin on sections does the work.
 .sidebar-divider {
   border: none;
-  border-top: 1px solid rgba(26, 43, 74, 0.07);
-  margin: 20px 0;
+  margin: 0;   // zero — wide margin on .sidebar-section handles the gap
 }
 
 .sidebar-section {
-  // Label role: section titles are axis labels, not headings
+  // wide gap above each section — the gap IS the divider
+  margin-top: $sp-wide;
+
+  // Label role: tight gap between title and its content
   &__title {
     font-size: 10px;
     font-weight: 700;
@@ -244,16 +555,18 @@
     letter-spacing: 0.1em;
     color: $muted;
     font-family: $ff-body;
-    margin: 0 0 12px;
+    margin: 0 0 $sp-tight;
     opacity: 0.75;
   }
 }
 
 // ── Bar grow animation ────────────────────────────────────────────────────────
+// The fill is absolutely positioned with translateY(-50%) for vertical centering.
+// The grow animation must combine both transforms to avoid overriding translateY.
 
 @keyframes barGrow {
-  from { transform: scaleX(0); }
-  to   { transform: scaleX(1); }
+  from { transform: translateY(-50%) scaleX(0); }
+  to   { transform: translateY(-50%) scaleX(1); }
 }
 
 // ── Difficulty bars ───────────────────────────────────────────────────────────
@@ -261,7 +574,8 @@
 .diff-bars {
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  // medium gap — bars are related items within a group
+  gap: $sp-medium;
 }
 
 .diff-bar-row {
@@ -283,16 +597,29 @@
     &--hard   { color: $red;  }
   }
 
+  // Track: 4px, the groove the fill rides in.
+  // overflow: visible so the 6px fill can bleed above/below.
   &__track {
-    height: 5px;
+    position: relative;
+    height: 4px;
     background: $ivory2;
-    border-radius: 20px;
-    overflow: hidden;
+    border-radius: 2px;
+    // overflow must NOT be hidden — fill is taller than track
+    overflow: visible;
   }
 
+  // Fill: 6px — 2px taller than the track, centered vertically.
+  // Left edge: square (starts at container edge).
+  // Right edge: rounded (3px).
+  // This makes the fill feel like it sits on top of the track, not inside it.
   &__fill {
-    height: 100%;
-    border-radius: 20px;
+    position: absolute;
+    top: 50%;
+    left: 0;
+    height: 6px;
+    transform: translateY(-50%);
+    // Square left, rounded right
+    border-radius: 0 3px 3px 0;
     transform-origin: left center;
     animation: barGrow 600ms ease-out both;
 
@@ -301,7 +628,7 @@
     &--hard   { background: $red;  }
   }
 
-  // Body role: the solved count is the important number
+  // Body role: solved count
   &__solved {
     font-family: $ff-body;
     font-size: 12px;
@@ -312,7 +639,7 @@
     &--hard   { color: $red;  }
   }
 
-  // Muted role: the total recedes
+  // Muted role: total recedes
   &__total {
     font-family: $ff-mono;
     font-size: 10px;
@@ -323,6 +650,8 @@
 }
 
 // ── Languages ─────────────────────────────────────────────────────────────────
+// Same bar construction as difficulty bars: 4px track, 6px fill, left-square right-rounded.
+// Proportion is relative to the highest language count, not a total.
 
 .lang-list {
   list-style: none;
@@ -330,13 +659,15 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  // medium gap — related items within the language group
+  gap: $sp-medium;
 }
 
 .lang-item {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  // tight gap — label row and bar are one unit
+  gap: $sp-tight;
 
   &__header {
     display: flex;
@@ -360,16 +691,22 @@
     opacity: 0.7;
   }
 
+  // Same track construction as diff bars
   &__track {
+    position: relative;
     height: 4px;
     background: $ivory2;
-    border-radius: 20px;
-    overflow: hidden;
+    border-radius: 2px;
+    overflow: visible;
   }
 
   &__fill {
-    height: 100%;
-    border-radius: 20px;
+    position: absolute;
+    top: 50%;
+    left: 0;
+    height: 6px;
+    transform: translateY(-50%);
+    border-radius: 0 3px 3px 0;
     background: $blue;
     transform-origin: left center;
     animation: barGrow 600ms ease-out both;
@@ -381,13 +718,15 @@
 .topic-groups {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  // medium gap — strong/average groups are related
+  gap: $sp-medium;
 }
 
 .topic-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  // tight gap — label and its pills are one unit
+  gap: $sp-tight;
 
   // Label role
   &__label {
@@ -397,8 +736,8 @@
     letter-spacing: 0.09em;
     font-family: $ff-body;
 
-    &--strong { color: $teal;      }
-    &--weak   { color: $red;       }
+    &--strong { color: $teal; }
+    &--weak   { color: $red;  }
   }
 
   &__pills {
@@ -518,7 +857,7 @@
   }
 }
 
-// ── ② Stats card ─────────────────────────────────────────────────────────────
+// ── Stats card ─────────────────────────────────────────────────────────────
 
 .stats-card {
   display: flex;
@@ -561,53 +900,45 @@
     min-width: 0;
   }
 
-  &__inner-sep {
-    border: none;
-    border-top: 1px solid $border;
-    margin: 0;
+  // Short centered divider — 40% width, very faint.
+  // Full-width feels like a table cell. Short feels designed.
+  &__short-sep {
+    width: 40%;
+    height: 1px;
+    background: $border;
+    margin: 0 auto;
+    opacity: 0.6;
+
+    @media (max-width: $mobile) {
+      margin: 0;
+    }
   }
 }
 
-// ── Stats meta items — the hero numbers ──────────────────────────────────────
+// ── Streak block ──────────────────────────────────────────────────────────────
 
-.stats-meta-item {
+.streak-block {
   display: flex;
   flex-direction: column;
   gap: 2px;
 
-  // Display role: this is the number that must dominate
-  &__val {
-    font-family: $ff-body;
-    font-size: clamp(40px, 5vw, 64px);
-    font-weight: 800;
-    color: $navy;
-    line-height: 1;
-    letter-spacing: -0.03em;
-    display: flex;
-    align-items: baseline;
-    gap: 5px;
+  // Fire icon — visual anchor. Not inline emoji. An icon with space.
+  &__fire {
+    width: 36px;
+    height: 36px;
+    margin-bottom: 4px;
+    flex-shrink: 0;
+
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      // Subtle warm drop shadow to make it glow slightly
+      filter: drop-shadow(0 2px 6px rgba(255, 107, 0, 0.35));
+    }
   }
 
-  // The emoji in the streak number — keep it aligned but don't disturb the weight
-  &__val-emoji {
-    font-size: 0.55em;
-    line-height: 1;
-    display: inline-block;
-    transform: translateY(-0.05em);
-  }
-
-  // Muted role: "days" is a unit label, not the focus
-  &__unit {
-    font-size: 0.32em;
-    font-family: $ff-body;
-    font-weight: 500;
-    color: $navy2;
-    letter-spacing: 0.01em;
-    align-self: flex-end;
-    padding-bottom: 0.12em;
-  }
-
-  // Label role: the label orients, the number commands
+  // Label role: above the number, orients first
   &__lbl {
     font-size: 10px;
     font-family: $ff-body;
@@ -618,41 +949,87 @@
     opacity: 0.75;
   }
 
-  // Muted role
-  &__sub {
+  // Number row: the number and unit on the same baseline
+  &__num-row {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    line-height: 1;
+  }
+
+  // Display role: the trophy. The thing they earned.
+  &__num {
+    font-family: $ff-body;
+    font-size: clamp(40px, 5vw, 58px);
+    font-weight: 800;
+    color: $navy;
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+
+  // Muted role: "days" is the unit, not the achievement
+  &__unit {
+    font-family: $ff-body;
+    font-size: 14px;
+    font-weight: 500;
+    color: $navy2;
+    letter-spacing: 0.01em;
+    padding-bottom: 3px;   // optical baseline alignment with the large number
+  }
+
+  // Ghost lap — the personal record, quieter than the current streak
+  &__record {
     font-size: 12px;
     font-family: $ff-body;
     font-weight: 400;
     color: $muted;
+    opacity: 0.75;
     margin-top: 3px;
 
+    // Personal best moment — accent color, slight weight bump
     &--best {
       color: $gold-dark;
       font-weight: 600;
+      opacity: 1;
     }
   }
 }
 
-// ── Joined / active-days row in stats card ────────────────────────────────────
-// These are Label role items — they orient, not command
+// ── Secondary facts: Joined / Active days ────────────────────────────────────
+// Footnote treatment: tiny all-caps label above a medium-weight value.
+// They belong together — tight gap, stacked.
 
-.stats-meta-joined {
+.stats-facts {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  gap: 20px;
+  flex-wrap: wrap;
 }
 
-.stats-meta-joined__item {
-  font-size: 11px;
-  font-family: $ff-body;
-  font-weight: 700;
-  color: $muted;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  opacity: 0.75;
+.stats-fact {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  gap: 1px;
+
+  // Label role: tiny, all-caps, tracked — reads as a field label
+  &__lbl {
+    font-size: 9px;
+    font-family: $ff-body;
+    font-weight: 700;
+    color: $muted;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    opacity: 0.65;
+  }
+
+  // Body role: the value is the content — medium weight, readable
+  &__val {
+    font-family: $ff-body;
+    font-size: 15px;
+    font-weight: 600;
+    color: $navy;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+  }
 }
 
 // ── ③ Heatmap section ────────────────────────────────────────────────────────
@@ -780,6 +1157,7 @@
   border-radius: $r;
   text-decoration: none;
   color: inherit;
+  cursor: pointer;   // every clickable row signals interactivity
   transition: background 120ms ease;
 
   & + & {
@@ -806,6 +1184,8 @@
     text-overflow: ellipsis;
     min-width: 0;
     line-height: 1.4;
+    // Selectable — users may want to copy a problem name
+    user-select: text;
   }
 
   &__badge {
@@ -819,6 +1199,7 @@
     font-weight: 600;
     white-space: nowrap;
     flex-shrink: 0;
+    user-select: none;  // decorative
 
     &--easy   { background: $teal-lt;  color: $teal;      }
     &--medium { background: $gold-lt;  color: $gold-dark; }
@@ -843,6 +1224,32 @@
     flex-shrink: 0;
     text-align: right;
     min-width: 52px;
+    user-select: none;  // decorative
+  }
+}
+
+// ── Empty state — recent submissions ─────────────────────────────────────────
+// Not an error. A starting state. Quiet, encouraging, not boxed.
+
+.recent-empty {
+  padding: 24px 10px;
+  text-align: center;
+  font-family: $ff-body;
+  font-size: 13px;
+  color: $muted;
+  line-height: 1.5;
+
+  a {
+    color: $blue;
+    text-decoration: none;
+    font-weight: 500;
+
+    &:hover { text-decoration: underline; }
+    &:focus-visible {
+      outline: 2px solid $blue;
+      outline-offset: 2px;
+      border-radius: 2px;
+    }
   }
 }
 

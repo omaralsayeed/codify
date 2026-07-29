@@ -2,35 +2,33 @@ import {
   Component,
   Input,
   OnChanges,
+  OnDestroy,
   SimpleChanges,
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  inject,
   signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivityDay } from '../../core/models/analytics.model';
 
-// ── Cell size constants — kept in sync with the CSS vars set by the parent ────
 const CELL_PX = 11;
-const GAP_PX  = 2;
+const GAP_PX  = 3;   // exactly 3px — intentional separation, not default
 
 interface HeatCell {
-  date:    string;
-  count:   number;
-  level:   0 | 1 | 2 | 3 | 4;
-  /** Full human-readable label used for aria-label and tooltip text */
-  label:   string;
-  /** Column index (0-based) in the padded grid — used for tooltip x */
-  col:     number;
-  /** Row index (0-based) — used for tooltip y */
-  row:     number;
+  date:  string;
+  count: number;
+  level: 0 | 1 | 2 | 3 | 4;
+  label: string;  // tooltip + aria-label text
+  col:   number;  // 0-based week column
+  row:   number;  // 0-based day-of-week (0 = Sun)
 }
 
 interface Tooltip {
   text:  string;
-  /** px from left edge of the grid scroll area */
-  x:     number;
-  /** px from top of the grid area */
-  y:     number;
+  x:     number;   // px from left of grid-wrap
+  y:     number;   // px from top of grid-wrap
+  below: boolean;  // true for top 2 rows — arrow points up
 }
 
 @Component({
@@ -39,63 +37,60 @@ interface Tooltip {
   imports: [CommonModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <!-- Outer scroll wrapper — overflows on mobile -->
-    <div class="heatmap-scroll" #scrollWrap>
-
-      <!-- Fixed-width inner that never reflows -->
+    <div class="heatmap-scroll">
       <div class="heatmap-inner"
-           [style.--heatmap-cols]="totalCols">
+           [style.--heatmap-cols]="totalCols"
+           [class.heatmap-inner--fade]="fading()">
 
-        <!-- Month labels row -->
+        <!-- Month labels: absolutely positioned, floating above columns -->
         <div class="heatmap-months" aria-hidden="true">
-          <!-- 28px left gutter for day labels -->
           <div class="heatmap-months__gutter"></div>
-          <div class="heatmap-months__labels">
-            @for (m of monthLabels; track m.label + m.weekCol) {
-              <span
-                class="heatmap-month"
-                [style.grid-column]="m.weekCol">{{ m.label }}</span>
+          <div class="heatmap-months__track" [style.width.px]="trackWidth">
+            @for (m of monthLabels; track m.label + m.offsetPx) {
+              <span class="heatmap-month" [style.left.px]="m.offsetPx">{{ m.label }}</span>
             }
           </div>
         </div>
 
-        <!-- Body row: day labels + grid + tooltip host -->
+        <!-- Body: day labels + grid -->
         <div class="heatmap-body">
 
-          <!-- Day-of-week labels (Mon/Wed/Fri only) -->
-          <div class="heatmap-days" aria-hidden="true">
-            <span></span>          <!-- Sun -->
-            <span>Mon</span>
-            <span></span>          <!-- Tue -->
-            <span>Wed</span>
-            <span></span>          <!-- Thu -->
-            <span>Fri</span>
-            <span></span>          <!-- Sat -->
+          <!-- Mon / Wed / Fri labels only -->
+          <div class="heatmap-days" aria-hidden="true"
+               [style.--cell]="CELL_PX + 'px'"
+               [style.--gap]="GAP_PX + 'px'">
+            <span class="heatmap-day"></span>        <!-- Sun -->
+            <span class="heatmap-day">Mon</span>
+            <span class="heatmap-day"></span>        <!-- Tue -->
+            <span class="heatmap-day">Wed</span>
+            <span class="heatmap-day"></span>        <!-- Thu -->
+            <span class="heatmap-day">Fri</span>
+            <span class="heatmap-day"></span>        <!-- Sat -->
           </div>
 
-          <!-- Grid + tooltip in a positioned container -->
-          <div class="heatmap-grid-wrap"
-               (mouseleave)="hideTooltip()">
+          <!-- Grid + tooltip host -->
+          <div class="heatmap-grid-wrap" (mouseleave)="hideTooltip()">
 
-            <!-- Cell grid -->
             <div class="heatmap-grid"
                  role="grid"
-                 [attr.aria-label]="'Activity heatmap, ' + totalActive + ' active days in the past year'">
+                 [attr.aria-label]="'Activity heatmap, ' + totalActive + ' active days'"
+                 [style.--cell]="CELL_PX + 'px'"
+                 [style.--gap]="GAP_PX + 'px'">
               @for (cell of cells; track cell.date || ($index + '__pad')) {
                 <span
-                  class="heatmap-cell"
-                  [class]="'heatmap-cell heatmap-cell--' + cell.level + (hoveredCell === cell ? ' heatmap-cell--active' : '')"
+                  [class]="'heatmap-cell heatmap-cell--' + cell.level + (hoveredCell === cell ? ' heatmap-cell--hover' : '')"
                   role="gridcell"
                   [attr.aria-label]="cell.label || null"
+                  [style.animation-delay]="colDelay(cell.col)"
                   (mouseenter)="showTooltip(cell)"
                   (mouseleave)="hideTooltip()">
                 </span>
               }
             </div>
 
-            <!-- Tooltip -->
             @if (tooltip()) {
               <div class="heatmap-tooltip"
+                   [class.heatmap-tooltip--below]="tooltip()!.below"
                    role="tooltip"
                    [style.left.px]="tooltip()!.x"
                    [style.top.px]="tooltip()!.y">
@@ -103,162 +98,215 @@ interface Tooltip {
               </div>
             }
 
-          </div><!-- /heatmap-grid-wrap -->
-        </div><!-- /heatmap-body -->
+          </div>
+        </div>
 
         <!-- Legend -->
         <div class="heatmap-legend" aria-hidden="true">
-          <span class="heatmap-legend__label">Less</span>
+          <span class="heatmap-legend__lbl">Less</span>
           <span class="heatmap-cell heatmap-cell--0"></span>
           <span class="heatmap-cell heatmap-cell--1"></span>
           <span class="heatmap-cell heatmap-cell--2"></span>
           <span class="heatmap-cell heatmap-cell--3"></span>
           <span class="heatmap-cell heatmap-cell--4"></span>
-          <span class="heatmap-legend__label">More</span>
+          <span class="heatmap-legend__lbl">More</span>
         </div>
 
-      </div><!-- /heatmap-inner -->
-    </div><!-- /heatmap-scroll -->
+      </div>
+    </div>
   `,
   styles: [`
-    /* ── Scroll container ──────────────────────────────────────────── */
+    /* ── Scroll shell ──────────────────────────────────────────────── */
     .heatmap-scroll {
-      /* Takes only as much width as the grid needs on desktop.
-         On mobile the parent is narrower so overflow-x kicks in. */
       display: block;
       width: fit-content;
       max-width: 100%;
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
       padding-bottom: 4px;
+      /* Custom scrollbar — inherits page style via CSS vars */
+      scrollbar-width: thin;
+      scrollbar-color: rgba(26, 43, 74, 0.2) transparent;
+      &::-webkit-scrollbar        { height: 4px; }
+      &::-webkit-scrollbar-track  { background: transparent; }
+      &::-webkit-scrollbar-thumb  { background: rgba(26,43,74,0.2); border-radius: 4px; }
     }
 
-    /* Fixed-width inner so the grid never reflows */
+    /* Cells + labels are decorative — never accidentally selected */
+    .heatmap-grid,
+    .heatmap-months,
+    .heatmap-days,
+    .heatmap-legend {
+      user-select: none;
+    }
+
+    /* ── Year-switch fade ──────────────────────────────────────────── */
+    /* Content opacity transitions on year change — no layout shift */
     .heatmap-inner {
       display: flex;
       flex-direction: column;
       gap: 4px;
-      width: fit-content;   /* shrink-wraps to exact grid width — no trailing gap */
+      width: fit-content;
+      opacity: 1;
+      transition: opacity 150ms ease-out;
+    }
+    .heatmap-inner--fade {
+      opacity: 0;
     }
 
     /* ── Month label row ───────────────────────────────────────────── */
     .heatmap-months {
       display: flex;
       align-items: flex-end;
+      height: 16px;
     }
-
     .heatmap-months__gutter {
       width: 28px;
       flex-shrink: 0;
     }
-
-    /* Sits over the grid columns — same template-columns as the grid */
-    .heatmap-months__labels {
-      display: grid;
-      grid-template-columns: repeat(var(--heatmap-cols, 53), 11px);
-      gap: 2px;
+    /* Track is exact pixel-width of the grid — labels position absolutely */
+    .heatmap-months__track {
+      position: relative;
+      height: 16px;
+      flex-shrink: 0;
     }
-
     .heatmap-month {
+      position: absolute;
+      bottom: 0;
       font-family: var(--ff-body);
       font-size: 10px;
+      font-weight: 500;
       color: var(--muted);
+      opacity: 0.65;
       white-space: nowrap;
-      /* Overflow: let it spill right (next empty column takes it) */
-      overflow: visible;
       line-height: 1;
+      letter-spacing: 0.02em;
     }
 
-    /* ── Body row (day labels + grid) ─────────────────────────────── */
+    /* ── Body row ──────────────────────────────────────────────────── */
     .heatmap-body {
       display: flex;
       align-items: flex-start;
       gap: 4px;
     }
 
-    /* Day-of-week labels column */
+    /* Day labels: Mon / Wed / Fri — vertically centered on their row */
     .heatmap-days {
       display: grid;
-      grid-template-rows: repeat(7, 11px);
-      gap: 2px;
+      grid-template-rows: repeat(7, calc(var(--cell, 11px) + var(--gap, 3px)));
       width: 24px;
       flex-shrink: 0;
+    }
+    .heatmap-day {
       font-family: var(--ff-body);
       font-size: 9px;
+      font-weight: 500;
       color: var(--muted);
-      line-height: 11px;
+      opacity: 0.6;
       text-align: right;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      line-height: 1;
     }
 
-    /* Positioned container for grid + tooltip */
-    .heatmap-grid-wrap {
-      position: relative;
-    }
+    .heatmap-grid-wrap { position: relative; }
 
-    /* Main grid — dynamic cols × 7 rows, filled column-first */
+    /* ── Cell grid ─────────────────────────────────────────────────── */
     .heatmap-grid {
       display: grid;
-      grid-template-columns: repeat(var(--heatmap-cols, 53), 11px);
-      grid-template-rows: repeat(7, 11px);
+      grid-template-columns: repeat(var(--heatmap-cols, 53), var(--cell, 11px));
+      grid-template-rows: repeat(7, var(--cell, 11px));
       grid-auto-flow: column;
-      gap: 2px;
+      gap: var(--gap, 3px);
+    }
+
+    /* ── Cell reveal animation ─────────────────────────────────────── */
+    /*
+      Cells appear column by column, left to right.
+      4 columns per batch, 30ms between batches.
+      All 7 cells in a column appear simultaneously (same delay = same col/4 * 30ms).
+      Opacity only — no transform on cells.
+    */
+    @keyframes cellReveal {
+      from { opacity: 0; }
+      to   { opacity: 1; }
     }
 
     /* ── Individual cell ───────────────────────────────────────────── */
     .heatmap-cell {
-      width: 11px;
-      height: 11px;
-      border-radius: 2px;
+      width: var(--cell, 11px);
+      height: var(--cell, 11px);
+      border-radius: 3px;   /* 3px — hand-crafted, not default */
       display: block;
       cursor: default;
-      /* Smooth border appearance on hover */
       box-sizing: border-box;
-      transition: outline-color 0.08s;
-      outline: 1px solid transparent;
+      outline: 1.5px solid transparent;
+      outline-offset: 0;
 
-      /* Level colours — 0 = background, 1–4 = green progression */
+      /* Four distinct greens matching the screenshot */
       &--0 { background: var(--ivory2); }
       &--1 { background: #9be9a8; }
-      &--2 { background: #40c463; }
-      &--3 { background: #30a14e; }
-      &--4 { background: #216e39; }
+      &--2 { background: #44c566; }
+      &--3 { background: #2ea04e; }
+      &--4 { background: #1a6b32; }
 
-      /* Active (hovered) — outline only, fill unchanged */
-      &--active {
-        outline: 1px solid var(--blue);
-        outline-offset: 0;
-        z-index: 1;
+      /* Cell reveal — delay set per-cell inline via colDelay() */
+      animation: cellReveal 120ms ease-out both;
+
+      /* Hover: brightness lift + outline. Instant — no delay. */
+      transition: filter 80ms ease, outline-color 80ms ease;
+      &--hover {
+        filter: brightness(1.12);
+        outline-color: rgba(46, 160, 78, 0.6);
         position: relative;
+        z-index: 1;
+      }
+
+      @media (max-width: 767px) {
+        width: 10px;
+        height: 10px;
       }
     }
 
     /* ── Tooltip ───────────────────────────────────────────────────── */
+    /* Default: above cell. --below: flips to below for top 2 rows. */
     .heatmap-tooltip {
       position: absolute;
-      /* Positioned by JS — top/left set via [style] bindings */
       transform: translateX(-50%) translateY(-100%);
       margin-top: -6px;
       background: var(--navy);
       color: #fff;
       font-family: var(--ff-body);
       font-size: 11px;
+      font-weight: 400;
       white-space: nowrap;
-      padding: 4px 8px;
-      border-radius: 4px;
+      padding: 5px 9px;
+      border-radius: 6px;
       pointer-events: none;
-      z-index: 10;
-      /* Tiny drop-shadow for depth */
-      box-shadow: 0 2px 8px rgba(0,0,0,0.22);
+      z-index: 20;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25), 0 1px 3px rgba(0,0,0,0.15);
 
-      /* Arrow pointing down */
+      /* Arrow down (tooltip above) */
       &::after {
         content: '';
         position: absolute;
-        top: 100%;
-        left: 50%;
+        top: 100%; left: 50%;
         transform: translateX(-50%);
         border: 4px solid transparent;
         border-top-color: var(--navy);
+      }
+
+      /* Flipped: tooltip below, arrow up */
+      &--below {
+        transform: translateX(-50%) translateY(0);
+        margin-top: 6px;
+        &::after {
+          top: auto;
+          bottom: 100%;
+          border-top-color: transparent;
+          border-bottom-color: var(--navy);
+        }
       }
     }
 
@@ -269,49 +317,87 @@ interface Tooltip {
       gap: 3px;
       justify-content: flex-end;
       padding-right: 2px;
-      margin-top: 2px;
+      margin-top: 4px;
     }
-
-    .heatmap-legend__label {
+    .heatmap-legend__lbl {
       font-family: var(--ff-body);
       font-size: 10px;
+      font-weight: 500;
       color: var(--muted);
-      margin: 0 3px;
+      opacity: 0.6;
+      margin: 0 4px;
+    }
+
+    /* ── Reduced motion ────────────────────────────────────────────── */
+    :host-context(.no-anim) * {
+      animation: none !important;
+      transition: none !important;
     }
   `],
 })
-export class ActivityHeatmapComponent implements OnChanges {
+export class ActivityHeatmapComponent implements OnChanges, OnDestroy {
   @Input() days: ActivityDay[] = [];
 
-  cells:       HeatCell[]                              = [];
-  monthLabels: { label: string; weekCol: number }[]   = [];
+  cells:       HeatCell[]                                          = [];
+  monthLabels: { label: string; weekCol: number; offsetPx: number }[] = [];
   totalActive  = 0;
-  hoveredCell: HeatCell | null                         = null;
+  hoveredCell: HeatCell | null = null;
   tooltip      = signal<Tooltip | null>(null);
+  fading       = signal(false);
 
-  // Total columns (weeks) in the padded grid — recalculated in buildGrid
-  totalCols = 53;
+  /** Exact pixel width of the month-labels track (= grid width) */
+  trackWidth = 0;
+  totalCols  = 53;
+
+  readonly CELL_PX = CELL_PX;
+  readonly GAP_PX  = GAP_PX;
+
+  private readonly cdr = inject(ChangeDetectorRef);
+  private fadeTimer: ReturnType<typeof setTimeout> | null = null;
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['days'] && this.days.length) {
+    if (!changes['days'] || !this.days.length) return;
+
+    if (this.cells.length > 0) {
+      // Year switch: fade out, rebuild, fade back in
+      this.fading.set(true);
+      if (this.fadeTimer) clearTimeout(this.fadeTimer);
+      this.fadeTimer = setTimeout(() => {
+        this.buildGrid();
+        this.fading.set(false);
+        this.cdr.markForCheck();
+      }, 150);
+    } else {
       this.buildGrid();
     }
   }
 
-  // ── Tooltip handlers ──────────────────────────────────────────────────────
+  ngOnDestroy(): void {
+    if (this.fadeTimer) clearTimeout(this.fadeTimer);
+  }
+
+  // ── Column reveal delay ───────────────────────────────────────────────────
+  // 4 columns per batch, 30ms between batches.
+  // All cells in the same column share the same delay → appear simultaneously.
+  colDelay(col: number): string {
+    return `${Math.floor(col / 4) * 30}ms`;
+  }
+
+  // ── Tooltip ───────────────────────────────────────────────────────────────
 
   showTooltip(cell: HeatCell): void {
-    if (!cell.label) return;   // padding cell — no tooltip
+    if (!cell.label) return;
     this.hoveredCell = cell;
 
-    // Centre of the hovered cell relative to the grid-wrap left edge.
-    // col × (cellSize + gap) + halfCell
-    const cellStep = CELL_PX + GAP_PX;
-    const cx = cell.col * cellStep + CELL_PX / 2;
-    // Top of the hovered cell
-    const cy = cell.row * cellStep;
+    const step = CELL_PX + GAP_PX;
+    const cx   = cell.col * step + CELL_PX / 2;
+    const cy   = cell.row * step;
 
-    this.tooltip.set({ text: cell.label, x: cx, y: cy });
+    // Top 2 rows: put tooltip below to avoid clipping at the top edge
+    const below = cell.row <= 1;
+    const ty    = below ? cy + CELL_PX : cy;
+
+    this.tooltip.set({ text: cell.label, x: cx, y: ty, below });
   }
 
   hideTooltip(): void {
@@ -322,68 +408,76 @@ export class ActivityHeatmapComponent implements OnChanges {
   // ── Grid builder ──────────────────────────────────────────────────────────
 
   private buildGrid(): void {
-    // Use all passed days — the parent already filters by year if needed
     const raw = [...this.days];
-
     if (!raw.length) return;
 
-    // Pad front so the first cell lands on Sunday (0)
     const firstDate = new Date(raw[0].date + 'T00:00:00');
-    const startPad  = firstDate.getDay(); // 0=Sun…6=Sat
+    const startPad  = firstDate.getDay();  // 0=Sun…6=Sat
 
     const padded: (ActivityDay | null)[] = [
       ...Array(startPad).fill(null),
       ...raw,
     ];
-
-    // Pad tail to complete the final week
     while (padded.length % 7 !== 0) padded.push(null);
 
     this.totalCols   = padded.length / 7;
     this.totalActive = raw.filter(d => d.count > 0).length;
+    this.trackWidth  = this.totalCols * CELL_PX + (this.totalCols - 1) * GAP_PX;
 
     this.cells = padded.map((d, idx) => {
-      const col = Math.floor(idx / 7);   // column = week index
-      const row = idx % 7;               // row = day-of-week
-
-      if (!d) {
-        return { date: '', count: 0, level: 0 as const, label: '', col, row };
-      }
-      const level = this.countToLevel(d.count);
-      const label = d.count === 0
-        ? `No submissions on ${this.formatDate(d.date)}`
-        : `${d.count} submission${d.count > 1 ? 's' : ''} on ${this.formatDate(d.date)}`;
-      return { date: d.date, count: d.count, level, label, col, row };
+      const col = Math.floor(idx / 7);
+      const row = idx % 7;
+      if (!d) return { date: '', count: 0, level: 0 as const, label: '', col, row };
+      return {
+        date:  d.date,
+        count: d.count,
+        level: this.countToLevel(d.count),
+        label: this.buildLabel(d.count, d.date),
+        col,
+        row,
+      };
     });
 
-    // Month labels — one per new month, placed at the week column where it first appears
+    // Month labels — absolutely positioned at exact pixel offsets
     this.monthLabels = [];
     const seen = new Set<string>();
     padded.forEach((d, idx) => {
       if (!d) return;
-      const key     = d.date.slice(0, 7); // YYYY-MM
-      const weekCol = Math.floor(idx / 7) + 1; // 1-based CSS grid-column
-      if (!seen.has(key)) {
-        seen.add(key);
-        const dt = new Date(d.date + 'T00:00:00');
-        this.monthLabels.push({
-          label:   dt.toLocaleDateString('en-US', { month: 'short' }),
-          weekCol,
-        });
-      }
+      const key = d.date.slice(0, 7);
+      if (seen.has(key)) return;
+      seen.add(key);
+      const weekIdx = Math.floor(idx / 7);
+      const dt = new Date(d.date + 'T00:00:00');
+      this.monthLabels.push({
+        label:    dt.toLocaleDateString('en-US', { month: 'short' }),
+        weekCol:  weekIdx + 1,
+        offsetPx: weekIdx * (CELL_PX + GAP_PX),
+      });
     });
   }
 
   private countToLevel(count: number): 0 | 1 | 2 | 3 | 4 {
     if (count === 0)  return 0;
-    if (count <= 2)   return 1;   // 1–2
-    if (count <= 5)   return 2;   // 3–5
-    if (count <= 9)   return 3;   // 6–9
-    return 4;                     // 10+
+    if (count <= 2)   return 1;
+    if (count <= 5)   return 2;
+    if (count <= 9)   return 3;
+    return 4;
   }
 
-  private formatDate(iso: string): string {
+  /**
+   * "2 submissions · Wednesday, Jan 15"
+   * "No submissions · Wednesday, Jan 15"
+   * Count always leads. Middle dot separator. Full weekday name.
+   */
+  private buildLabel(count: number, iso: string): string {
     const d = new Date(iso + 'T00:00:00');
-    return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    const dateStr = d.toLocaleDateString('en-US', {
+      weekday: 'long',
+      month:   'short',
+      day:     'numeric',
+    });
+    if (count === 0) return `No submissions · ${dateStr}`;
+    const noun = count === 1 ? 'submission' : 'submissions';
+    return `${count} ${noun} · ${dateStr}`;
   }
 }

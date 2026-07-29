@@ -3,19 +3,61 @@
   <!-- ── LOADING ─────────────────────────────────────────────────────────── -->
   @if (isLoading) {
     <div class="profile-layout">
+
+      <!-- Sidebar skeleton — matches exact sidebar shape -->
       <aside class="profile-sidebar">
+        <!-- Avatar: circle -->
         <div class="sk sk--avatar"></div>
-        <div class="sk sk--line sk--name"></div>
-        <div class="sk sk--line sk--sub"></div>
-        <div class="sk sk--block"></div>
-        <div class="sk sk--block"></div>
+        <!-- Name + handle -->
+        <div class="sk sk--line" style="width:140px; margin-bottom:6px"></div>
+        <div class="sk sk--line" style="width:90px; margin-bottom:4px"></div>
+        <!-- Role pill -->
+        <div class="sk sk--pill" style="margin-bottom:24px"></div>
+        <!-- Streak row -->
+        <div class="sk sk--line" style="width:120px; margin-bottom:6px"></div>
+        <div class="sk sk--line" style="width:100px; margin-bottom:28px"></div>
+        <!-- Section: Problems Solved -->
+        <div class="sk sk--line sk--label" style="margin-bottom:10px"></div>
+        <div class="sk sk--bar" style="margin-bottom:10px"></div>
+        <div class="sk sk--bar" style="margin-bottom:10px"></div>
+        <div class="sk sk--bar" style="margin-bottom:28px"></div>
+        <!-- Section: Languages -->
+        <div class="sk sk--line sk--label" style="margin-bottom:10px"></div>
+        <div class="sk sk--bar" style="margin-bottom:10px"></div>
+        <div class="sk sk--bar"></div>
       </aside>
+
+      <!-- Main skeleton — matches exact card shapes -->
       <main class="profile-main">
-        <div class="sk sk--bio"></div>
-        <div class="sk sk--stats-card"></div>
-        <div class="sk sk--heatmap"></div>
-        <div class="sk sk--table"></div>
+        <!-- Bio card -->
+        <div class="sk sk--card" style="height:60px; margin-bottom:16px"></div>
+
+        <!-- Stats card: ring circle + streak block side by side -->
+        <div class="sk--stats-card-wrap">
+          <div class="sk sk--ring"></div>
+          <div class="sk--stats-right">
+            <div class="sk sk--line" style="width:48px; margin-bottom:6px"></div>
+            <div class="sk sk--num"></div>
+            <div class="sk sk--line" style="width:80px; margin-top:8px"></div>
+          </div>
+        </div>
+
+        <!-- Heatmap: grid of gray squares -->
+        <div class="sk--heatmap-wrap">
+          <div class="sk--heatmap-row">
+            @for (_ of skCells; track $index) {
+              <div class="sk sk--cell"></div>
+            }
+          </div>
+        </div>
+
+        <!-- Submission rows -->
+        <div class="sk sk--line sk--label" style="margin-bottom:12px"></div>
+        @for (_ of [1,2,3,4,5]; track $index) {
+          <div class="sk sk--sub-row"></div>
+        }
       </main>
+
     </div>
   }
 
@@ -253,35 +295,55 @@
 
           <!-- Streak + meta (right) -->
           <div class="stats-card__meta">
-            <div class="stats-meta-item"
+
+            <!-- Streak block -->
+            <div class="streak-block"
                  [attr.aria-label]="'Current streak: ' + profile.streak.currentStreak + ' days'">
-              <span class="stats-meta-item__val">
-                <span class="stats-meta-item__val-emoji" aria-hidden="true">🔥</span>{{ profile.streak.currentStreak }}<span class="stats-meta-item__unit">days</span>
-              </span>
-              <span class="stats-meta-item__lbl">Current Streak</span>
+
+              <!-- Fire icon — the visual anchor, not a decoration -->
+              <div class="streak-block__fire" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="M12 2C12 2 9.5 6 9.5 9C9.5 10.38 10.29 11.58 11.44 12.22C11.17 11.5 11 10.76 11 10C11 8 12.5 6.5 12.5 6.5C12.5 6.5 13 8.5 14 9.5C14.88 10.38 15.5 11.62 15.5 13C15.5 15.76 13.26 18 10.5 18C10.5 18 9 17.5 8 16.5C8.69 17.94 10.22 19 12 19C14.76 19 17 16.76 17 14C17 10 14 7 12 2Z" fill="#FF6B00"/>
+                  <path d="M12 22C9.24 22 7 19.76 7 17C7 15 8 13.5 9.5 12.5C9.18 13.27 9 14.11 9 15C9 17.21 10.79 19 13 19C13.72 19 14.39 18.79 14.95 18.43C14.29 20.47 12.31 22 12 22Z" fill="#FF8C00"/>
+                </svg>
+              </div>
+
+              <!-- Label above the number — orients before the number lands -->
+              <span class="streak-block__lbl">Current Streak</span>
+
+              <!-- The number — the trophy -->
+              <div class="streak-block__num-row">
+                <span class="streak-block__num">{{ displayStreak() }}</span>
+                <span class="streak-block__unit">days</span>
+              </div>
+
+              <!-- Ghost lap — personal record -->
               @if (isPersonalBest) {
-                <span class="stats-meta-item__sub stats-meta-item__sub--best" aria-hidden="true">
-                  🏆 Personal best!
+                <span class="streak-block__record streak-block__record--best">
+                  🏆 Personal best
                 </span>
               } @else {
-                <span class="stats-meta-item__sub" aria-hidden="true">
+                <span class="streak-block__record">
                   Best: {{ profile.streak.longestStreak }} days
                 </span>
               }
             </div>
 
-            <hr class="stats-card__inner-sep" aria-hidden="true" />
+            <!-- Short centered divider — designed, not a table cell border -->
+            <div class="stats-card__short-sep" aria-hidden="true"></div>
 
-            <div class="stats-meta-joined">
-              <span class="stats-meta-joined__item">
-                <span aria-hidden="true">📅</span>
-                Joined {{ joinedYear(profile.user.joinedAt) }}
-              </span>
-              <span class="stats-meta-joined__item">
-                <span aria-hidden="true">⚡</span>
-                {{ profile.streak.totalActiveDays }} Active Days
-              </span>
+            <!-- Joined + active days — secondary facts, footnote treatment -->
+            <div class="stats-facts">
+              <div class="stats-fact">
+                <span class="stats-fact__lbl">Joined</span>
+                <span class="stats-fact__val">{{ joinedYear(profile.user.joinedAt) }}</span>
+              </div>
+              <div class="stats-fact">
+                <span class="stats-fact__lbl">Active Days</span>
+                <span class="stats-fact__val">{{ displayActiveDays() }}</span>
+              </div>
             </div>
+
           </div>
 
         </div>
@@ -334,28 +396,36 @@
           </h2>
 
           <div class="recent-list" role="list">
-            @for (sub of profile.recentAccepted; track trackBySubmissionId($index, sub)) {
-              <a class="recent-row"
-                 [routerLink]="['/problems', sub.problemId]"
-                 role="listitem"
-                 [attr.aria-label]="sub.problemTitle + ', ' + sub.difficulty + ', ' + sub.language + ', ' + relativeTime(sub.submittedAt)">
+            @if (profile.recentAccepted.length === 0) {
+              <p class="recent-empty">
+                No accepted submissions yet —
+                <a [routerLink]="['/problems']">solve your first problem</a>
+              </p>
+            } @else {
+              @for (sub of profile.recentAccepted; track trackBySubmissionId($index, sub); let i = $index) {
+                <a class="recent-row"
+                   [routerLink]="['/problems', sub.problemId]"
+                   role="listitem"
+                   [style.animation-delay]="subRowDelay(i)"
+                   [attr.aria-label]="sub.problemTitle + ', ' + sub.difficulty + ', ' + sub.language + ', ' + relativeTime(sub.submittedAt)">
 
-                <span class="recent-row__title">{{ sub.problemTitle }}</span>
+                  <span class="recent-row__title">{{ sub.problemTitle }}</span>
 
-                <span class="recent-row__badge"
-                      [class.recent-row__badge--easy]="sub.difficulty === 'Easy'"
-                      [class.recent-row__badge--medium]="sub.difficulty === 'Medium'"
-                      [class.recent-row__badge--hard]="sub.difficulty === 'Hard'">
-                  {{ sub.difficulty }}
-                </span>
+                  <span class="recent-row__badge"
+                        [class.recent-row__badge--easy]="sub.difficulty === 'Easy'"
+                        [class.recent-row__badge--medium]="sub.difficulty === 'Medium'"
+                        [class.recent-row__badge--hard]="sub.difficulty === 'Hard'">
+                    {{ sub.difficulty }}
+                  </span>
 
-                <span class="recent-row__badge recent-row__badge--lang">
-                  {{ sub.language }}
-                </span>
+                  <span class="recent-row__badge recent-row__badge--lang">
+                    {{ sub.language }}
+                  </span>
 
-                <span class="recent-row__time">{{ relativeTime(sub.submittedAt) }}</span>
+                  <span class="recent-row__time">{{ relativeTime(sub.submittedAt) }}</span>
 
-              </a>
+                </a>
+              }
             }
           </div>
         </section>

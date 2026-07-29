@@ -26,11 +26,12 @@ interface ArcSegment {
   solved:     number;
   total:      number;
   dashArray:  string;
+  /** Final resting dashOffset — CSS animation lands here from CIRCUMFERENCE */
   dashOffset: string;
 }
 
 const TWO_PI         = 2 * Math.PI;
-const GAP_DEG        = 3;                // exactly 3° — intentional, not arbitrary
+const GAP_DEG        = 3;
 const RING_RADIUS    = 68;
 const STROKE_WIDTH   = 11;
 const CIRCUMFERENCE  = TWO_PI * RING_RADIUS;
@@ -43,7 +44,7 @@ const CX       = SVG_SIZE / 2;
 const COLOR_EASY   = '#1D9E75';
 const COLOR_MEDIUM = '#FFB700';
 const COLOR_HARD   = '#D32F2F';
-const COLOR_TRACK  = '#ECE9E1';   // $ivory2 — barely visible, doesn't compete
+const COLOR_TRACK  = '#ECE9E1';
 
 @Component({
   selector: 'app-solved-ring',
@@ -65,7 +66,7 @@ const COLOR_TRACK  = '#ECE9E1';   // $ivory2 — barely visible, doesn't compete
              [attr.viewBox]="'0 0 ' + SVG_SIZE + ' ' + SVG_SIZE"
              aria-hidden="true">
 
-          <!-- Background track — barely there, just enough to show unfilled arc -->
+          <!-- Background track -->
           <circle
             [attr.cx]="CX" [attr.cy]="CX"
             [attr.r]="RADIUS"
@@ -73,6 +74,12 @@ const COLOR_TRACK  = '#ECE9E1';   // $ivory2 — barely visible, doesn't compete
             [attr.stroke]="TRACK_COLOR"
             [attr.stroke-width]="STROKE_WIDTH"
             stroke-linecap="round"/>
+
+          <!--
+            Draw-in: each segment animates stroke-dashoffset from CIRCUMFERENCE
+            (fully hidden) to its computed target. 800ms ease-out.
+            Stagger: Easy 0ms → Medium 100ms → Hard 200ms.
+          -->
 
           <!-- Easy -->
           <circle
@@ -85,10 +92,10 @@ const COLOR_TRACK  = '#ECE9E1';   // $ivory2 — barely visible, doesn't compete
             [attr.stroke-dasharray]="easyArc.dashArray"
             [attr.stroke-dashoffset]="easyArc.dashOffset"
             [class.ring-seg--lit]="hoveredSegment === 'easy'"
-            class="ring-seg"
+            class="ring-seg ring-seg--easy"
             [attr.transform]="'rotate(-90 ' + CX + ' ' + CX + ')'"/>
 
-          <!-- Medium -->
+          <!-- Medium — 100ms stagger -->
           <circle
             [attr.cx]="CX" [attr.cy]="CX"
             [attr.r]="RADIUS"
@@ -99,10 +106,10 @@ const COLOR_TRACK  = '#ECE9E1';   // $ivory2 — barely visible, doesn't compete
             [attr.stroke-dasharray]="mediumArc.dashArray"
             [attr.stroke-dashoffset]="mediumArc.dashOffset"
             [class.ring-seg--lit]="hoveredSegment === 'medium'"
-            class="ring-seg"
+            class="ring-seg ring-seg--medium"
             [attr.transform]="'rotate(-90 ' + CX + ' ' + CX + ')'"/>
 
-          <!-- Hard -->
+          <!-- Hard — 200ms stagger -->
           <circle
             [attr.cx]="CX" [attr.cy]="CX"
             [attr.r]="RADIUS"
@@ -113,16 +120,10 @@ const COLOR_TRACK  = '#ECE9E1';   // $ivory2 — barely visible, doesn't compete
             [attr.stroke-dasharray]="hardArc.dashArray"
             [attr.stroke-dashoffset]="hardArc.dashOffset"
             [class.ring-seg--lit]="hoveredSegment === 'hard'"
-            class="ring-seg"
+            class="ring-seg ring-seg--hard"
             [attr.transform]="'rotate(-90 ' + CX + ' ' + CX + ')'"/>
 
         </svg>
-
-        <!--
-          Centre content: two layers, both absolutely positioned on top of each
-          other so the ring's size never changes during the crossfade.
-          Transition: opacity only, 180ms ease-out. No layout shift.
-        -->
 
         <!-- Layer 1 — default: solved count -->
         <div class="ring-centre ring-centre--default"
@@ -149,7 +150,6 @@ const COLOR_TRACK  = '#ECE9E1';   // $ivory2 — barely visible, doesn't compete
       <!-- ── E / M / H stat rows ───────────────────────────────────── -->
       <div class="ring-stats">
 
-        <!-- Easy -->
         <div class="ring-stat"
              (mouseenter)="hoveredSegment = 'easy'"
              (mouseleave)="hoveredSegment = null">
@@ -168,7 +168,6 @@ const COLOR_TRACK  = '#ECE9E1';   // $ivory2 — barely visible, doesn't compete
           </div>
         </div>
 
-        <!-- Medium -->
         <div class="ring-stat"
              (mouseenter)="hoveredSegment = 'medium'"
              (mouseleave)="hoveredSegment = null">
@@ -187,7 +186,6 @@ const COLOR_TRACK  = '#ECE9E1';   // $ivory2 — barely visible, doesn't compete
           </div>
         </div>
 
-        <!-- Hard -->
         <div class="ring-stat"
              [class.ring-stat--fire]="hoveredSegment === 'hard'"
              (mouseenter)="hoveredSegment = 'hard'"
@@ -212,29 +210,33 @@ const COLOR_TRACK  = '#ECE9E1';   // $ivory2 — barely visible, doesn't compete
     </div>
   `,
   styles: [`
-    /* ── Card layout ───────────────────────────────────────────────── */
     .ring-card {
       display: flex;
       align-items: center;
       gap: 24px;
     }
 
-    /* ── Ring wrap ─────────────────────────────────────────────────── */
     .ring-wrap {
       position: relative;
-      /*
-        Width/height must exactly match SVG_SIZE (154px) so the absolutely-
-        positioned centre layers sit flush. Never let hover swap change size.
-      */
       width: 154px;
       height: 154px;
       flex-shrink: 0;
       cursor: default;
+      user-select: none;  /* ring is informational, not selectable */
     }
 
     .ring-svg { display: block; }
 
-    /* Arc segment hover brightness */
+    /* ── Segment draw-in ───────────────────────────────────────────── */
+    /*
+      The animation starts at stroke-dashoffset = CIRCUMFERENCE (fully hidden)
+      and ends at the element's natural stroke-dashoffset (set by [attr]).
+      fill-mode: both keeps the segment invisible before its delay fires.
+    */
+    @keyframes segDrawIn {
+      from { stroke-dashoffset: 427.26; }
+    }
+
     .ring-seg {
       transition: opacity 0.18s ease-out, filter 0.18s ease-out;
       opacity: 0.88;
@@ -243,13 +245,11 @@ const COLOR_TRACK  = '#ECE9E1';   // $ivory2 — barely visible, doesn't compete
       opacity: 1;
       filter: brightness(1.18);
     }
+    .ring-seg--easy   { animation: segDrawIn 800ms ease-out   0ms both; }
+    .ring-seg--medium { animation: segDrawIn 800ms ease-out 100ms both; }
+    .ring-seg--hard   { animation: segDrawIn 800ms ease-out 200ms both; }
 
     /* ── Centre layers ─────────────────────────────────────────────── */
-    /*
-      Both layers are absolute, stacked on top of each other.
-      Only opacity changes — zero layout shift, zero size change.
-      Duration: 180ms. Easing: ease-out.
-    */
     .ring-centre {
       position: absolute;
       inset: 0;
@@ -260,28 +260,21 @@ const COLOR_TRACK  = '#ECE9E1';   // $ivory2 — barely visible, doesn't compete
       pointer-events: none;
       gap: 2px;
     }
-
     .ring-centre--default {
       opacity: 1;
       transition: opacity 180ms ease-out;
     }
     .ring-centre--default.ring-centre--out {
       opacity: 0;
-      transition: opacity 180ms ease-out;
     }
-
     .ring-centre--hover {
       opacity: 0;
       transition: opacity 180ms ease-out;
     }
     .ring-centre--hover.ring-centre--in {
       opacity: 1;
-      transition: opacity 180ms ease-out;
     }
 
-    /* ── Centre text roles ─────────────────────────────────────────── */
-
-    /* Display role: the hero number — DM Sans 800, dominant */
     .ring-centre__num {
       font-family: var(--ff-body);
       font-size: 34px;
@@ -290,29 +283,22 @@ const COLOR_TRACK  = '#ECE9E1';   // $ivory2 — barely visible, doesn't compete
       line-height: 1;
       letter-spacing: -0.03em;
     }
-    .ring-centre__num--rate {
-      font-size: 26px;
-    }
+    .ring-centre__num--rate { font-size: 26px; }
     .ring-centre__unit {
       font-size: 14px;
       font-family: var(--ff-body);
       font-weight: 600;
       color: var(--navy2);
-      letter-spacing: 0;
     }
-
-    /* Label role (success): "✓ SOLVED" — tiny, all-caps, tracked, green */
     .ring-centre__solved-lbl {
       font-size: 9px;
       font-family: var(--ff-body);
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.1em;
-      color: #1D9E75;   /* $teal — success/green, matches easy segment */
+      color: #1D9E75;
       margin-top: 2px;
     }
-
-    /* Label role (neutral): "ACCEPTANCE" */
     .ring-centre__rate-lbl {
       font-size: 9px;
       font-family: var(--ff-body);
@@ -322,8 +308,6 @@ const COLOR_TRACK  = '#ECE9E1';   // $ivory2 — barely visible, doesn't compete
       color: var(--muted);
       margin-top: 2px;
     }
-
-    /* Muted role: "47 attempted" / "n submissions" */
     .ring-centre__sub {
       font-size: 9px;
       font-family: var(--ff-mono);
@@ -340,7 +324,6 @@ const COLOR_TRACK  = '#ECE9E1';   // $ivory2 — barely visible, doesn't compete
       min-width: 0;
       flex: 1;
     }
-
     .ring-stat {
       display: flex;
       flex-direction: column;
@@ -354,28 +337,22 @@ const COLOR_TRACK  = '#ECE9E1';   // $ivory2 — barely visible, doesn't compete
         background: rgba(26, 43, 74, 0.04);
       }
     }
-
     .ring-stat__top {
       display: flex;
       align-items: center;
       gap: 7px;
     }
-
-    /* Coloured dot — matches the ring segment color */
     .ring-stat__dot {
       width: 8px;
       height: 8px;
       border-radius: 50%;
       flex-shrink: 0;
       transition: box-shadow 0.2s ease;
-
       &--hard { background: #D32F2F; }
     }
     .ring-stat--fire .ring-stat__dot--hard {
       box-shadow: 0 0 5px 1px rgba(255,80,0,0.6);
     }
-
-    /* Label — body role */
     .ring-stat__label {
       font-size: 12px;
       font-family: var(--ff-body);
@@ -387,7 +364,6 @@ const COLOR_TRACK  = '#ECE9E1';   // $ivory2 — barely visible, doesn't compete
     .ring-stat__label--hard { color: #D32F2F; }
     .ring-stat--fire .ring-stat__label--hard { color: #ff4500; }
 
-    /* Fraction — solved number is body weight, total is muted */
     .ring-stat__frac {
       font-family: var(--ff-mono);
       font-size: 12px;
@@ -399,7 +375,6 @@ const COLOR_TRACK  = '#ECE9E1';   // $ivory2 — barely visible, doesn't compete
     .ring-stat__frac--medium { color: #FFB700; }
     .ring-stat__frac--hard   { color: #D32F2F; }
 
-    /* Muted role: the "/total" part recedes */
     .ring-stat__frac-total {
       font-weight: 400;
       color: var(--muted);
@@ -407,24 +382,20 @@ const COLOR_TRACK  = '#ECE9E1';   // $ivory2 — barely visible, doesn't compete
       opacity: 0.7;
     }
 
-    /* ── Progress bar — 4px, rounded ends, animated fill on load ──── */
     @keyframes ringBarGrow {
       from { transform: scaleX(0); }
       to   { transform: scaleX(1); }
     }
-
     .ring-stat__track {
       height: 4px;
       background: var(--ivory2);
-      border-radius: 20px;   /* full pill — rounds both ends */
+      border-radius: 20px;
       overflow: hidden;
     }
-
     .ring-stat__fill {
       height: 100%;
       border-radius: 20px;
       transform-origin: left center;
-      /* Staggered entrance — creates visual connection between bar and ring loading */
       animation: ringBarGrow 600ms ease-out both;
       transition: filter 0.15s ease;
 
@@ -437,33 +408,34 @@ const COLOR_TRACK  = '#ECE9E1';   // $ivory2 — barely visible, doesn't compete
     /* ── Hard row fire effect ───────────────────────────────────────── */
     @keyframes fireBox {
       0%   {
-        box-shadow: 0 0 0px 0px rgba(255,80,0,0),
-                    inset 0 0 0px rgba(255,80,0,0);
+        box-shadow: 0 0 0px 0px rgba(255,80,0,0), inset 0 0 0px rgba(255,80,0,0);
         background: rgba(26,43,74,0.04);
       }
       35%  {
-        box-shadow: 0 0 8px 2px rgba(255,100,0,0.35),
-                    0 0 18px 4px rgba(255,60,0,0.18),
+        box-shadow: 0 0 8px 2px rgba(255,100,0,0.35), 0 0 18px 4px rgba(255,60,0,0.18),
                     inset 0 0 10px rgba(255,120,0,0.07);
         background: rgba(255,69,0,0.06);
       }
       65%  {
-        box-shadow: 0 0 12px 3px rgba(255,130,0,0.45),
-                    0 0 24px 6px rgba(255,60,0,0.22),
+        box-shadow: 0 0 12px 3px rgba(255,130,0,0.45), 0 0 24px 6px rgba(255,60,0,0.22),
                     inset 0 0 14px rgba(255,160,0,0.09);
         background: rgba(255,100,0,0.09);
       }
       100% {
-        box-shadow: 0 0 8px 2px rgba(255,80,0,0.30),
-                    0 0 18px 4px rgba(255,60,0,0.15),
+        box-shadow: 0 0 8px 2px rgba(255,80,0,0.30), 0 0 18px 4px rgba(255,60,0,0.15),
                     inset 0 0 10px rgba(255,120,0,0.06);
         background: rgba(255,69,0,0.05);
       }
     }
-
     .ring-stat--fire {
       animation: fireBox 1.6s ease-in-out infinite;
       border-radius: 7px;
+    }
+
+    /* ── Reduced motion: kill everything via host context ──────────── */
+    :host-context(.no-anim) * {
+      animation: none !important;
+      transition: none !important;
     }
   `],
 })
@@ -495,13 +467,12 @@ export class SolvedRingComponent implements OnChanges {
     const { easySolved, mediumSolved, hardSolved } = this.data;
     const total  = easySolved + mediumSolved + hardSolved;
     const usable = 1 - TOTAL_GAP_FRAC;
-    const MIN_FRAC = 2 / 360;   // minimum arc so a single solve is still visible
+    const MIN_FRAC = 2 / 360;
 
     let easyFrac   = total > 0 ? (easySolved   / total) * usable : 0;
     let mediumFrac = total > 0 ? (mediumSolved  / total) * usable : 0;
     let hardFrac   = total > 0 ? (hardSolved    / total) * usable : 0;
 
-    // Clamp to minimum so even 1 solved problem shows as a visible nub
     if (easySolved   > 0 && easyFrac   < MIN_FRAC) easyFrac   = MIN_FRAC;
     if (mediumSolved > 0 && mediumFrac < MIN_FRAC) mediumFrac = MIN_FRAC;
     if (hardSolved   > 0 && hardFrac   < MIN_FRAC) hardFrac   = MIN_FRAC;
@@ -510,8 +481,8 @@ export class SolvedRingComponent implements OnChanges {
 
     this.easyArc = {
       ...this.emptyArc('easy', 'Easy', COLOR_EASY),
-      solved:     easySolved,
-      total:      this.data.easyTotal,
+      solved:    easySolved,
+      total:     this.data.easyTotal,
       dashArray:  `${easyFrac * CIRCUMFERENCE} ${CIRCUMFERENCE}`,
       dashOffset: '0',
     };
@@ -519,8 +490,8 @@ export class SolvedRingComponent implements OnChanges {
     const mediumStart = easyFrac * CIRCUMFERENCE + gapLen;
     this.mediumArc = {
       ...this.emptyArc('medium', 'Medium', COLOR_MEDIUM),
-      solved:     mediumSolved,
-      total:      this.data.mediumTotal,
+      solved:    mediumSolved,
+      total:     this.data.mediumTotal,
       dashArray:  `${mediumFrac * CIRCUMFERENCE} ${CIRCUMFERENCE}`,
       dashOffset: `${-mediumStart}`,
     };
@@ -528,8 +499,8 @@ export class SolvedRingComponent implements OnChanges {
     const hardStart = mediumStart + mediumFrac * CIRCUMFERENCE + gapLen;
     this.hardArc = {
       ...this.emptyArc('hard', 'Hard', COLOR_HARD),
-      solved:     hardSolved,
-      total:      this.data.hardTotal,
+      solved:    hardSolved,
+      total:     this.data.hardTotal,
       dashArray:  `${hardFrac * CIRCUMFERENCE} ${CIRCUMFERENCE}`,
       dashOffset: `${-hardStart}`,
     };
