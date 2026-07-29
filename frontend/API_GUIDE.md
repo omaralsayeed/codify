@@ -18,6 +18,10 @@
    - [4.5 AI Hints](#45-ai-hints)
    - [4.6 AI Feedback](#46-ai-feedback)
    - [4.7 Progress / Dashboard](#47-progress--dashboard)
+   - [4.8 Instructor — Students](#48-instructor--students)
+   - [4.9 Instructor — Integrity Flags](#49-instructor--integrity-flags)
+   - [4.10 Instructor — Activity Trend](#410-instructor--activity-trend)
+   - [4.11 Contests](#411-contests)
 5. [Data Models (TypeScript → C# DTO mapping)](#5-data-models)
 6. [Current Implementation Status](#6-current-implementation-status)
 7. [Priority Order for Backend Delivery](#7-priority-order-for-backend-delivery)
@@ -49,6 +53,14 @@ Frontend routing summary:
 | `/problems` | authGuard | ProblemListComponent |
 | `/problems/:id` | authGuard | ProblemPageComponent |
 | `/dashboard` | authGuard | StudentDashboardComponent |
+| `/instructor/dashboard` | authGuard + instructorGuard | InstructorShellComponent |
+| `/instructor/dashboard/overview` | authGuard + instructorGuard | InstructorOverviewComponent |
+| `/instructor/dashboard/students` | authGuard + instructorGuard | InstructorStudentsComponent |
+| `/instructor/dashboard/students/:id` | authGuard + instructorGuard | InstructorStudentDetailComponent |
+| `/instructor/dashboard/integrity` | authGuard + instructorGuard | InstructorIntegrityComponent |
+| `/instructor/dashboard/contests` | authGuard + instructorGuard | InstructorContestsComponent |
+| `/instructor/dashboard/contests/new` | authGuard + instructorGuard | InstructorContestCreateComponent |
+| `/instructor/dashboard/contests/:id` | authGuard + instructorGuard | InstructorContestDetailComponent |
 
 ---
 
@@ -590,7 +602,7 @@ Returns the logged-in student's progress stats.
 
 #### GET `/api/progress/class`
 
-Returns class-wide stats. Accessible by instructors only.
+Returns class-wide stats. Accessible by instructors only (`[Authorize(Roles = "Instructor")]`).
 
 **Response `200`:**
 ```json
@@ -611,6 +623,291 @@ Returns class-wide stats. Accessible by instructors only.
   }
 }
 ```
+
+---
+
+### 4.8 Instructor — Students
+
+> All endpoints in 4.8–4.11 require `[Authorize(Roles = "Instructor")]`.
+
+| Method | Endpoint | Status |
+|---|---|---|
+| GET | `/api/instructor/students` | ❌ Not implemented |
+| GET | `/api/instructor/students/:id` | ❌ Not implemented |
+| GET | `/api/instructor/students/:id/contests` | ❌ Not implemented |
+
+#### GET `/api/instructor/students`
+
+Returns a summary list of all students in the instructor's cohort.
+
+**Response `200`:**
+```json
+{
+  "data": [
+    {
+      "id": "s1",
+      "name": "Karim Ahmed",
+      "initials": "KA",
+      "avgScore": 92,
+      "problemsSolved": 38,
+      "integrityStatus": "clean"
+    }
+  ]
+}
+```
+
+**`integrityStatus` enum:** `clean` | `review` | `flagged`
+
+#### GET `/api/instructor/students/:id`
+
+Returns full detail for one student including topic mastery and recent submissions.
+
+**Response `200`:**
+```json
+{
+  "data": {
+    "id": "s1",
+    "name": "Karim Ahmed",
+    "initials": "KA",
+    "avgScore": 92,
+    "problemsSolved": 38,
+    "integrityStatus": "clean",
+    "streak": 14,
+    "hintsUsed": 11,
+    "lastActiveAt": "2026-07-23T11:30:00Z",
+    "topicMastery": [
+      { "topic": "Arrays", "percentage": 92 },
+      { "topic": "Recursion", "percentage": 80 },
+      { "topic": "Graphs", "percentage": 68 }
+    ],
+    "recentSubmissions": [
+      {
+        "problemTitle": "Two Sum",
+        "status": "Accepted",
+        "submittedAt": "2026-07-23T10:45:00Z"
+      },
+      {
+        "problemTitle": "Valid Parentheses",
+        "status": "WrongAnswer",
+        "submittedAt": "2026-07-22T16:20:00Z"
+      }
+    ]
+  }
+}
+```
+
+**`recentSubmissions.status` values:** any `SubmissionStatus` value from §4.4.
+
+**Response `404`:** Student not found or not in this instructor's cohort.
+
+#### GET `/api/instructor/students/:id/contests`
+
+Returns all contest results for a specific student across all contests, sorted chronologically (oldest first).
+
+**Response `200`:**
+```json
+{
+  "data": [
+    {
+      "contestId": "c1",
+      "studentId": "s1",
+      "studentName": "Karim Ahmed",
+      "rank": 1,
+      "score": 95,
+      "problemsSolved": 3,
+      "totalProblems": 3,
+      "accuracy": 96,
+      "finishedAt": "2026-07-10T10:22:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### 4.9 Instructor — Integrity Flags
+
+| Method | Endpoint | Status |
+|---|---|---|
+| GET | `/api/instructor/integrity-flags` | ❌ Not implemented |
+
+#### GET `/api/instructor/integrity-flags`
+
+Returns all AI-detected integrity flags for the instructor's cohort.
+Frontend sorts them client-side (high → medium → low, then by date) — backend may return in any order.
+
+**Response `200`:**
+```json
+{
+  "data": [
+    {
+      "id": "f1",
+      "studentId": "s3",
+      "studentName": "Omar Sherif",
+      "severity": "high",
+      "reason": "Submission matches AI-generated pattern (87% confidence)",
+      "detectedAt": "2026-07-23T10:00:00Z"
+    },
+    {
+      "id": "f2",
+      "studentId": "s4",
+      "studentName": "Sara Mahmoud",
+      "severity": "medium",
+      "reason": "Code structure similar to another student submission",
+      "detectedAt": "2026-07-22T14:30:00Z"
+    }
+  ]
+}
+```
+
+**`severity` enum:** `low` | `medium` | `high`
+
+---
+
+### 4.10 Instructor — Activity Trend
+
+| Method | Endpoint | Status |
+|---|---|---|
+| GET | `/api/instructor/activity` | ❌ Not implemented |
+
+#### GET `/api/instructor/activity?days=14`
+
+Returns daily submission counts for the instructor's cohort over the last N days (default 14).
+Used by the overview page to render the submission activity trend chart.
+
+**Query params:**
+
+| Param | Type | Default | Notes |
+|---|---|---|---|
+| `days` | number | 14 | How many days back to include |
+
+**Response `200`:**
+```json
+{
+  "data": [
+    { "date": "2026-07-10", "dayLabel": "Thu 10", "submissions": 22 },
+    { "date": "2026-07-11", "dayLabel": "Fri 11", "submissions": 11 },
+    { "date": "2026-07-12", "dayLabel": "Sat 12", "submissions": 5 },
+    { "date": "2026-07-13", "dayLabel": "Sun 13", "submissions": 4 },
+    { "date": "2026-07-14", "dayLabel": "Mon 14", "submissions": 19 }
+  ]
+}
+```
+
+Array is ordered oldest → newest. The frontend expects exactly `days` entries.
+
+---
+
+### 4.11 Contests
+
+> Contests are instructor-only (create/view). Students have no contest UI.
+> Approved scope change — see `PROJECT_CONTEXT.md §5` boundary note (2026-07-23).
+
+| Method | Endpoint | Status |
+|---|---|---|
+| GET | `/api/contests` | ❌ Not implemented |
+| GET | `/api/contests/:id` | ❌ Not implemented |
+| POST | `/api/contests` | ❌ Not implemented |
+| GET | `/api/contests/:id/results` | ❌ Not implemented |
+
+#### GET `/api/contests`
+
+Returns all contests created by the authenticated instructor.
+
+**Response `200`:**
+```json
+{
+  "data": [
+    {
+      "id": "c1",
+      "title": "Arrays & Hashing Sprint",
+      "description": "Quick contest covering array manipulation and hash map problems.",
+      "createdByInstructorId": "instructor-1",
+      "problemIds": ["uuid1", "uuid2", "uuid3"],
+      "assignedStudentIds": ["s1", "s2", "s3", "s4"],
+      "startAt": "2026-07-10T09:00:00Z",
+      "endAt": "2026-07-10T11:00:00Z",
+      "status": "ended"
+    }
+  ]
+}
+```
+
+**`status` enum:** `draft` | `upcoming` | `live` | `ended`
+
+> Backend should auto-derive `status` from `startAt`/`endAt` relative to current time, or store it explicitly and update via a background job.
+
+#### GET `/api/contests/:id`
+
+Returns a single contest by ID.
+
+**Response `200`:** Same shape as a single item from `GET /api/contests`.
+
+**Response `404`:** Contest not found or not owned by this instructor.
+
+#### POST `/api/contests`
+
+Creates a new contest. Backend must validate:
+- `title` is non-empty
+- `problemIds` has at least 1 entry
+- `assignedStudentIds` has at least 1 entry
+- `endAt` is after `startAt`
+
+**Request body:**
+```json
+{
+  "title": "Arrays & Hashing Sprint",
+  "description": "Quick contest covering array manipulation and hash map problems.",
+  "problemIds": ["uuid1", "uuid2", "uuid3"],
+  "assignedStudentIds": ["s1", "s2", "s3", "s4"],
+  "startAt": "2026-07-10T09:00:00Z",
+  "endAt": "2026-07-10T11:00:00Z"
+}
+```
+
+**Response `201`:** The created contest in the same shape as `GET /api/contests/:id`.
+
+**Response `400`:** Validation failure — e.g. `{ "message": "End date must be after start date." }`
+
+#### GET `/api/contests/:id/results`
+
+Returns all student results for a contest, sorted by rank ascending.
+Only meaningful for `ended` contests — returns empty array for others.
+
+**Response `200`:**
+```json
+{
+  "data": [
+    {
+      "contestId": "c1",
+      "studentId": "s1",
+      "studentName": "Karim Ahmed",
+      "rank": 1,
+      "score": 95,
+      "problemsSolved": 3,
+      "totalProblems": 3,
+      "accuracy": 96,
+      "finishedAt": "2026-07-10T10:22:00Z"
+    },
+    {
+      "contestId": "c1",
+      "studentId": "s2",
+      "studentName": "Layla Mostafa",
+      "rank": 2,
+      "score": 88,
+      "problemsSolved": 3,
+      "totalProblems": 3,
+      "accuracy": 91,
+      "finishedAt": "2026-07-10T10:35:00Z"
+    }
+  ]
+}
+```
+
+**Ranking rules (must match frontend display):**
+- Primary: `score` descending
+- Secondary: `problemsSolved` descending
+- Tertiary: `finishedAt` ascending (earlier finish wins)
 
 ---
 
@@ -761,6 +1058,90 @@ interface ClassProgress {
 }
 ```
 
+### DailyActivity (activity trend chart)
+```typescript
+interface DailyActivity {
+  date: string;        // ISO date, e.g. "2026-07-10"
+  dayLabel: string;    // Short label, e.g. "Thu 10"
+  submissions: number;
+}
+```
+
+### InstructorStudentSummary
+```typescript
+type IntegrityStatus = 'clean' | 'review' | 'flagged';
+
+interface InstructorStudentSummary {
+  id: string;
+  name: string;
+  initials: string;       // e.g. "KA" — first+last name initials
+  avgScore: number;
+  problemsSolved: number;
+  integrityStatus: IntegrityStatus;
+}
+```
+
+### InstructorStudentDetail
+```typescript
+interface InstructorStudentDetail extends InstructorStudentSummary {
+  streak: number;
+  hintsUsed: number;
+  lastActiveAt: string;   // ISO-8601
+  topicMastery: { topic: string; percentage: number; }[];
+  recentSubmissions: {
+    problemTitle: string;
+    status: string;         // SubmissionStatus values
+    submittedAt: string;    // ISO-8601
+  }[];
+}
+```
+
+### IntegrityFlag
+```typescript
+type IntegritySeverity = 'low' | 'medium' | 'high';
+
+interface IntegrityFlag {
+  id: string;
+  studentId: string;
+  studentName: string;
+  severity: IntegritySeverity;
+  reason: string;
+  detectedAt: string;   // ISO-8601
+}
+```
+
+### Contest
+```typescript
+type ContestStatus = 'draft' | 'upcoming' | 'live' | 'ended';
+
+interface Contest {
+  id: string;
+  title: string;
+  description: string;
+  createdByInstructorId: string;
+  problemIds: string[];
+  assignedStudentIds: string[];   // explicit subset — never implicit "all"
+  startAt: string;                // ISO-8601
+  endAt: string;                  // ISO-8601
+  status: ContestStatus;
+}
+```
+
+### ContestResult
+```typescript
+interface ContestResult {
+  contestId: string;
+  studentId: string;
+  studentName: string;
+  rank: number;             // 1-based
+  score: number;            // 0–100
+  problemsSolved: number;
+  totalProblems: number;
+  accuracy: number;         // percentage
+  finishedAt: string;       // ISO-8601
+}
+```
+
 ---
 
 ## 6. Current Implementation Status
@@ -780,11 +1161,20 @@ interface ClassProgress {
 | AI Feedback | `GET /api/submissions/:id/feedback` | ❌ Missing | UI complete, endpoint doesn't exist |
 | Student Progress | `GET /api/progress/student` | ⚠️ Mocked | No HTTP call wired |
 | Class Progress | `GET /api/progress/class` | ⚠️ Mocked | No HTTP call wired |
+| Student List | `GET /api/instructor/students` | ❌ Not implemented | UI complete, mock data |
+| Student Detail | `GET /api/instructor/students/:id` | ❌ Not implemented | UI complete, mock data |
+| Student Contests | `GET /api/instructor/students/:id/contests` | ❌ Not implemented | UI complete, mock data |
+| Integrity Flags | `GET /api/instructor/integrity-flags` | ❌ Not implemented | UI complete, mock data |
+| Activity Trend | `GET /api/instructor/activity` | ❌ Not implemented | Chart complete, mock data |
+| Contest List | `GET /api/contests` | ❌ Not implemented | UI complete, mock data |
+| Contest Detail | `GET /api/contests/:id` | ❌ Not implemented | UI complete, mock data |
+| Create Contest | `POST /api/contests` | ❌ Not implemented | Form complete, mock data |
+| Contest Results | `GET /api/contests/:id/results` | ❌ Not implemented | Analytics chart complete, mock data |
 
 **Legend:**
 - ✅ Live — real HTTP call working
 - ⚠️ Mocked — frontend ready, backend needed
-- ❌ Missing — backend endpoint doesn't exist yet, UI exists
+- ❌ Missing / Not implemented — backend endpoint doesn't exist yet, UI exists
 
 ---
 
@@ -792,15 +1182,26 @@ interface ClassProgress {
 
 Ordered by what unblocks the most frontend functionality:
 
+**Student-facing (Salah's work is blocked on these):**
 1. **Auth (Login + Register)** — blocks everything behind `authGuard`
 2. **`POST /api/execution/run`** — highest-traffic endpoint, core product experience
-3. **`POST /api/submissions` + `GET /api/submissions/:id`** — complete the judge loop
-4. **`GET /api/problems` + `GET /api/problems/:id`** — unblock the problem list and page
+3. **`POST /api/submissions` + `GET /api/submissions/:id`** — completes the judge loop
+4. **`GET /api/problems` + `GET /api/problems/:id`** — unblocks the problem list and page
 5. **`POST /api/ai/hints`** — AI hint panel is fully built and waiting
-6. **`GET /api/submissions/:id/feedback`** — feedback UI is complete but endpoint missing
+6. **`GET /api/submissions/:id/feedback`** — feedback UI is complete but endpoint is missing
 7. **`GET /api/progress/student`** — needed for student dashboard
 8. **`POST /api/auth/forgot-password`** — lower priority
-9. **`GET /api/progress/class`** — instructor dashboard, not yet designed
+
+**Instructor-facing (Owais's work is blocked on these — all owned by Khaled, Sprint 4):**
+9. **`GET /api/progress/class`** — overview metric cards + topic mastery chart
+10. **`GET /api/instructor/activity?days=14`** — activity trend chart
+11. **`GET /api/instructor/students`** — student list table
+12. **`GET /api/instructor/students/:id`** — student detail (streak, hints, submissions)
+13. **`GET /api/instructor/integrity-flags`** — integrity flags view
+14. **`GET /api/contests` + `GET /api/contests/:id`** — contest list + detail
+15. **`POST /api/contests`** — create contest form
+16. **`GET /api/contests/:id/results`** — contest analytics (leaderboard, charts)
+17. **`GET /api/instructor/students/:id/contests`** — per-student contest history
 
 ---
 

@@ -1,0 +1,192 @@
+<!-- Not found -->
+@if (contest() === 'not-found') {
+  <div class="not-found">
+    <span class="not-found-icon" aria-hidden="true">🔍</span>
+    <h2 class="not-found-title">Contest not found</h2>
+    <p class="not-found-sub">This contest doesn't exist or has been removed.</p>
+    <a class="back-link" routerLink="../">← Back to Contests</a>
+  </div>
+}
+
+@if (contest() !== null && contest() !== 'not-found') {
+  @let c = $any(contest());
+
+  <section class="contest-detail">
+
+    <!-- Back + header -->
+    <a class="back-link" routerLink="../">← Back to Contests</a>
+
+    <div class="contest-header">
+      <div class="header-body">
+        <h1 class="contest-title">{{ c.title }}</h1>
+        @if (c.description) {
+          <p class="contest-desc">{{ c.description }}</p>
+        }
+        <div class="header-meta">
+          <span class="status-badge" [ngClass]="statusClass(c.status)">
+            {{ c.status | titlecase }}
+          </span>
+          <span class="meta-item">
+            📅 {{ formatDate(c.startAt) }} · {{ formatTime(c.startAt) }}
+            → {{ formatDate(c.endAt) }} · {{ formatTime(c.endAt) }}
+          </span>
+          <span class="meta-item">👥 {{ c.assignedStudentIds.length }} students</span>
+          <span class="meta-item">🗂️ {{ c.problemIds.length }} problems</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- No results state (upcoming / live / draft) -->
+    @if (results().length === 0) {
+      <div class="empty-state">
+        <span class="empty-icon" aria-hidden="true">⏳</span>
+        <p class="empty-text">
+          @if (c.status === 'ended') {
+            No results recorded for this contest.
+          } @else {
+            Analytics will be available once the contest ends.
+          }
+        </p>
+      </div>
+    }
+
+    <!-- Analytics (ended contests with results) -->
+    @if (results().length > 0) {
+
+      <!-- Summary stats -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-icon" aria-hidden="true">📊</span>
+          <div class="stat-body">
+            <span class="stat-value">{{ avgScore }}</span>
+            <span class="stat-label">Avg Score</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <span class="stat-icon" aria-hidden="true">🎯</span>
+          <div class="stat-body">
+            <span class="stat-value">{{ avgAccuracy }}%</span>
+            <span class="stat-label">Avg Accuracy</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <span class="stat-icon" aria-hidden="true">✅</span>
+          <div class="stat-body">
+            <span class="stat-value">{{ completionRate }}%</span>
+            <span class="stat-label">Completion Rate</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <span class="stat-icon" aria-hidden="true">👥</span>
+          <div class="stat-body">
+            <span class="stat-value">{{ results().length }}</span>
+            <span class="stat-label">Participants</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts row -->
+      <div class="charts-row">
+
+        <!-- Score distribution bar chart -->
+        <div class="section-card">
+          <h2 class="section-title">Score Distribution</h2>
+          <div class="bar-chart" role="img" aria-label="Score distribution bar chart">
+            @for (bucket of scoreBuckets; track bucket.label) {
+              <div class="bar-col">
+                <span class="bar-count" [class.bar-count--zero]="bucket.count === 0">
+                  {{ bucket.count > 0 ? bucket.count : '' }}
+                </span>
+                <div
+                  class="bar-fill-v"
+                  [style.height.%]="bucket.pct"
+                  [class.bar-fill-v--empty]="bucket.count === 0"
+                  [attr.aria-label]="bucket.label + ': ' + bucket.count + ' students'"
+                ></div>
+                <span class="bar-label">{{ bucket.label }}</span>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Per-problem accuracy -->
+        <div class="section-card">
+          <h2 class="section-title">Per-Problem Accuracy</h2>
+          <ul class="accuracy-list" aria-label="Per-problem accuracy">
+            @for (p of problemAccuracy; track p.title) {
+              <li class="accuracy-row">
+                <span class="prob-title">{{ p.title }}</span>
+                <div class="bar-track"
+                     role="progressbar"
+                     [attr.aria-valuenow]="p.accuracy"
+                     aria-valuemin="0" aria-valuemax="100"
+                     [attr.aria-label]="p.title + ': ' + p.accuracy + '%'">
+                  <div class="bar-fill-h"
+                       [ngClass]="barColor(p.accuracy)"
+                       [style.width.%]="p.accuracy">
+                  </div>
+                </div>
+                <span class="prob-pct">{{ p.accuracy }}%</span>
+              </li>
+            }
+          </ul>
+        </div>
+
+      </div>
+
+      <!-- Leaderboard -->
+      <div class="section-card">
+        <h2 class="section-title">Leaderboard</h2>
+        <p class="section-sub">Ranked by score (descending).</p>
+
+        <div class="table-wrap">
+          <table class="leaderboard-table" aria-label="Contest leaderboard">
+            <thead>
+              <tr>
+                <th scope="col" class="col-rank">Rank</th>
+                <th scope="col" class="col-student">Student</th>
+                <th scope="col" class="col-score">Score</th>
+                <th scope="col" class="col-solved">Solved</th>
+                <th scope="col" class="col-accuracy">Accuracy</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of results(); track r.studentId) {
+                <tr class="leaderboard-row" [class.leaderboard-row--top3]="r.rank <= 3">
+                  <!-- Rank -->
+                  <td class="col-rank">
+                    <span class="rank-badge" [ngClass]="rankBadgeClass(r.rank)">
+                      {{ r.rank }}
+                    </span>
+                  </td>
+                  <!-- Student -->
+                  <td class="col-student">
+                    <a
+                      class="student-link"
+                      [routerLink]="['../../students', r.studentId]"
+                      [attr.aria-label]="'View ' + r.studentName + ' profile'"
+                    >
+                      {{ r.studentName }}
+                    </a>
+                  </td>
+                  <!-- Score with badge -->
+                  <td class="col-score">
+                    <span class="score-badge" [ngClass]="scoreBadgeClass(r.score)">
+                      {{ r.score }}
+                    </span>
+                  </td>
+                  <!-- Solved -->
+                  <td class="col-solved">{{ r.problemsSolved }}/{{ r.totalProblems }}</td>
+                  <!-- Accuracy -->
+                  <td class="col-accuracy">{{ r.accuracy }}%</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    }
+
+  </section>
+}

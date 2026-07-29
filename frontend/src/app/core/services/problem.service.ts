@@ -22,4 +22,19 @@ export class ProblemService {
   getRecommended(): Problem[] {
     return this.problems.slice(0, 3);
   }
+
+  /**
+   * Search problems by title or topic label (case-insensitive).
+   * Structured as a method call so it can later be replaced with an HTTP call
+   * without changing any component that uses it.
+   */
+  search(query: string): Problem[] {
+    const q = query.toLowerCase().trim();
+    if (!q) return [];
+    return this.problems.filter(p =>
+      p.title.toLowerCase().includes(q) ||
+      p.topicLabel.toLowerCase().includes(q) ||
+      p.topic.toLowerCase().includes(q)
+    );
+  }
 }
