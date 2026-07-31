@@ -1,0 +1,26 @@
+@use '../../../styles/variables' as *;
+
+.hint-bubble {
+  background: white;
+  border: 1px solid $border;
+  border-radius: $r-lg;
+  padding: 14px 18px;
+  box-shadow: $shadow;
+  max-width: 300px;
+  animation: floatUp 3s ease-in-out infinite;
+}
+
+@keyframes floatUp {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-6px); }
+}
+
+.hint-label {
+  font-size: 10px; font-weight: 600;
+  font-family: $ff-mono; color: $teal;
+  letter-spacing: 0.06em; margin-bottom: 6px;
+}
+
+.hint-text {
+  font-size: 13px; color: $charcoal; line-height: 1.5;
+}

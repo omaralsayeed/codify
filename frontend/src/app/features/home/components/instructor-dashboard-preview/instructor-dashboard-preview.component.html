@@ -1,0 +1,91 @@
+<section id="instructor" class="section-pad inst-section">
+  <div class="section-inner">
+    <span class="section-tag tag-gold">For instructors</span>
+    <h2 class="section-h">Full visibility into<br/>your class's progress</h2>
+    <p class="section-sub">Monitor performance, spot struggling students, and flag integrity issues before the final exam.</p>
+
+    <div class="inst-frame">
+      <div class="inst-topbar">
+        <span class="inst-logo">Codify</span>
+        <span class="inst-badge">Instructor view</span>
+      </div>
+
+      <div class="inst-body">
+        <nav class="inst-sidebar">
+          <div class="nav-item active">⊞ Overview</div>
+          <div class="nav-item">◻ Students</div>
+          <div class="nav-item">◈ Problems</div>
+          <div class="nav-item">⚑ Integrity</div>
+          <div class="nav-item">◌ Reports</div>
+        </nav>
+
+        <div class="inst-main">
+          <h3 class="greeting">Class overview — CS301</h3>
+          <p class="sub">Week 11 · Assignment 3 due in 2 days · {{ classProgress.activeStudents }} students active</p>
+
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-val">{{ classProgress.activeStudents }}</div>
+              <div class="metric-lbl">Active students</div>
+              <div class="metric-change">of {{ classProgress.enrolledStudents }} enrolled</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-val">{{ classProgress.classAvgScore }}%</div>
+              <div class="metric-lbl">Class avg. score</div>
+              <div class="metric-change">+6% vs last week</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-val">{{ classProgress.integrityFlags }}</div>
+              <div class="metric-lbl">Integrity flags</div>
+              <div class="metric-change red">Needs review</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-val">{{ classProgress.assignedProblems }}</div>
+              <div class="metric-lbl">Problems assigned</div>
+              <div class="metric-change">7 completed avg.</div>
+            </div>
+          </div>
+
+          <div class="three-col">
+            <!-- Alerts -->
+            <div class="panel">
+              <div class="panel-title">Integrity alerts <span>this week</span></div>
+              <div class="alert-row" *ngFor="let a of alerts">
+                <span class="alert-dot {{ a.dotClass }}"></span>
+                <div>
+                  <div class="alert-text">{{ a.text }}</div>
+                  <div class="alert-time">{{ a.time }}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Students -->
+            <div class="panel">
+              <div class="panel-title">Top students <span>by score</span></div>
+              <div class="student-row" *ngFor="let s of students">
+                <div class="student-info">
+                  <div class="stu-avatar">{{ s.initials }}</div>
+                  <span class="stu-name">{{ s.name }}</span>
+                </div>
+                <div class="student-right">
+                  <div class="stu-score">{{ s.score }}%</div>
+                  <span class="badge {{ s.integrityClass }}">{{ s.integrityLabel }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Class mastery -->
+            <div class="panel">
+              <div class="panel-title">Class topic mastery</div>
+              <div class="mastery-row" *ngFor="let t of classProgress.topicMastery">
+                <span class="mastery-label">{{ t.topic }}</span>
+                <div class="bar-wrap"><div class="bar" [style.width.%]="t.percentage" [class]="barColor(t.percentage)"></div></div>
+                <span class="mastery-pct">{{ t.percentage }}%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

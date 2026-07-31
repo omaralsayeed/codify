@@ -1,0 +1,209 @@
+<section class="overview">
+
+  <!-- Page header -->
+  <h1 class="page-title">Class Overview</h1>
+  <p class="page-sub">Real-time snapshot of your cohort's performance.</p>
+
+  <!-- Metric cards -->
+  <div class="metrics-grid">
+    @for (m of metrics; track m.label) {
+      <div class="metric-card" [ngClass]="m.colorClass">
+        <span class="metric-icon" aria-hidden="true">{{ m.icon }}</span>
+        <div class="metric-body">
+          <span class="metric-value">{{ m.value }}</span>
+          <span class="metric-label">{{ m.label }}</span>
+          <span class="metric-sub">{{ m.sub }}</span>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Activity trend chart -->
+  <div class="section-card">
+    <div class="chart-header">
+      <div>
+        <h2 class="section-title">Submission Activity</h2>
+        <p class="section-sub">Daily submissions over the last 14 days — {{ trendTotal }} total.</p>
+      </div>
+      <span class="chart-peak-label">Peak: {{ trendMax }}/day</span>
+    </div>
+
+    <div class="trend-wrap">
+      <!-- Y-axis labels -->
+      <div class="trend-yaxis" aria-hidden="true">
+        <span>{{ trendMax }}</span>
+        <span>{{ (trendMax / 2) | number:'1.0-0' }}</span>
+        <span>0</span>
+      </div>
+
+      <!-- SVG chart -->
+      <div class="trend-chart-wrap">
+        <svg
+          class="trend-svg"
+          [attr.viewBox]="'0 0 ' + trendW + ' ' + trendH"
+          preserveAspectRatio="none"
+          aria-label="Submission activity trend"
+          role="img"
+        >
+          <defs>
+            <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%"   stop-color="#2E86AB" stop-opacity="0.18"/>
+              <stop offset="100%" stop-color="#2E86AB" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+
+          <!-- Horizontal gridlines at 50% and 100% -->
+          <line [attr.x1]="0" [attr.y1]="trendH / 2"
+                [attr.x2]="trendW" [attr.y2]="trendH / 2"
+                class="trend-grid"/>
+          <line [attr.x1]="0" [attr.y1]="padY"
+                [attr.x2]="trendW" [attr.y2]="padY"
+                class="trend-grid"/>
+
+          <!-- Area fill -->
+          <path [attr.d]="trendArea" fill="url(#trendGrad)"/>
+
+          <!-- Line -->
+          <path [attr.d]="trendPath" fill="none" class="trend-line"/>
+
+          <!-- Dots -->
+          @for (pt of trendPoints; track pt.dayLabel; let i = $index) {
+            <circle
+              [attr.cx]="pt.x"
+              [attr.cy]="pt.y"
+              r="3"
+              class="trend-dot"
+              [attr.aria-label]="pt.dayLabel + ': ' + pt.submissions + ' submissions'"
+            />
+          }
+        </svg>
+
+        <!-- X-axis labels -->
+        <div class="trend-xaxis" aria-hidden="true">
+          @for (pt of trendPoints; track pt.dayLabel; let i = $index) {
+            <span class="xaxis-label" [class.xaxis-label--hidden]="!showLabel(i)">
+              {{ pt.dayLabel }}
+            </span>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Topic mastery -->
+  <div class="section-card">
+    <h2 class="section-title">Topic Performance</h2>
+    <p class="section-sub">Average mastery across all students by topic — sorted highest to lowest.</p>
+
+    <div class="mastery-chart" aria-label="Topic mastery chart">
+
+      <!-- Grid overlay (25 / 50 / 75 / 100 vertical lines) -->
+      <div class="mastery-grid" aria-hidden="true">
+        @for (line of masteryGridLines; track line) {
+          <div class="grid-line" [style.left.%]="line">
+            <span class="grid-label">{{ line }}</span>
+          </div>
+        }
+      </div>
+
+      <!-- Bars -->
+      <ul class="mastery-list">
+        @for (t of sortedTopics; track t.topic) {
+          <li class="mastery-row">
+            <span class="mastery-name">{{ t.topic }}</span>
+            <div class="mastery-bar-wrap">
+              <div
+                class="mastery-bar"
+                [ngClass]="barColor(t.percentage)"
+                [style.width.%]="t.percentage"
+                role="progressbar"
+                [attr.aria-valuenow]="t.percentage"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                [attr.aria-label]="t.topic + ': ' + t.percentage + '%'"
+              ></div>
+              <span class="mastery-pct">{{ t.percentage }}%</span>
+            </div>
+          </li>
+        }
+      </ul>
+
+    </div>
+  </div>
+  <!-- Contest participation & avg score summary (ended contests only) -->
+  @if (contestSummaries.length > 0) {
+    <div class="section-card">
+      <div class="chart-header">
+        <div>
+          <h2 class="section-title">Contest Performance</h2>
+          <p class="section-sub">Participation rate and avg score per ended contest.</p>
+        </div>
+        @if (hasMoreContests) {
+          <a class="view-all-link" routerLink="../contests">View all →</a>
+        }
+      </div>
+
+      <div class="contest-chart">
+
+        <!-- Column labels (x-axis) -->
+        <div class="contest-x-labels" aria-hidden="true">
+          @for (row of contestSummaries; track row.id) {
+            <span class="cx-label" [title]="row.title">
+              {{ row.title | slice:0:14 }}{{ row.title.length > 14 ? '…' : '' }}
+            </span>
+          }
+        </div>
+
+        <!-- Grouped bars per contest -->
+        <div class="contest-bars-wrap" role="list" aria-label="Contest participation and avg score">
+          @for (row of contestSummaries; track row.id) {
+            <div class="contest-bar-group" role="listitem" [attr.aria-label]="row.title">
+
+              <!-- Participation rate bar -->
+              <div class="bar-group-inner">
+                <div class="cbar-track">
+                  <div
+                    class="cbar-fill cbar-fill--participation"
+                    [style.height.%]="row.participationRate"
+                    [attr.aria-label]="'Participation: ' + row.participationRate + '%'"
+                    [title]="'Participation: ' + row.participantCount + '/' + row.assignedCount + ' (' + row.participationRate + '%)'"
+                  ></div>
+                </div>
+                <div class="cbar-track">
+                  <div
+                    class="cbar-fill cbar-fill--score"
+                    [style.height.%]="row.avgScore"
+                    [attr.aria-label]="'Avg score: ' + row.avgScore"
+                    [title]="'Avg score: ' + row.avgScore"
+                  ></div>
+                </div>
+              </div>
+
+              <!-- Values below bars -->
+              <div class="cbar-values">
+                <span class="cbar-val cbar-val--participation">{{ row.participationRate }}%</span>
+                <span class="cbar-val cbar-val--score">{{ row.avgScore }}</span>
+              </div>
+
+            </div>
+          }
+        </div>
+
+        <!-- Y-axis reference line at 50% -->
+        <div class="contest-yref" aria-hidden="true">
+          <span class="yref-label">100</span>
+          <span class="yref-label">50</span>
+          <span class="yref-label">0</span>
+        </div>
+
+        <!-- Legend -->
+        <div class="contest-legend" aria-hidden="true">
+          <span class="legend-dot legend-dot--participation"></span><span class="legend-text">Participation rate</span>
+          <span class="legend-dot legend-dot--score"></span><span class="legend-text">Avg score</span>
+        </div>
+
+      </div>
+    </div>
+  }
+
+</section>

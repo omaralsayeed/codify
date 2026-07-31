@@ -1,0 +1,61 @@
+<section class="hero">
+  <div class="hero-left">
+    <div class="hero-eyebrow">AI-Powered Programming Education</div>
+    <h1>Think deeper.<br/><em>Solve better.</em><br/>Learn for real.</h1>
+    <p class="hero-sub">
+      Codify guides you through programming problems with intelligent hints—
+      never giving away the answer, always building your thinking.
+    </p>
+    <div class="hero-actions">
+      <button class="btn btn--navy btn--lg" (click)="handleCTA()">Start solving free</button>
+      <button class="btn btn--ghost btn--lg" (click)="handleCTA()">View problems →</button>
+    </div>
+    <div class="hero-stats">
+      <div class="stat">
+        <div class="stat-val">2,400+</div>
+        <div class="stat-lbl">Problems curated</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val">8 topics</div>
+        <div class="stat-lbl">Concept areas</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val">AI tutor</div>
+        <div class="stat-lbl">Step-by-step hints</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero-visual">
+    <div class="code-card">
+      <div class="code-card-header">
+        <div class="code-dots">
+          <span class="dot dot--red"></span>
+          <span class="dot dot--yellow"></span>
+          <span class="dot dot--green"></span>
+        </div>
+        <span class="code-filename">longest_path.py</span>
+        <span class="code-tag">Dynamic Programming</span>
+      </div>
+      <pre class="code-block"><code><span class="kw">def</span> <span class="fn">longest_increasing_path</span>(matrix):
+    <span class="kw">if not</span> matrix: <span class="kw">return</span> <span class="num">0</span>
+    m, n = len(matrix), len(matrix[<span class="num">0</span>])
+    memo = &#123;&#125;
+
+    <span class="kw">def</span> <span class="fn">dfs</span>(i, j):
+        <span class="kw">if</span> (i, j) <span class="kw">in</span> memo:
+            <span class="kw">return</span> memo[(i, j)]
+        best = <span class="num">1</span>
+        <span class="kw">for</span> di, dj <span class="kw">in</span> [(<span class="num">0</span>,<span class="num">1</span>),(<span class="num">1</span>,<span class="num">0</span>)]:
+            ni, nj = i+di, j+dj
+            <span class="kw">if</span> <span class="num">0</span>&lt;=ni&lt;m <span class="kw">and</span> matrix[ni][nj] &gt; matrix[i][j]:
+                best = max(best, <span class="num">1</span>+dfs(ni,nj))
+        memo[(i,j)] = best
+        <span class="kw">return</span> best
+
+    <span class="kw">return</span> max(dfs(i,j) <span class="kw">for</span> i <span class="kw">in</span> range(m)
+               <span class="kw">for</span> j <span class="kw">in</span> range(n))</code></pre>
+    </div>
+    <app-hint-bubble [hint]="sampleHint" />
+  </div>
+</section>

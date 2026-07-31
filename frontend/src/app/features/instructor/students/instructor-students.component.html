@@ -1,0 +1,93 @@
+<section class="students">
+
+  <!-- Header -->
+  <h1 class="page-title">Students</h1>
+  <p class="page-sub">{{ students().length }} of {{ allStudents.length }} students shown</p>
+
+  <!-- Search bar -->
+  <div class="toolbar">
+    <div class="search-wrap">
+      <span class="search-icon" aria-hidden="true">🔍</span>
+      <input
+        class="search-input"
+        type="search"
+        placeholder="Search by name…"
+        [ngModel]="searchQuery()"
+        (ngModelChange)="searchQuery.set($event)"
+        aria-label="Search students by name"
+      />
+    </div>
+  </div>
+
+  <!-- Table -->
+  @if (students().length > 0) {
+    <div class="table-wrap">
+      <table class="students-table" aria-label="Student list">
+        <thead>
+          <tr>
+            <th scope="col" class="col-student">Student</th>
+            <th
+              scope="col"
+              class="col-score sortable"
+              (click)="sortBy('avgScore')"
+              [attr.aria-sort]="sortField() === 'avgScore' ? (sortDir() === 'asc' ? 'ascending' : 'descending') : 'none'"
+            >
+              Avg Score <span class="sort-icon" aria-hidden="true">{{ sortIcon('avgScore') }}</span>
+            </th>
+            <th
+              scope="col"
+              class="col-solved sortable"
+              (click)="sortBy('problemsSolved')"
+              [attr.aria-sort]="sortField() === 'problemsSolved' ? (sortDir() === 'asc' ? 'ascending' : 'descending') : 'none'"
+            >
+              Solved <span class="sort-icon" aria-hidden="true">{{ sortIcon('problemsSolved') }}</span>
+            </th>
+            <th scope="col" class="col-integrity">Integrity</th>
+            <th scope="col" class="col-action"><span class="sr-only">Action</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (student of students(); track student.id) {
+            <tr class="student-row"
+                [routerLink]="['../students', student.id]"
+                tabindex="0"
+                [attr.aria-label]="'View ' + student.name + ' details'">
+              <!-- Avatar + name -->
+              <td class="col-student">
+                <div class="student-cell">
+                  <div class="avatar" aria-hidden="true">{{ student.initials }}</div>
+                  <span class="student-name">{{ student.name }}</span>
+                </div>
+              </td>
+              <!-- Avg score with mini bar -->
+              <td class="col-score">
+                <div class="score-cell">
+                  <span class="score-value">{{ student.avgScore }}</span>
+                  <div class="score-bar-track" aria-hidden="true">
+                    <div class="score-bar-fill" [style.width.%]="student.avgScore"></div>
+                  </div>
+                </div>
+              </td>
+              <!-- Problems solved -->
+              <td class="col-solved">{{ student.problemsSolved }}</td>
+              <!-- Integrity badge -->
+              <td class="col-integrity">
+                <span class="integrity-badge" [ngClass]="integrityClass(student.integrityStatus)">
+                  {{ integrityLabel(student.integrityStatus) }}
+                </span>
+              </td>
+              <!-- Arrow -->
+              <td class="col-action" aria-hidden="true">›</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else {
+    <div class="empty-state">
+      <span class="empty-icon" aria-hidden="true">🔍</span>
+      <p class="empty-text">No students match "<strong>{{ searchQuery() }}</strong>"</p>
+    </div>
+  }
+
+</section>

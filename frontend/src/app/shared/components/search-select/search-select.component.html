@@ -1,0 +1,73 @@
+<div class="ss-field">
+
+  <!-- Label -->
+  <div class="ss-label-row">
+    <span class="ss-label">{{ label }}</span>
+    @if (selected.length > 0) {
+      <span class="ss-count">{{ selected.length }} selected</span>
+    }
+  </div>
+
+  <!-- Search input -->
+  <div class="ss-input-wrap">
+    <span class="ss-search-icon" aria-hidden="true">🔍</span>
+    <input
+      class="ss-input"
+      type="search"
+      [placeholder]="placeholder"
+      [ngModel]="query()"
+      (ngModelChange)="onQueryInput($event)"
+      autocomplete="off"
+      [attr.aria-label]="'Search ' + label"
+    />
+  </div>
+
+  <!-- Suggestions -->
+  @if (hasQuery()) {
+    @if (suggestions().length > 0) {
+      <ul class="ss-suggestions" role="listbox" [attr.aria-label]="label + ' suggestions'">
+        @for (item of suggestions(); track item.id) {
+          <li
+            class="ss-suggestion"
+            role="option"
+            aria-selected="false"
+            (click)="pick(item)"
+            (keydown.enter)="pick(item)"
+            (keydown.space)="pick(item)"
+            tabindex="0"
+          >
+            <span class="ss-item-label">{{ item.label }}</span>
+            @if (item.badge) {
+              <span class="ss-item-badge" [ngClass]="item.badgeClass">{{ item.badge }}</span>
+            }
+            <span class="ss-add-icon" aria-hidden="true">+</span>
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="ss-no-results">No matches for "{{ query() }}"</p>
+    }
+  }
+
+  <!-- Selected items -->
+  @if (selected.length > 0) {
+    <ul class="ss-selected" aria-label="Selected {{ label }}">
+      @for (item of selected; track item.id) {
+        <li class="ss-selected-item">
+          <span class="ss-check" aria-hidden="true">✓</span>
+          <span class="ss-item-label">{{ item.label }}</span>
+          @if (item.badge) {
+            <span class="ss-item-badge" [ngClass]="item.badgeClass">{{ item.badge }}</span>
+          }
+          <button
+            type="button"
+            class="ss-remove"
+            (click)="remove(item)"
+            [attr.aria-label]="'Remove ' + item.label"
+          >✕</button>
+        </li>
+      }
+    </ul>
+  }
+
+</div>

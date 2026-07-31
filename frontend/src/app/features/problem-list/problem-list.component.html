@@ -1,0 +1,64 @@
+<section class="problem-list section-pad">
+  <div class="section-inner">
+    <span class="section-tag tag-blue">Practice Arena</span>
+    <h1>Problem List</h1>
+    <p class="intro">
+      Build your algorithmic intuition by practicing structured sets of coding problems.
+      Filter by topic and difficulty to focus your learning.
+    </p>
+
+    <div class="filters">
+      <label class="filter-item">
+        Topic
+        <select [(ngModel)]="selectedTopic">
+          @for (topic of topics; track topic.value) {
+            <option [value]="topic.value">{{ topic.label }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="filter-item">
+        Difficulty
+        <select [(ngModel)]="selectedDifficulty">
+          @for (difficulty of difficulties; track difficulty.value) {
+            <option [value]="difficulty.value">{{ difficulty.label }}</option>
+          }
+        </select>
+      </label>
+    </div>
+
+    <div class="stats">
+      <span>{{ filteredProblems.length }} problems</span>
+      <span>{{ solvedTotal | number }} total solves</span>
+    </div>
+
+    <div class="problem-table-wrap">
+      <table class="problem-table">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Topic</th>
+            <th>Difficulty</th>
+            <th>Solves</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (problem of filteredProblems; track trackByProblemId($index, problem)) {
+            <tr>
+              <td class="title">{{ problem.title }}</td>
+              <td>{{ problem.topicLabel }}</td>
+              <td><app-difficulty-badge [difficulty]="problem.difficulty" /></td>
+              <td>{{ problem.solvedCount ?? 0 | number }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="4" class="empty-state">
+                No problems found for the selected filters.
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>

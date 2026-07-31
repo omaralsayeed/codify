@@ -1,0 +1,227 @@
+<!-- Not found -->
+@if (student() === 'not-found') {
+  <div class="not-found">
+    <span class="not-found-icon" aria-hidden="true">🔍</span>
+    <h2 class="not-found-title">Student not found</h2>
+    <p class="not-found-sub">The student you're looking for doesn't exist or has been removed.</p>
+    <a class="back-link" routerLink="../">← Back to students</a>
+  </div>
+}
+
+<!-- Detail view -->
+@if (student() !== 'not-found' && student() !== null) {
+  @let s = $any(student());
+
+  <div class="detail">
+
+    <!-- Back link -->
+    <a class="back-link" routerLink="../">← Back to students</a>
+
+    <!-- Student header -->
+    <div class="student-header">
+      <div class="avatar-lg" aria-hidden="true">{{ s.initials }}</div>
+      <div class="header-body">
+        <h1 class="student-name">{{ s.name }}</h1>
+        <span class="integrity-badge" [ngClass]="integrityClass(s.integrityStatus)">
+          {{ s.integrityStatus | titlecase }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Stat pills -->
+    <div class="stats-row">
+      <div class="stat-pill">
+        <span class="stat-icon" aria-hidden="true">🔥</span>
+        <div class="stat-body">
+          <span class="stat-value">{{ s.streak }}</span>
+          <span class="stat-label">Day streak</span>
+        </div>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-icon" aria-hidden="true">💡</span>
+        <div class="stat-body">
+          <span class="stat-value">{{ s.hintsUsed }}</span>
+          <span class="stat-label">Hints used</span>
+        </div>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-icon" aria-hidden="true">✅</span>
+        <div class="stat-body">
+          <span class="stat-value">{{ s.problemsSolved }}</span>
+          <span class="stat-label">Problems solved</span>
+        </div>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-icon" aria-hidden="true">📈</span>
+        <div class="stat-body">
+          <span class="stat-value">{{ s.avgScore }}</span>
+          <span class="stat-label">Avg score</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Last active -->
+    <p class="last-active">
+      Last active: <strong>{{ formatDate(s.lastActiveAt) }}</strong>
+    </p>
+
+    <!-- Two-column layout -->
+    <div class="two-col">
+
+      <!-- Topic mastery -->
+      <div class="section-card">
+        <h2 class="section-title">Topic Mastery</h2>
+        <ul class="topic-list" aria-label="Topic mastery">
+          @for (t of s.topicMastery; track t.topic) {
+            <li class="topic-row">
+              <span class="topic-name">{{ t.topic }}</span>
+              <div class="bar-track"
+                   role="progressbar"
+                   [attr.aria-valuenow]="t.percentage"
+                   aria-valuemin="0"
+                   aria-valuemax="100"
+                   [attr.aria-label]="t.topic + ': ' + t.percentage + '%'">
+                <div class="bar-fill"
+                     [ngClass]="barColor(t.percentage)"
+                     [style.width.%]="t.percentage">
+                </div>
+              </div>
+              <span class="topic-pct">{{ t.percentage }}%</span>
+            </li>
+          }
+        </ul>
+      </div>
+
+      <!-- Recent submissions -->
+      <div class="section-card">
+        <h2 class="section-title">Recent Submissions</h2>
+        @if (s.recentSubmissions.length > 0) {
+          <ul class="submission-list" aria-label="Recent submissions">
+            @for (sub of s.recentSubmissions; track sub.submittedAt) {
+              <li class="submission-row">
+                <div class="sub-info">
+                  <span class="sub-title">{{ sub.problemTitle }}</span>
+                  <span class="sub-date">{{ formatDate(sub.submittedAt) }}</span>
+                </div>
+                <span class="status-badge" [ngClass]="statusClass(sub.status)">
+                  {{ sub.status }}
+                </span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="empty-sub">No submissions yet.</p>
+        }
+      </div>
+
+    </div>
+
+    <!-- ── Contest history ─────────────────────────────────────────────── -->
+    <div class="section-card">
+      <h2 class="section-title">Contest History</h2>
+
+      @if (contestHistory.length === 0) {
+        <p class="empty-sub">This student hasn't participated in any ended contests yet.</p>
+      }
+
+      @if (contestHistory.length > 0) {
+
+        <!-- Score trend sparkline -->
+        <div class="sparkline-wrap" aria-label="Score trend across contests">
+          <span class="sparkline-label">Score trend</span>
+          <svg
+            class="sparkline"
+            [attr.viewBox]="'0 0 ' + sparklineW + ' ' + sparklineH"
+            [attr.width]="sparklineW"
+            [attr.height]="sparklineH"
+            aria-hidden="true"
+            overflow="visible"
+          >
+            <!-- Baseline grid line at 50 -->
+            <line
+              x1="0" [attr.y1]="sparklineH / 2"
+              [attr.x2]="sparklineW" [attr.y2]="sparklineH / 2"
+              stroke-dasharray="4 3"
+              class="sparkline-baseline"
+            />
+            <!-- Score path -->
+            <path
+              [attr.d]="sparklinePath"
+              fill="none"
+              class="sparkline-path"
+            />
+            <!-- Dots at each data point -->
+            @for (row of contestHistory; track row.contestId; let i = $index) {
+              <circle
+                [attr.cx]="4 + (i / (contestHistory.length - 1)) * (sparklineW - 8)"
+                [attr.cy]="sparklineH - 4 - ((row.score - minScore) / scoreRange) * (sparklineH - 8)"
+                r="3.5"
+                class="sparkline-dot"
+                [attr.aria-label]="row.contestTitle + ': ' + row.score"
+              />
+            }
+          </svg>
+
+          <!-- X-axis contest labels -->
+          <div class="sparkline-axis">
+            @for (row of contestHistory; track row.contestId) {
+              <span class="axis-label">{{ row.contestTitle | slice:0:12 }}…</span>
+            }
+          </div>
+        </div>
+
+        <!-- Contest history table -->
+        <div class="table-wrap">
+          <table class="contest-table" aria-label="Contest history">
+            <thead>
+              <tr>
+                <th scope="col">Contest</th>
+                <th scope="col" class="col-num">Rank</th>
+                <th scope="col" class="col-num">Score</th>
+                <th scope="col" class="col-num">vs Class</th>
+                <th scope="col" class="col-num">Accuracy</th>
+                <th scope="col" class="col-num">Solved</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of contestHistory; track row.contestId) {
+                <tr class="contest-row">
+                  <!-- Contest title links to contest detail -->
+                  <td>
+                    <a
+                      class="contest-link"
+                      [routerLink]="['../../contests', row.contestId]"
+                      [attr.aria-label]="'View contest: ' + row.contestTitle"
+                    >
+                      {{ row.contestTitle }}
+                    </a>
+                  </td>
+                  <!-- Rank badge -->
+                  <td class="col-num">
+                    <span class="rank-badge" [ngClass]="rankBadgeClass(row.rank)">
+                      {{ row.rank }}
+                    </span>
+                  </td>
+                  <!-- Score -->
+                  <td class="col-num score-val">{{ row.score }}</td>
+                  <!-- Delta vs class avg -->
+                  <td class="col-num">
+                    <span class="delta-badge" [ngClass]="deltaClass(row.scoreDelta)">
+                      {{ deltaLabel(row.scoreDelta) }}
+                    </span>
+                  </td>
+                  <!-- Accuracy -->
+                  <td class="col-num">{{ row.accuracy }}%</td>
+                  <!-- Solved -->
+                  <td class="col-num">{{ row.problemsSolved }}/{{ row.totalProblems }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+      }
+    </div>
+
+  </div>
+}
