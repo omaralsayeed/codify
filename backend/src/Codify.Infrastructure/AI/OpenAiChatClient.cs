@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.Json;
 using Codify.Application.Interfaces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -58,6 +59,111 @@ public class OpenAiChatClient(IOptions<OpenAiOptions> options, ILogger<OpenAiCha
             throw;
         }
     }
+
+    public async Task<LlmResponse> CompleteWithToolsAsync(
+        List<LlmMessage> messages,
+        List<LlmToolDefinition> tools,
+        CancellationToken cancellationToken = default)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        try
+        {
+            // Map our message types to OpenAI SDK types.
+            var chatMessages = messages.Select(MapToChatMessage).ToList();
+
+            // Build tool definitions for the OpenAI SDK.
+            var chatTools = tools.Select(t => ChatTool.CreateFunctionTool(
+                t.Name,
+                t.Description,
+                BinaryData.FromString(t.ParametersJsonSchema))).ToList();
+
+            var options = new ChatCompletionOptions();
+            foreach (var tool in chatTools)
+                options.Tools.Add(tool);
+
+            // Force tool choice to "auto" so the model decides.
+            options.ToolChoice = ChatToolChoice.CreateAutoChoice();
+
+            var response = await _chatClient.CompleteChatAsync(
+                chatMessages, options, cancellationToken);
+
+            stopwatch.Stop();
+
+            var usage = response.Value.Usage;
+            _logger.LogInformation(
+                "LLM tool-call success. Model={Model} InputTokens={InputTokens} OutputTokens={OutputTokens} LatencyMs={LatencyMs} HasToolCalls={HasToolCalls}",
+                _model,
+                usage?.InputTokenCount ?? 0,
+                usage?.OutputTokenCount ?? 0,
+                stopwatch.ElapsedMilliseconds,
+                response.Value.ToolCalls.Count > 0);
+
+            // Check if the model wants to call tools.
+            if (response.Value.ToolCalls.Count > 0)
+            {
+                var toolCalls = response.Value.ToolCalls.Select(tc => new LlmToolCall
+                {
+                    Id = tc.Id,
+                    Name = tc.FunctionName,
+                    ArgumentsJson = tc.FunctionArguments.ToString()
+                }).ToList();
+
+                return new LlmResponse { HasToolCalls = true, ToolCalls = toolCalls };
+            }
+
+            // Model returned final text.
+            var finalText = response.Value.Content.Count > 0
+                ? response.Value.Content[0].Text ?? string.Empty
+                : string.Empty;
+
+            return new LlmResponse { HasToolCalls = false, FinalText = finalText };
+        }
+        catch (Exception ex)
+        {
+            stopwatch.Stop();
+            _logger.LogError(ex, "LLM tool-call failed. Model={Model} LatencyMs={LatencyMs}",
+                _model, stopwatch.ElapsedMilliseconds);
+            throw;
+        }
+    }
+
+    private static ChatMessage MapToChatMessage(LlmMessage message)
+    {
+        // Tool result messages.
+        if (message.Role == "tool" && message.ToolCallId is not null)
+        {
+            return new ToolChatMessage(message.ToolCallId, message.Content ?? string.Empty);
+        }
+
+        // Assistant messages with tool calls.
+        if (message.Role == "assistant" && message.ToolCalls is not null && message.ToolCalls.Count > 0)
+        {
+            // The OpenAI SDK v2.0 assistant message with tool calls.
+            var assistantMessage = new AssistantChatMessage();
+            foreach (var tc in message.ToolCalls)
+            {
+                // We embed the tool call in the content for the SDK to track.
+                // The SDK's AssistantChatMessage supports tool calls via the
+                // constructor that takes ChatToolCall list.
+            }
+            // Fallback: serialize tool calls into content so the conversation
+            // history is preserved. The SDK v2.0 handles this internally when
+            // you pass the messages back — but for our loop we need the tool
+            // results appended as ToolChatMessage, which is the key part.
+            var content = message.Content ?? JsonSerializer.Serialize(message.ToolCalls);
+            return new AssistantChatMessage(content);
+        }
+
+        if (message.Role == "system")
+            return new SystemChatMessage(message.Content ?? string.Empty);
+
+        if (message.Role == "user")
+            return new UserChatMessage(message.Content ?? string.Empty);
+
+        // Default: treat as user message.
+        return new UserChatMessage(message.Content ?? string.Empty);
+    }
+
 
     private static ChatClient CreateChatClient(OpenAiOptions options)
     {

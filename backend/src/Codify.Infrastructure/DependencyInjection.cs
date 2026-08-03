@@ -5,6 +5,7 @@ using Codify.Infrastructure.AI;
 using Codify.Infrastructure.Auth;
 using Codify.Infrastructure.Persistence;
 using Codify.Infrastructure.Repositories;
+using Codify.Infrastructure.Search;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,6 +27,8 @@ public static class DependencyInjection
         services.AddScoped<IProblemRepository, ProblemRepository>();
         services.AddScoped<IConceptTagRepository, ConceptTagRepository>();
         services.AddScoped<ISubmissionRepository, SubmissionRepository>();
+        services.AddScoped<IHintLogRepository, HintLogRepository>();
+        services.AddScoped<IKnowledgeBaseSearchService, KnowledgeBaseSearchService>();
 
         // Auth
         services.AddScoped<IJwtService, JwtService>();
@@ -46,7 +49,8 @@ public static class DependencyInjection
         });
         services.AddSingleton<ILLMClient, OpenAiChatClient>();
         services.AddSingleton<IPromptLoader, PromptLoader>();
-        services.AddScoped<ITutorAgent, TutorAgent>();
+        services.AddScoped<ITutorAgentTools, TutorAgentTools>();
+        services.AddScoped<ITutorAgent, TutorAgentService>();
 
         return services;
     }

@@ -1,12 +1,22 @@
+using System.Text.Json;
 using Codify.Application.Agents;
 using Codify.Application.DTOs.AI;
 using Codify.Application.Interfaces;
+using Codify.Domain.Entities;
 using Codify.Domain.Exceptions;
 
 namespace Codify.Application.Services;
 
-public class AiHintService(IProblemRepository problemRepo, ITutorAgent tutorAgent) : IAiHintService
+public class AiHintService(
+    IProblemRepository problemRepo,
+    IHintLogRepository hintLogRepo,
+    ITutorAgent tutorAgent) : IAiHintService
 {
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+
     public async Task<HintResponse> GetHintAsync(
         HintRequest request,
         Guid userId,
@@ -30,9 +40,25 @@ public class AiHintService(IProblemRepository problemRepo, ITutorAgent tutorAgen
             LastSubmissionStatus = request.LastSubmissionStatus,
             AttemptCount = request.AttemptCount ?? 0,
             RetrievedContext = string.Empty,
-            StudentCode = request.StudentCode
+            StudentCode = request.StudentCode,
+            UserId = userId
         };
 
-        return await tutorAgent.GenerateHintAsync(input, cancellationToken);
+        var response = await tutorAgent.GenerateHintAsync(input, cancellationToken);
+
+        // Persist the hint to HintLog with agentic metadata (tools used + reasoning).
+        var toolsUsedJson = JsonSerializer.Serialize(response.ToolsUsed, JsonOptions);
+        var log = HintLog.CreateWithAgentMetadata(
+            userId,
+            problem.Id,
+            response.HintLevel,
+            response.HintText,
+            requestText: request.StudentCode is null ? null : $"level={request.HintLevel}",
+            toolsUsedJson,
+            response.ReasoningSummary ?? string.Empty);
+        await hintLogRepo.AddAsync(log);
+        await hintLogRepo.SaveChangesAsync();
+
+        return response;
     }
 }
