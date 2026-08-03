@@ -135,23 +135,13 @@ public class OpenAiChatClient(IOptions<OpenAiOptions> options, ILogger<OpenAiCha
             return new ToolChatMessage(message.ToolCallId, message.Content ?? string.Empty);
         }
 
-        // Assistant messages with tool calls.
         if (message.Role == "assistant" && message.ToolCalls is not null && message.ToolCalls.Count > 0)
         {
-            // The OpenAI SDK v2.0 assistant message with tool calls.
-            var assistantMessage = new AssistantChatMessage();
-            foreach (var tc in message.ToolCalls)
-            {
-                // We embed the tool call in the content for the SDK to track.
-                // The SDK's AssistantChatMessage supports tool calls via the
-                // constructor that takes ChatToolCall list.
-            }
-            // Fallback: serialize tool calls into content so the conversation
-            // history is preserved. The SDK v2.0 handles this internally when
-            // you pass the messages back — but for our loop we need the tool
-            // results appended as ToolChatMessage, which is the key part.
-            var content = message.Content ?? JsonSerializer.Serialize(message.ToolCalls);
-            return new AssistantChatMessage(content);
+            var sdkToolCalls = message.ToolCalls.Select(tc => ChatToolCall.CreateFunctionToolCall(
+                tc.Id,
+                tc.Name,
+                BinaryData.FromString(tc.ArgumentsJson))).ToList();
+            return new AssistantChatMessage(sdkToolCalls);
         }
 
         if (message.Role == "system")
