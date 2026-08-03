@@ -1,6 +1,8 @@
 # Codify — AI Agent Design & Contracts
 
-This document reflects the AI implementation that is actually wired in the backend today. The only runtime agent currently active is the **agentic Tutor Agent**, which uses OpenAI function calling to decide for itself which tools to call before producing a hint.
+This document reflects the AI implementation that is actually wired in the backend today. All three agents — **Tutor Agent**, **Code Analysis Agent**, and **Analytics / Tagging Agent** — are active. Each one is an agentic .NET service that uses OpenAI function calling to decide for itself which tools to call before producing a response.
+
+The Python sidecar described in earlier roadmap documents has been removed; the Tutor Agent was rewritten in C# with native tool use, and the Code Analysis / Analytics agents merged from the backup were converted to the same .NET-native agentic architecture.
 
 ## Design Principles
 
@@ -11,11 +13,15 @@ This document reflects the AI implementation that is actually wired in the backe
 5. **Evidence of reasoning.** `tools_used` and `reasoning_summary` are persisted to `HintLog` so the agent's decision-making can be inspected.
 6. **No hallucinated facts.** Tools ground the agent in real attempt history, previous hints, concept docs, and the student's actual code.
 
-## Active Runtime Agent: Tutor Agent
+## Active Runtime Agents
 
-### Trigger
+| Agent | Trigger | Role |
+|-------|---------|------|
+| **Tutor Agent** | `POST /api/ai/hints` | Provides progressive, personalized hints without giving the solution. |
+| **Code Analysis Agent** | `POST /api/ai/analyze` | Analyzes submitted code using sandboxed execution, static analysis, and complexity estimation. |
+| **Analytics / Tagging Agent** | `POST /api/ai/analytics` | Builds a learning profile from submission history, identifying weak/strong topics and generating recommendations. |
 
-`POST /api/ai/hints`
+## Tutor Agent
 
 ### Input Contract
 
@@ -126,13 +132,12 @@ This closes the previously documented gap and provides the evidence the instruct
 
 ## Current Gaps
 
-- No code-checker agent is wired into runtime.
-- No analytics or tagging agent is wired into runtime.
+- No runtime event automatically triggers analytics refresh after every submission (could be added as a fire-and-forget call in `SubmissionService`).
+- `KnowledgeBaseSearchService` currently uses keyword search over `ConceptTag` descriptions; it is interface-ready for pgvector embeddings when the vector pipeline is added.
 
-## Planned Extensions
+## Future Extensions
 
-If the team resumes the broader multi-agent roadmap, the next additions should be:
-
-1. A feedback agent for submission analysis.
-2. A performance-profile updater for student weakness tracking.
-3. Code-checker and analytics agents as separate agentic services.
+1. Auto-refresh analytics after each accepted submission.
+2. Replace keyword search with pgvector similarity search.
+3. Add an instructor dashboard endpoint using `GET /api/ai/analytics/{userId}`.
+4. Let the Tutor Agent consume `PerformanceProfile.WeakTopicsJson` to personalize hints further.
