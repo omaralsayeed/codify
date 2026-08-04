@@ -98,6 +98,25 @@ select {
   color: $muted;
 }
 
+.problem-row {
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover {
+    background: var(--ivory);
+
+    .title {
+      color: $blue;
+      text-decoration: underline;
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid $blue;
+    outline-offset: -2px;
+  }
+}
+
 @media (max-width: $mobile) {
   .problem-table {
     th, td {

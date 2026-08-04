@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { Difficulty, Problem, Topic } from '../../core/models/problem.model';
 import { ProblemService } from '../../core/services/problem.service';
 import { DifficultyBadgeComponent } from '../../shared/components/difficulty-badge/difficulty-badge.component';
@@ -8,7 +9,7 @@ import { DifficultyBadgeComponent } from '../../shared/components/difficulty-bad
 @Component({
   selector: 'app-problem-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, DifficultyBadgeComponent],
+  imports: [CommonModule, FormsModule, RouterLink, DifficultyBadgeComponent],
   templateUrl: './problem-list.component.html',
   styleUrl: './problem-list.component.scss'
 })

@@ -5,6 +5,27 @@
 
 ---
 
+## Summary
+
+**Total Endpoints:** 20  
+**Real Endpoints:** 0  
+**Mocked Endpoints:** 20  
+
+**Feature Areas Fully Mocked (Awaiting Backend):**
+- Authentication (3 endpoints)
+- Problems (3 endpoints)
+- Code Execution & Submissions (3 endpoints)
+- AI Hints (1 endpoint)
+- AI Feedback (1 endpoint — endpoint does not exist yet)
+- Analytics & Progress (7 endpoints)
+- Public Profile (1 endpoint)
+
+**Deprecated (Frontend No Longer Uses):**
+- `GET /api/progress/student` — replaced by `GET /api/analytics/progress`
+- `GET /api/progress/class` — not yet used by any component
+
+---
+
 ## Table of Contents
 
 1. [Project Overview](#1-project-overview)
@@ -17,11 +38,12 @@
    - [4.4 Submissions](#44-submissions)
    - [4.5 AI Hints](#45-ai-hints)
    - [4.6 AI Feedback](#46-ai-feedback)
-   - [4.7 Progress / Dashboard](#47-progress--dashboard)
-   - [4.8 Instructor — Students](#48-instructor--students)
-   - [4.9 Instructor — Integrity Flags](#49-instructor--integrity-flags)
-   - [4.10 Instructor — Activity Trend](#410-instructor--activity-trend)
-   - [4.11 Contests](#411-contests)
+- [4.7 Analytics](#47-analytics)
+- [4.8 Public Profile](#48-public-profile)
+- [4.9 Instructor — Students](#49-instructor--students)
+- [4.10 Instructor — Integrity Flags](#410-instructor--integrity-flags)
+- [4.11 Instructor — Activity Trend](#411-instructor--activity-trend)
+- [4.12 Contests](#412-contests)
 5. [Data Models (TypeScript → C# DTO mapping)](#5-data-models)
 6. [Current Implementation Status](#6-current-implementation-status)
 7. [Priority Order for Backend Delivery](#7-priority-order-for-backend-delivery)
@@ -46,13 +68,15 @@ Frontend routing summary:
 
 | Route | Guard | Component |
 |---|---|---|
-| `/` | public | Home |
+| `/` | public | HomeComponent |
 | `/auth/login` | guestGuard | LoginComponent |
 | `/auth/register` | guestGuard | RegisterComponent |
 | `/auth/forgot-password` | guestGuard | ForgotPasswordComponent |
 | `/problems` | authGuard | ProblemListComponent |
 | `/problems/:id` | authGuard | ProblemPageComponent |
-| `/dashboard` | authGuard | StudentDashboardComponent |
+| `/progress` | authGuard | StudentProgressComponent |
+| `/profile/:username` | public | ProfileComponent |
+| `/dashboard` | — | Redirects to `/profile/:username` (logged-in user) |
 | `/instructor/dashboard` | authGuard + instructorGuard | InstructorShellComponent |
 | `/instructor/dashboard/overview` | authGuard + instructorGuard | InstructorOverviewComponent |
 | `/instructor/dashboard/students` | authGuard + instructorGuard | InstructorStudentsComponent |
@@ -61,7 +85,6 @@ Frontend routing summary:
 | `/instructor/dashboard/contests` | authGuard + instructorGuard | InstructorContestsComponent |
 | `/instructor/dashboard/contests/new` | authGuard + instructorGuard | InstructorContestCreateComponent |
 | `/instructor/dashboard/contests/:id` | authGuard + instructorGuard | InstructorContestDetailComponent |
-
 ---
 
 ## 2. Global Conventions
@@ -569,16 +592,170 @@ Returns AI-generated code quality feedback for a completed submission.
 
 ---
 
-### 4.7 Progress / Dashboard
+### 4.7 Analytics
 
-| Method | Endpoint | Status |
+> All endpoints in this section are called by `AnalyticsService`. All are currently mocked with `delay(1200)` to simulate network latency. The HTTP calls are written and commented out in the service — only the backend endpoints are missing.
+
+| Method | Endpoint | Status | Caller |
+|---|---|---|---|
+| GET | `/api/analytics/progress` | ⚠️ Mocked | `StudentProgressComponent` |
+| GET | `/api/analytics/dashboard` | ⚠️ Mocked | legacy (kept for compatibility) |
+| GET | `/api/analytics/summary` | ⚠️ Mocked | legacy (kept for compatibility) |
+| GET | `/api/analytics/topics` | ⚠️ Mocked | legacy (kept for compatibility) |
+| GET | `/api/analytics/activity` | ⚠️ Mocked | legacy (kept for compatibility) |
+| GET | `/api/analytics/scores` | ⚠️ Mocked | legacy (kept for compatibility) |
+| GET | `/api/analytics/recommendations` | ⚠️ Mocked | legacy (kept for compatibility) |
+
+---
+
+#### GET `/api/analytics/progress`
+
+The primary endpoint for the **Student Progress page** (`/progress`). Returns the full `StudentAnalytics` payload in one call — summary stats, topic performance with AI insights, difficulty breakdown, success rate history, recent submissions, recommendations, and hint usage.
+
+**Auth:** Required (`Authorization: Bearer <token>`)
+
+**Response `200`:**
+```json
+{
+  "data": {
+    "summary": {
+      "studentName": "Mohamed",
+      "totalAttempted": 47,
+      "totalSolved": 31,
+      "successRate": 66,
+      "streak": {
+        "currentStreak": 7,
+        "longestStreak": 15,
+        "lastSevenDays": [
+          { "date": "2026-07-23", "submitted": true },
+          { "date": "2026-07-24", "submitted": true },
+          { "date": "2026-07-25", "submitted": false },
+          { "date": "2026-07-26", "submitted": true },
+          { "date": "2026-07-27", "submitted": true },
+          { "date": "2026-07-28", "submitted": true },
+          { "date": "2026-07-29", "submitted": true }
+        ]
+      }
+    },
+    "topics": [
+      {
+        "topicId": "t1",
+        "topicName": "Arrays",
+        "attempted": 12,
+        "solved": 10,
+        "strengthScore": 83,
+        "strength": "strong",
+        "aiInsight": null
+      },
+      {
+        "topicId": "t5",
+        "topicName": "Dynamic Programming",
+        "attempted": 7,
+        "solved": 2,
+        "strengthScore": 28,
+        "strength": "weak",
+        "aiInsight": "You tend to miss the memoization step — try identifying overlapping subproblems first."
+      }
+    ],
+    "difficultyBreakdown": { "easy": 18, "medium": 10, "hard": 3 },
+    "successRateHistory": [
+      { "label": "Mon", "successRate": 50, "solved": 2 },
+      { "label": "Tue", "successRate": 66, "solved": 4 }
+    ],
+    "recentSubmissions": [
+      {
+        "submissionId": "uuid",
+        "problemId": "uuid",
+        "problemTitle": "Two Sum",
+        "difficulty": "Easy",
+        "status": "Accepted",
+        "language": "Python",
+        "submittedAt": "2026-07-29T10:30:00Z"
+      }
+    ],
+    "recommendations": [
+      {
+        "problemId": "r1",
+        "title": "Coin Change",
+        "difficulty": "Medium",
+        "topic": "Dynamic Programming",
+        "reason": "Based on your weakness in Dynamic Programming"
+      }
+    ],
+    "hintUsage": {
+      "totalHintsUsed": 14,
+      "averageHintsPerProblem": 0.9,
+      "solvedWithZeroHints": 18,
+      "solvedUsingAllHints": 3
+    }
+  }
+}
+```
+
+**Key field notes:**
+
+| Field | Type | Notes |
 |---|---|---|
-| GET | `/api/progress/student` | ⚠️ Mocked |
-| GET | `/api/progress/class` | ⚠️ Mocked |
+| `summary.streak.lastSevenDays` | `DailyActivity[7]` | Always exactly 7 items, oldest first. Drives the 7-dot streak row in the UI. |
+| `topics[].strength` | `'strong' \| 'average' \| 'weak'` | `strengthScore` ≥ 75 = strong, 40–74 = average, < 40 = weak |
+| `topics[].aiInsight` | `string \| null` | Only provided for weak topics. Displayed in the "Focus Areas" cards. |
+| `successRateHistory[].label` | `string` | Day-of-week label, e.g. `"Mon"`. Drives the success rate chart. |
+| `recentSubmissions[].status` | `string` | `"Accepted"` \| `"Wrong Answer"` \| `"Runtime Error"` \| `"Time Limit Exceeded"` |
+| `recentSubmissions[].difficulty` | `string` | Title-cased: `"Easy"` \| `"Medium"` \| `"Hard"` |
 
-#### GET `/api/progress/student`
+---
 
-Returns the logged-in student's progress stats.
+#### GET `/api/analytics/dashboard`
+
+Returns the full legacy dashboard payload for a student in a single call. Currently not consumed by any active component but the service method remains for compatibility.
+
+**Auth:** Required
+
+**Response `200`:**
+```json
+{
+  "data": {
+    "summary": {
+      "problemsSolved": 47,
+      "avgScore": 68,
+      "streak": 12,
+      "totalAttempts": 83,
+      "acceptanceRate": 57,
+      "hintsUsedToday": 3,
+      "hintsLimit": 5
+    },
+    "topicStats": [
+      { "topic": "Arrays", "percentage": 85, "trend": "up" },
+      { "topic": "Graphs", "percentage": 38, "trend": "down" }
+    ],
+    "weeklyActivity": [
+      { "date": "2026-07-01", "solved": 3, "attempted": 4 }
+    ],
+    "scoreHistory": [
+      { "date": "2026-06-29", "score": 61 }
+    ],
+    "recommendations": [
+      {
+        "id": "uuid",
+        "title": "Number of Islands",
+        "difficulty": "hard",
+        "topic": "graphs",
+        "topicLabel": "Graphs · BFS",
+        "reason": "Weak area: Graphs (38%)",
+        "estimatedMinutes": 35
+      }
+    ]
+  }
+}
+```
+
+---
+
+#### GET `/api/analytics/summary`
+
+Returns only the headline summary stats. Subset of the `/analytics/dashboard` response.
+
+**Auth:** Required
 
 **Response `200`:**
 ```json
@@ -587,42 +764,195 @@ Returns the logged-in student's progress stats.
     "problemsSolved": 47,
     "avgScore": 68,
     "streak": 12,
+    "totalAttempts": 83,
+    "acceptanceRate": 57,
     "hintsUsedToday": 3,
-    "hintsLimit": 5,
-    "topicMastery": [
-      { "topic": "Arrays", "percentage": 85 },
-      { "topic": "Recursion", "percentage": 72 },
-      { "topic": "Dyn. Programming", "percentage": 54 },
-      { "topic": "Graphs", "percentage": 38 },
-      { "topic": "Greedy", "percentage": 61 }
-    ]
+    "hintsLimit": 5
   }
 }
 ```
 
-#### GET `/api/progress/class`
+---
 
-Returns class-wide stats. Accessible by instructors only (`[Authorize(Roles = "Instructor")]`).
+#### GET `/api/analytics/topics`
+
+Returns topic mastery stats with trend indicators.
+
+**Auth:** Required
+
+**Response `200`:**
+```json
+{
+  "data": [
+    { "topic": "Arrays",           "percentage": 85, "trend": "up"   },
+    { "topic": "Recursion",        "percentage": 72, "trend": "up"   },
+    { "topic": "Dyn. Programming", "percentage": 54, "trend": "flat" },
+    { "topic": "Graphs",           "percentage": 38, "trend": "down" }
+  ]
+}
+```
+
+**`trend` enum:** `up` | `down` | `flat`
+
+---
+
+#### GET `/api/analytics/activity`
+
+Returns daily activity for the last **28 days** (4 weeks).
+
+**Auth:** Required
+
+**Response `200`:**
+```json
+{
+  "data": [
+    { "date": "2026-07-01", "solved": 3, "attempted": 4 },
+    { "date": "2026-07-02", "solved": 0, "attempted": 1 }
+  ]
+}
+```
+
+Array length: always **28 items**, oldest first.
+
+---
+
+#### GET `/api/analytics/scores`
+
+Returns score history for the rolling **30-day** trend chart.
+
+**Auth:** Required
+
+**Response `200`:**
+```json
+{
+  "data": [
+    { "date": "2026-06-29", "score": 61 },
+    { "date": "2026-06-30", "score": 68 }
+  ]
+}
+```
+
+Array length: always **30 items**, oldest first. `score` is 0–100.
+
+---
+
+#### GET `/api/analytics/recommendations`
+
+Returns personalized problem recommendations ordered by priority (weakest topics first).
+
+**Auth:** Required
+
+**Response `200`:**
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "title": "Number of Islands",
+      "difficulty": "hard",
+      "topic": "graphs",
+      "topicLabel": "Graphs · BFS",
+      "reason": "Weak area: Graphs (38%)",
+      "estimatedMinutes": 35
+    }
+  ]
+}
+```
+
+---
+
+### 4.8 Public Profile
+
+| Method | Endpoint | Status | Caller |
+|---|---|---|---|
+| GET | `/api/profile/:username` | ⚠️ Mocked | `ProfileComponent` |
+
+#### GET `/api/profile/:username`
+
+Returns a public profile for any user identified by their username slug. **No authentication required** — this endpoint is intentionally public.
+
+Called by `ProfileComponent` at route `/profile/:username`. The `:username` parameter is a URL-safe lowercase slug (e.g., `test_student` from name "Test Student").
+
+**Auth:** None
 
 **Response `200`:**
 ```json
 {
   "data": {
-    "activeStudents": 28,
-    "enrolledStudents": 32,
-    "classAvgScore": 63,
-    "integrityFlags": 3,
-    "assignedProblems": 14,
-    "topicMastery": [
-      { "topic": "Arrays", "percentage": 78 },
-      { "topic": "Recursion", "percentage": 65 },
-      { "topic": "Dyn. Programming", "percentage": 48 },
-      { "topic": "Graphs", "percentage": 41 },
-      { "topic": "Sorting", "percentage": 72 }
+    "user": {
+      "username": "test_student",
+      "name": "Test Student",
+      "avatarInitials": "TS",
+      "role": "student",
+      "joinedAt": "2023-01-15T00:00:00.000Z",
+      "headline": "SWE | 3 yrs exp · Open to opportunities",
+      "bio": "Passionate about algorithms and clean code.",
+      "social": {
+        "linkedin": "https://linkedin.com/in/test-student",
+        "github":   "https://github.com/test-student",
+        "twitter":  "https://twitter.com/test_student"
+      }
+    },
+    "totalSolved": 31,
+    "totalAttempted": 47,
+    "successRate": 66,
+    "streak": {
+      "currentStreak": 12,
+      "longestStreak": 21,
+      "totalActiveDays": 89,
+      "totalSubmissionsLastYear": 143
+    },
+    "difficultyBreakdown": { "easy": 18, "medium": 10, "hard": 3 },
+    "difficultyTotals":    { "easy": 955, "medium": 1813, "hard": 843 },
+    "languageStats": [
+      { "language": "Python",     "solved": 22 },
+      { "language": "C#",         "solved": 7  },
+      { "language": "JavaScript", "solved": 2  }
+    ],
+    "topicStats": [
+      {
+        "topicId": "t1",
+        "topicName": "Arrays",
+        "attempted": 12,
+        "solved": 10,
+        "strengthScore": 83,
+        "strength": "strong",
+        "aiInsight": null
+      }
+    ],
+    "activityGrid": [
+      { "date": "2025-07-29", "count": 0 },
+      { "date": "2025-07-30", "count": 2 }
+    ],
+    "recentAccepted": [
+      {
+        "submissionId": "uuid",
+        "problemId": "uuid",
+        "problemTitle": "Two Sum",
+        "difficulty": "Easy",
+        "status": "Accepted",
+        "language": "Python",
+        "submittedAt": "2026-07-28T10:30:00Z"
+      }
     ]
   }
 }
 ```
+
+**Key field notes:**
+
+| Field | Type | Notes |
+|---|---|---|
+| `user.username` | `string` | URL-safe slug matching the `:username` route param |
+| `user.headline` | `string?` | Optional one-liner shown under avatar |
+| `user.bio` | `string?` | Optional short bio |
+| `user.social.*` | `string?` | Full URLs; all fields optional |
+| `difficultyTotals` | `object` | Platform-wide totals per difficulty, used to render the difficulty progress bars (e.g. "18 / 955 Easy") |
+| `activityGrid` | `ActivityDay[365]` | Exactly **365 items**, oldest first. Drives the GitHub-style activity heatmap. `count = 0` means inactive. |
+| `recentAccepted` | `RecentSubmission[]` | Last **10 Accepted-only** submissions. Non-accepted verdicts are excluded. |
+| `topicStats[].strength` | `'strong' \| 'average' \| 'weak'` | Same calculation as the progress page |
+
+> **Note:** The `/dashboard` route now redirects to `/profile/:username` for the logged-in user. The profile page doubles as the personal dashboard.
 
 ---
 
@@ -924,6 +1254,8 @@ interface User {
   role: 'student' | 'instructor';
   avatarInitials: string;   // e.g. "JD" — auto-generated from full name
   streak?: number;          // students only
+  username?: string;        // URL-safe slug, e.g. "test_student"
+  joinedAt?: string;        // ISO date string — populated on profile load
 }
 ```
 
@@ -1037,24 +1369,192 @@ interface SubmissionFeedback {
 }
 ```
 
-### Progress
+### Analytics — Student Progress (`GET /api/analytics/progress`)
 ```typescript
-interface StudentProgress {
-  problemsSolved: number;
-  avgScore: number;
-  streak: number;
-  hintsUsedToday: number;
-  hintsLimit: number;
-  topicMastery: { topic: string; percentage: number; }[];
+// Streak & activity
+interface DailyActivity {
+  date: string;        // 'YYYY-MM-DD'
+  submitted: boolean;  // true if at least one submission that day
 }
 
-interface ClassProgress {
-  activeStudents: number;
-  enrolledStudents: number;
-  classAvgScore: number;
-  integrityFlags: number;
-  assignedProblems: number;
-  topicMastery: { topic: string; percentage: number; }[];
+interface StreakData {
+  currentStreak: number;          // consecutive days with ≥1 submission
+  longestStreak: number;          // all-time best
+  lastSevenDays: DailyActivity[]; // always 7 items, oldest first
+}
+
+// Hero summary
+interface ProgressSummary {
+  studentName: string;
+  totalAttempted: number;
+  totalSolved: number;
+  successRate: number;   // 0–100
+  streak: StreakData;
+}
+
+// Topic performance
+type TopicStrength = 'strong' | 'average' | 'weak';
+
+interface TopicPerformance {
+  topicId: string;
+  topicName: string;
+  attempted: number;
+  solved: number;
+  strengthScore: number;     // 0–100 — thresholds: ≥75 strong, 40–74 average, <40 weak
+  strength: TopicStrength;
+  aiInsight: string | null;  // only populated for weak topics
+}
+
+// Difficulty distribution
+interface DifficultyBreakdown {
+  easy: number;
+  medium: number;
+  hard: number;
+}
+
+// Success rate chart data
+interface SuccessRateDataPoint {
+  label: string;        // e.g. 'Mon', 'Tue'
+  successRate: number;  // 0–100
+  solved: number;
+}
+
+// Recent submissions (progress page)
+interface RecentSubmission {
+  submissionId: string;
+  problemId: string;
+  problemTitle: string;
+  difficulty: 'Easy' | 'Medium' | 'Hard';   // title-cased
+  status: 'Accepted' | 'Wrong Answer' | 'Runtime Error' | 'Time Limit Exceeded';
+  language: string;
+  submittedAt: string;  // ISO-8601
+}
+
+// Recommended problems (progress page)
+interface ProgressRecommendedProblem {
+  problemId: string;
+  title: string;
+  difficulty: 'Easy' | 'Medium' | 'Hard';
+  topic: string;
+  reason: string;   // e.g. "Based on your weakness in Dynamic Programming"
+}
+
+// Hint usage stats
+interface HintUsageStats {
+  totalHintsUsed: number;
+  averageHintsPerProblem: number;
+  solvedWithZeroHints: number;
+  solvedUsingAllHints: number;
+}
+
+// Full response shape
+interface StudentAnalytics {
+  summary: ProgressSummary;
+  topics: TopicPerformance[];
+  difficultyBreakdown: DifficultyBreakdown;
+  successRateHistory: SuccessRateDataPoint[];
+  recentSubmissions: RecentSubmission[];
+  recommendations: ProgressRecommendedProblem[];
+  hintUsage: HintUsageStats;
+}
+```
+
+### Analytics — Dashboard / Legacy (`GET /api/analytics/dashboard` and sub-endpoints)
+```typescript
+interface TopicStat {
+  topic: string;
+  percentage: number;   // 0–100
+  trend: 'up' | 'down' | 'flat';
+}
+
+interface DashboardSummary {
+  problemsSolved: number;
+  avgScore: number;         // 0–100
+  streak: number;           // consecutive days
+  totalAttempts: number;
+  acceptanceRate: number;   // 0–100
+  hintsUsedToday: number;
+  hintsLimit: number;
+}
+
+interface WeeklyActivity {
+  date: string;       // 'YYYY-MM-DD'
+  solved: number;
+  attempted: number;
+}
+
+interface ScorePoint {
+  date: string;       // 'YYYY-MM-DD'
+  score: number;      // 0–100
+}
+
+interface RecommendedProblem {
+  id: string;
+  title: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  topic: string;
+  topicLabel: string;
+  reason: string;
+  estimatedMinutes: number;
+}
+
+interface StudentDashboardData {
+  summary: DashboardSummary;
+  topicStats: TopicStat[];
+  weeklyActivity: WeeklyActivity[];   // 28 items
+  scoreHistory: ScorePoint[];         // 30 items
+  recommendations: RecommendedProblem[];
+}
+```
+
+### Public Profile (`GET /api/profile/:username`)
+```typescript
+interface LanguageStat {
+  language: string;   // e.g. 'Python', 'C#', 'JavaScript'
+  solved: number;
+}
+
+interface ActivityDay {
+  date: string;    // 'YYYY-MM-DD'
+  count: number;   // 0 = inactive, 1+ = number of submissions that day
+}
+
+interface DifficultyTotals {
+  easy: number;    // total Easy problems available on the platform
+  medium: number;
+  hard: number;
+}
+
+interface PublicProfileData {
+  user: {
+    username: string;          // URL-safe slug, e.g. "test_student"
+    name: string;
+    avatarInitials: string;
+    role: 'student' | 'instructor';
+    joinedAt: string;          // ISO date string
+    headline?: string;         // optional one-liner, e.g. "SWE | 3 yrs exp"
+    bio?: string;              // optional short summary
+    social?: {
+      linkedin?: string;       // full URL
+      github?: string;         // full URL
+      twitter?: string;        // full URL
+    };
+  };
+  totalSolved: number;
+  totalAttempted: number;
+  successRate: number;         // 0–100
+  streak: {
+    currentStreak: number;
+    longestStreak: number;
+    totalActiveDays: number;
+    totalSubmissionsLastYear: number;
+  };
+  difficultyBreakdown: DifficultyBreakdown;
+  difficultyTotals: DifficultyTotals;    // platform-wide totals, used for progress bars
+  languageStats: LanguageStat[];
+  topicStats: TopicPerformance[];        // same shape as progress page
+  activityGrid: ActivityDay[];           // exactly 365 items, oldest first
+  recentAccepted: RecentSubmission[];    // last 10 Accepted-only submissions
 }
 ```
 
@@ -1148,19 +1648,25 @@ interface ContestResult {
 
 | Feature | Endpoint | Status | Notes |
 |---|---|---|---|
-| Login | `POST /api/auth/login` | ⚠️ Mocked | In-memory mock users |
-| Register | `POST /api/auth/register` | ⚠️ Mocked | No persistence |
-| Forgot Password | `POST /api/auth/forgot-password` | ⚠️ Mocked | Form exists, no action |
-| Problem List | `GET /api/problems` | ⚠️ Mocked | Hardcoded 9 problems |
-| Problem Detail | `GET /api/problems/:id` | ⚠️ Not started | Page hardcoded to Two Sum |
-| Recommended | `GET /api/problems/recommended` | ⚠️ Mocked | First 3 of hardcoded list |
+| Login | `POST /api/auth/login` | ⚠️ Mocked | In-memory mock users (student@codify.com / instructor@codify.com) |
+| Register | `POST /api/auth/register` | ⚠️ Mocked | Creates user in-memory, no persistence |
+| Forgot Password | `POST /api/auth/forgot-password` | ⚠️ Mocked | Form shows success state, no HTTP call |
+| Problem List | `GET /api/problems` | ⚠️ Mocked | Hardcoded 9-problem array in service |
+| Problem Detail | `GET /api/problems/:id` | ⚠️ Mocked | Page hardcoded to Two Sum; route param not yet used |
+| Recommended | `GET /api/problems/recommended` | ⚠️ Mocked | Returns first 3 of hardcoded list |
 | Run Code | `POST /api/execution/run` | ⚠️ Mocked | Real call commented out, ready to enable |
 | Submit | `POST /api/submissions` | ⚠️ Mocked | Real call commented out, ready to enable |
-| Poll Submission | `GET /api/submissions/:id` | ⚠️ Mocked | Polling logic fully built |
+| Poll Submission | `GET /api/submissions/:id` | ⚠️ Mocked | Polling logic fully built (1500ms interval) |
 | AI Hints | `POST /api/ai/hints` | ⚠️ Mocked | Real call commented out, ready to enable |
-| AI Feedback | `GET /api/submissions/:id/feedback` | ❌ Missing | UI complete, endpoint doesn't exist |
-| Student Progress | `GET /api/progress/student` | ⚠️ Mocked | No HTTP call wired |
-| Class Progress | `GET /api/progress/class` | ⚠️ Mocked | No HTTP call wired |
+| AI Feedback | `GET /api/submissions/:id/feedback` | ❌ Missing | Full UI complete; backend endpoint does not exist yet |
+| Student Analytics | `GET /api/analytics/progress` | ⚠️ Mocked | Used by StudentProgressComponent; no HTTP wired |
+| Dashboard | `GET /api/analytics/dashboard` | ⚠️ Mocked | Legacy method; no active component consumes it |
+| Summary | `GET /api/analytics/summary` | ⚠️ Mocked | Legacy method; no active component consumes it |
+| Topic Stats | `GET /api/analytics/topics` | ⚠️ Mocked | Legacy method; no active component consumes it |
+| Activity | `GET /api/analytics/activity` | ⚠️ Mocked | Legacy method; no active component consumes it |
+| Score History | `GET /api/analytics/scores` | ⚠️ Mocked | Legacy method; no active component consumes it |
+| Recommendations | `GET /api/analytics/recommendations` | ⚠️ Mocked | Legacy method; no active component consumes it |
+| Public Profile | `GET /api/profile/:username` | ⚠️ Mocked | Used by ProfileComponent; no HTTP wired |
 | Student List | `GET /api/instructor/students` | ❌ Not implemented | UI complete, mock data |
 | Student Detail | `GET /api/instructor/students/:id` | ❌ Not implemented | UI complete, mock data |
 | Student Contests | `GET /api/instructor/students/:id/contests` | ❌ Not implemented | UI complete, mock data |
@@ -1170,11 +1676,13 @@ interface ContestResult {
 | Contest Detail | `GET /api/contests/:id` | ❌ Not implemented | UI complete, mock data |
 | Create Contest | `POST /api/contests` | ❌ Not implemented | Form complete, mock data |
 | Contest Results | `GET /api/contests/:id/results` | ❌ Not implemented | Analytics chart complete, mock data |
-
+| ~~Student Progress~~ | ~~`GET /api/progress/student`~~ | 🚫 Deprecated | Replaced by `GET /api/analytics/progress` |
+| ~~Class Progress~~ | ~~`GET /api/progress/class`~~ | 🚫 Deprecated | No component uses this; instructor dashboard not yet designed |
 **Legend:**
 - ✅ Live — real HTTP call working
 - ⚠️ Mocked — frontend ready, backend needed
-- ❌ Missing / Not implemented — backend endpoint doesn't exist yet, UI exists
+- ❌ Missing — backend endpoint does not exist yet, UI is complete
+- 🚫 Deprecated — no longer called by any frontend component
 
 ---
 
@@ -1185,15 +1693,15 @@ Ordered by what unblocks the most frontend functionality:
 **Student-facing (Salah's work is blocked on these):**
 1. **Auth (Login + Register)** — blocks everything behind `authGuard`
 2. **`POST /api/execution/run`** — highest-traffic endpoint, core product experience
-3. **`POST /api/submissions` + `GET /api/submissions/:id`** — completes the judge loop
-4. **`GET /api/problems` + `GET /api/problems/:id`** — unblocks the problem list and page
-5. **`POST /api/ai/hints`** — AI hint panel is fully built and waiting
-6. **`GET /api/submissions/:id/feedback`** — feedback UI is complete but endpoint is missing
-7. **`GET /api/progress/student`** — needed for student dashboard
-8. **`POST /api/auth/forgot-password`** — lower priority
+3. **`POST /api/submissions` + `GET /api/submissions/:id`** — completes the judge loop; polling logic already built
+4. **`GET /api/problems` + `GET /api/problems/:id`** — unblocks the full problem list and per-problem pages
+5. **`POST /api/ai/hints`** — AI hint panel fully built and waiting; real call commented out and ready
+6. **`GET /api/submissions/:id/feedback`** — feedback UI complete but endpoint does not exist yet; highest-priority new build
+7. **`GET /api/analytics/progress`** — unlocks the entire Student Progress page (`/progress`)
+8. **`GET /api/profile/:username`** — unlocks the Public Profile page and the `/dashboard` redirect
+9. **`POST /api/auth/forgot-password`** — lower priority, form already shows success state
 
-**Instructor-facing (Owais's work is blocked on these — all owned by Khaled, Sprint 4):**
-9. **`GET /api/progress/class`** — overview metric cards + topic mastery chart
+**Instructor-facing (all owned by Khaled, Sprint 4):**
 10. **`GET /api/instructor/activity?days=14`** — activity trend chart
 11. **`GET /api/instructor/students`** — student list table
 12. **`GET /api/instructor/students/:id`** — student detail (streak, hints, submissions)
@@ -1202,6 +1710,10 @@ Ordered by what unblocks the most frontend functionality:
 15. **`POST /api/contests`** — create contest form
 16. **`GET /api/contests/:id/results`** — contest analytics (leaderboard, charts)
 17. **`GET /api/instructor/students/:id/contests`** — per-student contest history
+
+**Lower priority / Legacy:**
+18. **`GET /api/analytics/dashboard` and related analytics endpoints** — legacy; back-fill after the progress endpoint is live
+19. **`GET /api/problems/recommended`** — no active UI component currently consumes this
 
 ---
 
@@ -1214,13 +1726,25 @@ Ordered by what unblocks the most frontend functionality:
 - No refresh token mechanism exists yet — implement standard JWT expiry
 
 ### HttpInterceptor (TODO)
-Currently each service builds the `Authorization` header manually. Once real auth is wired, we'll add an `HttpInterceptor` to handle this globally. The backend doesn't need to change anything for this.
+Currently each service builds the `Authorization` header manually via a `headers()` helper. Once real auth is wired, we'll add an `HttpInterceptor` to handle this globally. The backend doesn't need to change anything for this.
 
 ### Submission polling interval
 The frontend polls `GET /api/submissions/:id` every **1500ms** using `timer(0, 1500)`. Keep response time for this endpoint under 500ms.
 
 ### Problem ID hardcoding
 The problem page currently uses a hardcoded problem ID: `00000000-0000-0000-0000-000000000005`. Once `GET /api/problems/:id` is live, the component will read the ID from the route param `problems/:id`.
+
+### `/dashboard` redirect
+`/dashboard` no longer maps to a component — it redirects to `/profile/:username` using the logged-in user's name slug. The profile page is the new combined dashboard + profile surface. `StudentDashboardComponent` has been removed.
+
+### Username slug format
+The slug is derived from the user's full name: lowercase, spaces replaced with underscores (e.g. "Test Student" → `test_student`). The same logic runs in `app.routes.ts` (redirect) and should be used server-side when looking up a profile by slug.
+
+### Activity heatmap grid
+`GET /api/profile/:username` must return exactly **365 `ActivityDay` items**, one per calendar day, oldest first, ending on today. The profile component filters by year client-side — the full year of data is always expected in the response.
+
+### `successRateHistory` time range
+The progress component has a time-range toggle (`7d` | `30d` | `3m`). The current mock always returns 7 data points with day-of-week labels. When the real endpoint ships, the backend should accept an optional `?range=7d|30d|3m` query param and return the appropriate slice. The component calls `getStudentAnalytics()` without query params for now, so this can be a v2 addition.
 
 ### Language support matrix
 
@@ -1233,12 +1757,12 @@ The problem page currently uses a hardcoded problem ID: `00000000-0000-0000-0000
 | C++ | frontend mock only | frontend mock only | Not planned |
 
 ### Enabling real API calls
-All three services (`SubmissionService`, `HintService`) have the real HTTP calls written and commented out right next to the mock line. To switch any endpoint live:
-1. Uncomment the `http` block
+`SubmissionService`, `HintService`, and `AnalyticsService` all have the real HTTP calls written and commented out directly next to the mock line. To switch any endpoint live:
+1. Uncomment the `http.get` / `http.post` block in the service
 2. Delete the mock return line directly below it
 
 ### CORS
 Backend needs to allow requests from `http://localhost:4200` (Angular dev server default).
 
 ### `avatarInitials` generation
-Frontend auto-generates initials from full name (first + last word initials). The backend doesn't need to compute this — the frontend sends the final value on register if needed, or the backend can derive it using the same logic.
+Frontend auto-generates initials from the full name (first letter of first word + first letter of last word). The backend doesn't need to compute this — the frontend derives and stores the value.
