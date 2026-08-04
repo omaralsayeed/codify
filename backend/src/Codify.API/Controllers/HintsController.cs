@@ -1,4 +1,7 @@
 using Codify.API.Common;
+using Codify.API.Extensions;
+using Codify.Application.DTOs.AI;
+using Codify.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -6,37 +9,40 @@ using Microsoft.AspNetCore.RateLimiting;
 namespace Codify.API.Controllers;
 
 /// <summary>
-/// AI hint endpoints. Full implementation wired to the Tutor Agent in Sprint 3 (Omar).
-/// Rate limiting policy is already applied: 10 requests per hour per user.
+/// AI hint endpoints. Wired to the Tutor Agent via IAiHintService.
+/// Rate limiting policy is applied: 10 requests per hour per user.
 /// </summary>
 [ApiController]
-[Route("api/ai/hints")]
+[Route("api/hints")]
 [Authorize(Roles = "Student")]
-public class HintsController : ControllerBase
+public class HintsController(IAiHintService hintService) : ControllerBase
 {
     /// <summary>
-    /// Request a hint for a problem.
+    /// Request an AI-generated hint for a problem.
     /// Rate limited: 10 requests per hour per user.
-    /// TODO Sprint 3: inject IHintService and wire to Tutor Agent.
     /// </summary>
     [HttpPost]
     [EnableRateLimiting("ai-hints")]
-    public IActionResult RequestHint()
+    public async Task<IActionResult> RequestHint(
+        [FromBody] HintRequest request,
+        CancellationToken cancellationToken)
     {
-        // Placeholder — full implementation in Sprint 3
-        return StatusCode(501, ApiResponse.Fail("NOT_IMPLEMENTED",
-            "Hint service will be available in Sprint 3."));
+        var userId = User.GetUserId();
+        var result = await hintService.GetHintAsync(request, userId, cancellationToken);
+        return Ok(ApiResponse.Ok(result));
     }
 
     /// <summary>
     /// Get hint history for the current user on a problem.
-    /// TODO Sprint 3: inject IHintService.
     /// </summary>
     [HttpGet("history")]
-    public IActionResult GetHistory([FromQuery] Guid problemId)
+    public async Task<IActionResult> GetHistory(
+        [FromQuery] Guid problemId,
+        CancellationToken cancellationToken)
     {
-        // Placeholder — full implementation in Sprint 3
-        return StatusCode(501, ApiResponse.Fail("NOT_IMPLEMENTED",
-            "Hint service will be available in Sprint 3."));
+        var userId = User.GetUserId();
+        var result = await hintService.GetHintHistoryAsync(problemId, userId, cancellationToken);
+        return Ok(ApiResponse.Ok(result));
     }
 }
+

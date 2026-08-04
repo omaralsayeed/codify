@@ -1,5 +1,6 @@
 using Codify.Application.Interfaces;
 using Codify.Domain.Entities;
+using Codify.Domain.Enums;
 using Codify.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -27,8 +28,26 @@ public class SubmissionRepository(CodifyDbContext db) : ISubmissionRepository
             .Include(s => s.FeedbackRecords)
             .FirstOrDefaultAsync(s => s.Id == id);
 
+    public async Task<IEnumerable<Submission>> GetAllByUserAsync(Guid userId) =>
+        await db.Submissions
+            .Include(s => s.Problem)
+                .ThenInclude(p => p.ProblemTags)
+                    .ThenInclude(pt => pt.ConceptTag)
+            .Where(s => s.UserId == userId)
+            .ToListAsync();
+
+    public async Task<bool> HasPreviousAcceptedAsync(Guid userId, Guid problemId, Guid excludeSubmissionId) =>
+        await db.Submissions
+            .AnyAsync(s => s.UserId == userId
+                        && s.ProblemId == problemId
+                        && s.Status == SubmissionStatus.Accepted
+                        && s.Id != excludeSubmissionId);
+
     public async Task AddAsync(Submission submission) =>
         await db.Submissions.AddAsync(submission);
+
+    public async Task AddResultAsync(SubmissionResult result) =>
+        await db.SubmissionResults.AddAsync(result);
 
     public async Task SaveChangesAsync() =>
         await db.SaveChangesAsync();

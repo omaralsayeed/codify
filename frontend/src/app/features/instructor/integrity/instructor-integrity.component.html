@@ -1,0 +1,59 @@
+<section class="integrity">
+
+  <!-- Header -->
+  <h1 class="page-title">Integrity Flags</h1>
+  <p class="page-sub">
+    {{ flags.length }} flag{{ flags.length !== 1 ? 's' : '' }} detected — sorted by severity.
+  </p>
+
+  <!-- Flag list -->
+  @if (flags.length > 0) {
+    <ul class="flags-list" aria-label="Integrity flags">
+      @for (flag of flags; track flag.id) {
+        <li class="flag-card">
+
+          <!-- Left: severity stripe -->
+          <div class="severity-stripe" [ngClass]="severityClass(flag.severity)" aria-hidden="true"></div>
+
+          <!-- Content -->
+          <div class="flag-body">
+            <div class="flag-header">
+              <!-- Student name + link -->
+              <a
+                class="student-link"
+                [routerLink]="['../students', flag.studentId]"
+                [attr.aria-label]="'View ' + flag.studentName + ' profile'"
+              >
+                {{ flag.studentName }}
+              </a>
+
+              <!-- Severity badge -->
+              <span
+                class="severity-badge"
+                [ngClass]="severityClass(flag.severity)"
+                [attr.aria-label]="'Severity: ' + severityLabel(flag.severity)"
+              >
+                {{ severityLabel(flag.severity) }}
+              </span>
+            </div>
+
+            <!-- Reason -->
+            <p class="flag-reason">{{ flag.reason }}</p>
+
+            <!-- Footer: detected date -->
+            <span class="flag-date" [title]="formatDate(flag.detectedAt)">
+              Detected {{ relativeTime(flag.detectedAt) }}
+            </span>
+          </div>
+
+        </li>
+      }
+    </ul>
+  } @else {
+    <div class="empty-state">
+      <span class="empty-icon" aria-hidden="true">✅</span>
+      <p class="empty-text">No integrity flags detected. All clear!</p>
+    </div>
+  }
+
+</section>

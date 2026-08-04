@@ -26,6 +26,9 @@ public static class DependencyInjection
         services.AddScoped<IProblemRepository, ProblemRepository>();
         services.AddScoped<IConceptTagRepository, ConceptTagRepository>();
         services.AddScoped<ISubmissionRepository, SubmissionRepository>();
+        services.AddScoped<IHintRepository, HintRepository>();
+        services.AddScoped<IFeedbackRepository, FeedbackRepository>();
+        services.AddScoped<IPerformanceRepository, PerformanceRepository>();
 
         // Auth
         services.AddScoped<IJwtService, JwtService>();
@@ -37,6 +40,8 @@ public static class DependencyInjection
         services.AddScoped<ISubmissionService, SubmissionService>();
         services.AddScoped<IExecutionService, ExecutionService>();
         services.AddScoped<IAiHintService, AiHintService>();
+        services.AddScoped<IPerformanceService, PerformanceService>();
+        services.AddScoped<IFeedbackRepository, FeedbackRepository>();
 
         // AI
         services.Configure<OpenAiOptions>(options =>
