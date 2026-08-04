@@ -1,17 +1,14 @@
-using Codify.Application.Agents;
+﻿using Codify.Application.Agents;
 using Codify.Application.Interfaces;
 using Codify.Domain.Enums;
 using Microsoft.Extensions.Logging;
 
 namespace Codify.Infrastructure.AI;
 
-/// <summary>
-/// Implements the tools the .NET-native Analytics / Tagging Agent can call via
-/// OpenAI function calling. The LLM decides which tools to call; these methods
-/// only execute the requested tool and return deterministic analytics data.
-/// </summary>
 public class AnalyticsAgentTools(
     ISubmissionRepository submissionRepo,
+    IVectorStore vectorStore,
+    IEmbeddingService embeddingService,
     ILogger<AnalyticsAgentTools> logger) : IAnalyticsAgentTools
 {
     public async Task<List<SubmissionSnapshot>> GetSubmissionHistoryAsync(Guid userId)
@@ -223,6 +220,94 @@ public class AnalyticsAgentTools(
         };
     }
 
+    public async Task<ConceptContextResult> GetConceptContextAsync(string topic)
+    {
+        if (string.IsNullOrWhiteSpace(topic))
+            return new ConceptContextResult { Topic = topic, Summary = "No topic provided." };
+
+        try
+        {
+            await vectorStore.EnsureCollectionAsync();
+            var vector = await embeddingService.GenerateAsync(topic);
+            var results = await vectorStore.SearchAsync(
+                vector,
+                conceptTag: topic,
+                source: "concept",
+                topK: 3,
+                minSimilarity: 0.6f);
+
+            var chunks = results.Select(r => r.Content).ToList();
+            return new ConceptContextResult
+            {
+                Topic = topic,
+                RetrievedChunks = chunks,
+                Summary = chunks.Count > 0
+                    ? $"Retrieved {chunks.Count} concept chunk(s) for '{topic}'."
+                    : $"No relevant concept chunks found for '{topic}'."
+            };
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to retrieve concept context for topic '{Topic}'", topic);
+            return new ConceptContextResult
+            {
+                Topic = topic,
+                Summary = "Concept context retrieval failed."
+            };
+        }
+    }
+
+    public async Task<ProblemClassificationResult> ClassifyProblemTagsAsync(string problemTitle, string problemStatement)
+    {
+        if (string.IsNullOrWhiteSpace(problemStatement))
+            return new ProblemClassificationResult
+            {
+                SuggestedTags = [],
+                Reasoning = "No problem statement provided."
+            };
+
+        try
+        {
+            await vectorStore.EnsureCollectionAsync();
+            var text = $"{problemTitle}\n\n{problemStatement}";
+            var vector = await embeddingService.GenerateAsync(text);
+            var results = await vectorStore.SearchAsync(
+                vector,
+                source: "problem",
+                topK: 5,
+                minSimilarity: 0.6f);
+
+            var tagVotes = results
+                .Where(r => r.Metadata.TryGetValue("concept_tag", out _))
+                .GroupBy(r => r.Metadata["concept_tag"]?.ToString() ?? "General")
+                .Select(g => new TagConfidence
+                {
+                    Tag = g.Key,
+                    Confidence = (float)g.Average(r => r.Similarity)
+                })
+                .Where(tc => !string.IsNullOrWhiteSpace(tc.Tag))
+                .OrderByDescending(tc => tc.Confidence)
+                .Take(3)
+                .ToList();
+
+            return new ProblemClassificationResult
+            {
+                SuggestedTags = tagVotes.Select(t => t.Tag).ToList(),
+                TagConfidences = tagVotes,
+                Reasoning = $"Inferred from {results.Count} nearest tagged problem(s) in the vector store."
+            };
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to classify problem tags for '{Title}'", problemTitle);
+            return new ProblemClassificationResult
+            {
+                SuggestedTags = [],
+                Reasoning = "Problem classification failed."
+            };
+        }
+    }
+
     private static Dictionary<string, float> ComputeTopicSuccessRates(List<SubmissionSnapshot> snapshots)
     {
         return snapshots
@@ -255,5 +340,3 @@ public class AnalyticsAgentTools(
         Score = s.Score
     };
 }
-
-

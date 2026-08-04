@@ -43,6 +43,18 @@ public static class AnalyticsAgentToolSchemas
             Name = "generate_tags",
             Description = "Generate structured learning tags: learning stage, overall score, consistency, confidence, weak topics, strong topics, recommended difficulty.",
             ParametersJsonSchema = """{"type":"object","properties":{"userId":{"type":"string","description":"The student's user ID"}},"required":["userId"]}"""
+        },
+        new LlmToolDefinition
+        {
+            Name = "get_concept_context",
+            Description = "Retrieve the concept description for a topic from the knowledge base. Use this to ground recommendations with real educational content rather than generic advice.",
+            ParametersJsonSchema = """{"type":"object","properties":{"topic":{"type":"string","description":"The topic/concept to look up"}},"required":["topic"]}"""
+        },
+        new LlmToolDefinition
+        {
+            Name = "classify_problem_tags",
+            Description = "Suggest ConceptTags for an untagged problem by finding similar already-tagged problems in the vector store.",
+            ParametersJsonSchema = """{"type":"object","properties":{"problemTitle":{"type":"string","description":"The problem title"},"problemStatement":{"type":"string","description":"The problem statement to classify"}},"required":["problemTitle","problemStatement"]}"""
         }
     ];
 
@@ -63,7 +75,24 @@ public static class AnalyticsAgentToolSchemas
             "detect_weaknesses" => JsonSerializer.Serialize(await tools.DetectWeaknessesAsync(userId)),
             "analyze_trends" => JsonSerializer.Serialize(await tools.AnalyzeTrendsAsync(userId)),
             "generate_tags" => JsonSerializer.Serialize(await tools.GenerateTagsAsync(userId)),
+            "get_concept_context" => await ExecuteGetConceptContextAsync(arguments, tools),
+            "classify_problem_tags" => await ExecuteClassifyProblemTagsAsync(arguments, input, tools),
             _ => """{"error":"Unknown tool"}"""
         };
+    }
+
+    private static async Task<string> ExecuteGetConceptContextAsync(JsonElement args, IAnalyticsAgentTools tools)
+    {
+        var topic = args.TryGetProperty("topic", out var t) ? t.GetString()! : string.Empty;
+        var result = await tools.GetConceptContextAsync(topic);
+        return JsonSerializer.Serialize(result);
+    }
+
+    private static async Task<string> ExecuteClassifyProblemTagsAsync(JsonElement args, AnalyticsAgentInput input, IAnalyticsAgentTools tools)
+    {
+        var title = args.TryGetProperty("problemTitle", out var pt) ? pt.GetString()! : string.Empty;
+        var statement = args.TryGetProperty("problemStatement", out var s) ? s.GetString()! : string.Empty;
+        var result = await tools.ClassifyProblemTagsAsync(title, statement);
+        return JsonSerializer.Serialize(result);
     }
 }

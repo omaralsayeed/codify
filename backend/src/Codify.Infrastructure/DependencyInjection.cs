@@ -71,9 +71,50 @@ public static class DependencyInjection
         {
             options.ApiKey = configuration[$"{OpenAiOptions.SectionName}:ApiKey"] ?? string.Empty;
             options.Model = configuration[$"{OpenAiOptions.SectionName}:Model"] ?? OpenAiOptions.DefaultModel;
+            options.EmbeddingModel = configuration[$"{OpenAiOptions.SectionName}:EmbeddingModel"] ?? "text-embedding-3-small";
         });
         services.AddSingleton<ILLMClient, OpenAiChatClient>();
         services.AddSingleton<IPromptLoader, PromptLoader>();
+
+        // RAG - embeddings + vector store (Chroma)
+        services.Configure<ChromaOptions>(options =>
+        {
+            options.BaseUrl = configuration[$"{ChromaOptions.SectionName}:BaseUrl"] ?? "http://localhost:8000";
+            options.CollectionName = configuration[$"{ChromaOptions.SectionName}:CollectionName"] ?? "codify_knowledge";
+            options.TimeoutMs = int.TryParse(configuration[$"{ChromaOptions.SectionName}:TimeoutMs"], out var t) ? t : 30000;
+            options.SimilarityThreshold = float.TryParse(configuration[$"{ChromaOptions.SectionName}:SimilarityThreshold"], out var s) ? s : 0.75f;
+        });
+
+        services.AddHttpClient<OpenAiEmbeddingService>((sp, client) =>
+        {
+            var opts = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<OpenAiOptions>>().Value;
+            client.BaseAddress = new Uri("https://api.openai.com/v1/");
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", opts.ApiKey);
+            client.Timeout = TimeSpan.FromSeconds(60);
+        });
+        services.AddScoped<IEmbeddingService>(sp =>
+        {
+            var httpClient = sp.GetRequiredService<IHttpClientFactory>().CreateClient(nameof(OpenAiEmbeddingService));
+            var opts = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<OpenAiOptions>>();
+            var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<OpenAiEmbeddingService>>();
+            return new OpenAiEmbeddingService(httpClient, opts, logger);
+        });
+
+        services.AddHttpClient<ChromaVectorStore>((sp, client) =>
+        {
+            var opts = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<ChromaOptions>>().Value;
+            client.BaseAddress = new Uri(opts.BaseUrl);
+            client.Timeout = TimeSpan.FromMilliseconds(opts.TimeoutMs);
+        });
+        services.AddScoped<IVectorStore>(sp =>
+        {
+            var httpClient = sp.GetRequiredService<IHttpClientFactory>().CreateClient(nameof(ChromaVectorStore));
+            var opts = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<ChromaOptions>>();
+            var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<ChromaVectorStore>>();
+            return new ChromaVectorStore(httpClient, opts, logger);
+        });
+
+        services.AddScoped<IConceptDocumentIngestionService, ConceptDocumentIngestionService>();
 
         services.AddScoped<ITutorAgentTools, TutorAgentTools>();
         services.AddScoped<ITutorAgent, TutorAgentService>();

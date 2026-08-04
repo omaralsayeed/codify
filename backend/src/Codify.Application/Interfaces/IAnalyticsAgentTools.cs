@@ -14,6 +14,8 @@ public interface IAnalyticsAgentTools
     Task<WeaknessDetectionResult> DetectWeaknessesAsync(Guid userId);
     Task<TrendAnalysisResult> AnalyzeTrendsAsync(Guid userId);
     Task<TagGenerationResult> GenerateTagsAsync(Guid userId);
+    Task<ConceptContextResult> GetConceptContextAsync(string topic);
+    Task<ProblemClassificationResult> ClassifyProblemTagsAsync(string problemTitle, string problemStatement);
 }
 
 public class TopicPerformanceResult
@@ -56,4 +58,24 @@ public class TagGenerationResult
     public List<string> WeakTopics { get; set; } = [];
     public List<string> StrongTopics { get; set; } = [];
     public string RecommendedDifficulty { get; set; } = "Easy";
+}
+
+public class ConceptContextResult
+{
+    public string Topic { get; set; } = string.Empty;
+    public List<string> RetrievedChunks { get; set; } = [];
+    public string Summary { get; set; } = string.Empty;
+}
+
+public class ProblemClassificationResult
+{
+    public List<string> SuggestedTags { get; set; } = [];
+    public List<TagConfidence> TagConfidences { get; set; } = [];
+    public string Reasoning { get; set; } = string.Empty;
+}
+
+public class TagConfidence
+{
+    public string Tag { get; set; } = string.Empty;
+    public float Confidence { get; set; }
 }

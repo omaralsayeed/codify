@@ -39,6 +39,13 @@ public class ProblemRepository(CodifyDbContext db) : IProblemRepository
         return (items, total);
     }
 
+    public async Task<IEnumerable<Problem>> GetAllAsync() =>
+        await db.Problems
+            .Include(p => p.ProblemTags)
+                .ThenInclude(pt => pt.ConceptTag)
+            .Where(p => p.IsActive)
+            .ToListAsync();
+
     public async Task<Problem?> GetByIdWithDetailsAsync(Guid id) =>
         await db.Problems
             .Include(p => p.ProblemTags)

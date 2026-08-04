@@ -78,7 +78,7 @@ POST /api/ai/hints
 | Tool | Purpose |
 |------|---------|
 | `get_attempt_history` | How stuck is the student? Returns attempt count, statuses, previous hint levels, timestamps. |
-| `search_knowledge_base` | Retrieves concept-level grounding from DSA concept docs when the student is missing an underlying idea. |
+| `search_knowledge_base` | Retrieves concept-level grounding from **Chroma vector store** when the student is missing an underlying idea. Embeds the query and returns top-k similar chunks. |
 | `check_partial_code` | Lightweight static observations on the student's code (loops, recursion, base case, syntax heuristics). |
 | `get_previous_hints` | Avoids repeating guidance and judges how much more specific the next hint should be. |
 
@@ -133,11 +133,9 @@ This closes the previously documented gap and provides the evidence the instruct
 ## Current Gaps
 
 - No runtime event automatically triggers analytics refresh after every submission (could be added as a fire-and-forget call in `SubmissionService`).
-- `KnowledgeBaseSearchService` currently uses keyword search over `ConceptTag` descriptions; it is interface-ready for pgvector embeddings when the vector pipeline is added.
 
 ## Future Extensions
 
 1. Auto-refresh analytics after each accepted submission.
-2. Replace keyword search with pgvector similarity search.
-3. Add an instructor dashboard endpoint using `GET /api/ai/analytics/{userId}`.
-4. Let the Tutor Agent consume `PerformanceProfile.WeakTopicsJson` to personalize hints further.
+2. Add an instructor dashboard endpoint using `GET /api/ai/analytics/{userId}`.
+3. Let the Tutor Agent consume `PerformanceProfile.WeakTopicsJson` to personalize hints further.

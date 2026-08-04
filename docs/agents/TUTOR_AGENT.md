@@ -45,7 +45,7 @@ The agent has four tools. The **model** chooses which to use.
 | # | Tool | Input | Output | Why the Agent Calls It |
 |---|------|-------|--------|------------------------|
 | 1 | `get_attempt_history` | `studentId`, `problemId` | attempt count, submission statuses, previous hint levels, timestamps | To judge how stuck the student really is, instead of trusting the client-supplied hint level. |
-| 2 | `search_knowledge_base` | `query`, optional `conceptTag` | list of relevant concept-doc snippets | To retrieve grounding material when the student seems to be missing an underlying concept. |
+| 2 | `search_knowledge_base` | `query`, optional `conceptTag` | list of relevant concept-doc snippets from **Chroma vector store** | To retrieve grounding material when the student seems to be missing an underlying concept. Embeds the query with `text-embedding-3-small` and runs similarity search. |
 | 3 | `check_partial_code` | `code`, `language` | syntax validity + structural observations (loops, recursion, base case) | To tailor the hint to the code the student actually wrote. |
 | 4 | `get_previous_hints` | `studentId`, `problemId` | exact text of prior hints | To avoid repeating guidance and judge how much more specific to get. |
 
@@ -154,7 +154,10 @@ Although the backend is C#, the loop mirrors a LangGraph-style tool-calling agen
 | Infrastructure LLM | `backend/src/Codify.Infrastructure/AI/OpenAiChatClient.cs` | OpenAI SDK tool-calling implementation. |
 | Infrastructure prompt | `backend/src/Codify.Infrastructure/AI/Prompts/tutor-agent-system.txt` | Agentic system prompt. |
 | Infrastructure repos | `backend/src/Codify.Infrastructure/Repositories/HintLogRepository.cs` | Reads/writes hint history. |
-| Infrastructure search | `backend/src/Codify.Infrastructure/Search/KnowledgeBaseSearchService.cs` | Searches `ConceptTag` descriptions. |
+| Infrastructure search | `backend/src/Codify.Infrastructure/Search/KnowledgeBaseSearchService.cs` | Embeds queries and searches Chroma for concept chunks. |
+| Infrastructure vector | `backend/src/Codify.Infrastructure/AI/ChromaVectorStore.cs` | Chroma HTTP client for upsert/query. |
+| Infrastructure embeddings | `backend/src/Codify.Infrastructure/AI/OpenAiEmbeddingService.cs` | OpenAI `text-embedding-3-small` client. |
+| Infrastructure ingestion | `backend/src/Codify.Infrastructure/Search/ConceptDocumentIngestionService.cs` | Chunks and embeds concept markdown docs. |
 | API | `backend/src/Codify.API/Controllers/AiController.cs` | `POST /api/ai/hints`. |
 
 ## Testing
