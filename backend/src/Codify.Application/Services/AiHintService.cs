@@ -22,12 +22,21 @@ public class AiHintService(
         Guid userId,
         CancellationToken cancellationToken = default)
     {
-        if (request.HintLevel < HintRequest.MinHintLevel || request.HintLevel > HintRequest.MaxHintLevel)
-            throw new ValidationException(
-                $"Hint level must be between {HintRequest.MinHintLevel} and {HintRequest.MaxHintLevel}.");
-
         var problem = await problemRepo.GetByIdWithDetailsAsync(request.ProblemId)
             ?? throw new NotFoundException($"Problem {request.ProblemId} not found.");
+
+        // Determine next hint level from persisted history (ignore client-supplied level)
+        var currentLevel = await hintRepo.GetCurrentHintLevelAsync(userId, problem.Id);
+        if (currentLevel >= MaxHintLevel)
+            throw new ValidationException(
+                $"You have already used all {MaxHintLevel} hints for this problem.");
+
+        var nextLevel = currentLevel + 1;
+
+        // Fetch previous hint texts to give the agent context
+        var previousHints = (await hintRepo.GetByUserAndProblemAsync(userId, problem.Id))
+            .Select(h => h.ResponseText)
+            .ToList();
 
         var input = new TutorAgentInput
         {
@@ -35,8 +44,8 @@ public class AiHintService(
             ProblemTitle = problem.Title,
             ProblemStatement = problem.Statement,
             ConceptTags = problem.ProblemTags.Select(pt => pt.ConceptTag.Name).ToList(),
-            HintLevel = request.HintLevel,
-            PreviousHints = request.PreviousHints,
+            HintLevel = nextLevel,
+            PreviousHints = previousHints,
             LastSubmissionStatus = request.LastSubmissionStatus,
             AttemptCount = request.AttemptCount ?? 0,
             RetrievedContext = string.Empty,

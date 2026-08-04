@@ -5,5 +5,7 @@ export interface User {
   role: 'student' | 'instructor';
   avatarInitials: string;
   streak?: number;
-  password?: string; // Optional, for mock data only
+  username?: string;   // URL-safe slug derived from name, e.g. "test_student"
+  joinedAt?: string;   // ISO date string
+  password?: string;   // Optional, for mock data only
 }

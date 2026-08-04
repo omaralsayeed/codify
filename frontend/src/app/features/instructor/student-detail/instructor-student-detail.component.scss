@@ -293,3 +293,142 @@
   color: $muted;
   margin: 0;
 }
+
+// ── Contest history section ───────────────────────────────────────────────────
+
+.empty-sub {
+  font-size: 13px;
+  color: $muted;
+  margin: 0;
+}
+
+// ── SVG Sparkline ─────────────────────────────────────────────────────────────
+
+.sparkline-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 20px;
+}
+
+.sparkline-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: $muted;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.sparkline {
+  display: block;
+  overflow: visible;
+}
+
+.sparkline-baseline {
+  stroke: $border;
+  stroke-width: 1;
+}
+
+.sparkline-path {
+  stroke: $blue;
+  stroke-width: 2;
+}
+
+.sparkline-dot {
+  fill: $white;
+  stroke: $blue;
+  stroke-width: 2;
+}
+
+.sparkline-axis {
+  display: flex;
+  justify-content: space-between;
+}
+
+.axis-label {
+  font-size: 10px;
+  color: $muted;
+  text-align: center;
+  flex: 1;
+}
+
+// ── Contest history table ─────────────────────────────────────────────────────
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.contest-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th, td {
+    padding: 10px 12px;
+    text-align: left;
+    font-size: 13px;
+  }
+
+  thead tr { border-bottom: 1px solid $border; }
+
+  th {
+    font-size: 11px;
+    font-weight: 700;
+    color: $muted;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: $ivory;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid $border;
+    transition: background 0.12s;
+    &:last-child { border-bottom: none; }
+    &:hover { background: $blue-lt; }
+  }
+}
+
+.col-num { text-align: right; }
+
+.contest-link {
+  font-weight: 500;
+  color: $blue;
+  text-decoration: none;
+  &:hover { text-decoration: underline; }
+}
+
+.score-val {
+  font-weight: 600;
+  color: $navy;
+}
+
+// ── Rank badge (reuse contest-detail pattern) ─────────────────────────────────
+
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+
+  &.rank--gold    { background: $gold-lt;  color: $gold;    border: 2px solid $gold;   }
+  &.rank--silver  { background: $ivory2;   color: $muted;   border: 2px solid $muted;  }
+  &.rank--bronze  { background: $red-lt;   color: $orange;  border: 2px solid $orange; }
+  &.rank--default { background: $ivory;    color: $charcoal; border: 1px solid $border; }
+}
+
+// ── Delta badge ───────────────────────────────────────────────────────────────
+
+.delta-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+
+  &.delta--above   { background: $teal-lt; color: $teal; }
+  &.delta--below   { background: $red-lt;  color: $red;  }
+  &.delta--neutral { background: $ivory2;  color: $muted; }
+}

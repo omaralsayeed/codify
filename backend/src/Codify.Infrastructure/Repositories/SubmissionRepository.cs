@@ -1,5 +1,6 @@
 using Codify.Application.Interfaces;
 using Codify.Domain.Entities;
+using Codify.Domain.Enums;
 using Codify.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -42,6 +43,9 @@ public class SubmissionRepository(CodifyDbContext db) : ISubmissionRepository
 
     public async Task AddAsync(Submission submission) =>
         await db.Submissions.AddAsync(submission);
+
+    public async Task AddResultAsync(SubmissionResult result) =>
+        await db.SubmissionResults.AddAsync(result);
 
     public async Task SaveChangesAsync() =>
         await db.SaveChangesAsync();

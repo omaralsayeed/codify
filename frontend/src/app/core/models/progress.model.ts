@@ -3,6 +3,12 @@ export interface TopicMastery {
   percentage: number;
 }
 
+export interface DailyActivity {
+  date: string;        // ISO date string, e.g. "2026-07-10"
+  dayLabel: string;    // short label, e.g. "Thu 10"
+  submissions: number;
+}
+
 export interface StudentProgress {
   problemsSolved: number;
   avgScore: number;

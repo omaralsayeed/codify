@@ -16,6 +16,11 @@ public class AiController(
     ICodeAnalysisService codeAnalysisService,
     IAnalyticsService analyticsService) : ControllerBase
 {
+    /// <summary>
+    /// Request an AI-generated hint for a problem.
+    /// Hint level is auto-incremented server-side. Max 3 hints per problem per user.
+    /// Rate limited: 10 requests per hour per user.
+    /// </summary>
     [HttpPost("hints")]
     [Authorize(Roles = "Student")]
     [EnableRateLimiting("ai-hints")]
@@ -71,5 +76,19 @@ public class AiController(
         return result is null
             ? NotFound(ApiResponse.Fail("NotFound", "Analytics not found for this student."))
             : Ok(ApiResponse.Ok(result));
+    }
+    /// <summary>
+    /// Get the full hint history for the current user on a specific problem.
+    /// Returns all hint logs ordered by hint level ascending.
+    /// </summary>
+    [HttpGet("hints/history")]
+    [Authorize(Roles = "Student")]
+    public async Task<IActionResult> GetHintHistory(
+        [FromQuery] Guid problemId,
+        CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        var result = await hintService.GetHintHistoryAsync(problemId, userId, cancellationToken);
+        return Ok(ApiResponse.Ok(result));
     }
 }
