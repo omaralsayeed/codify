@@ -26,6 +26,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Codify.Domain\Codify.Domain.csproj" />
     <ProjectReference Include="..\..\src\Codify.Application\Codify.Application.csproj" />
+    <ProjectReference Include="..\..\src\Codify.Infrastructure\Codify.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Codify.API\Codify.API.csproj" />
   </ItemGroup>
 

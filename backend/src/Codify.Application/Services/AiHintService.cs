@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Codify.Application.Agents;
 using Codify.Application.DTOs.AI;
 using Codify.Application.Interfaces;
@@ -8,10 +9,13 @@ namespace Codify.Application.Services;
 
 public class AiHintService(
     IProblemRepository problemRepo,
-    IHintRepository hintRepo,
+    IHintLogRepository hintLogRepo,
     ITutorAgent tutorAgent) : IAiHintService
 {
-    private const int MaxHintLevel = HintRequest.MaxHintLevel;
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
 
     public async Task<HintResponse> GetHintAsync(
         HintRequest request,
@@ -45,47 +49,25 @@ public class AiHintService(
             LastSubmissionStatus = request.LastSubmissionStatus,
             AttemptCount = request.AttemptCount ?? 0,
             RetrievedContext = string.Empty,
-            StudentCode = request.StudentCode
+            StudentCode = request.StudentCode,
+            UserId = userId
         };
 
         var response = await tutorAgent.GenerateHintAsync(input, cancellationToken);
 
-        // Persist the hint log
-        var hintLog = HintLog.Create(
-            userId: userId,
-            problemId: problem.Id,
-            hintLevel: nextLevel,
-            responseText: response.HintText,
-            requestText: request.StudentCode);
-
-        await hintRepo.AddAsync(hintLog);
-        await hintRepo.SaveChangesAsync();
-
-        // Ensure response reflects server-computed level and hasMoreHints
-        response.HintLevel = nextLevel;
-        response.HasMoreHints = nextLevel < MaxHintLevel;
+        // Persist the hint to HintLog with agentic metadata (tools used + reasoning).
+        var toolsUsedJson = JsonSerializer.Serialize(response.ToolsUsed, JsonOptions);
+        var log = HintLog.CreateWithAgentMetadata(
+            userId,
+            problem.Id,
+            response.HintLevel,
+            response.HintText,
+            requestText: request.StudentCode is null ? null : $"level={request.HintLevel}",
+            toolsUsedJson,
+            response.ReasoningSummary ?? string.Empty);
+        await hintLogRepo.AddAsync(log);
+        await hintLogRepo.SaveChangesAsync();
 
         return response;
-    }
-
-    public async Task<HintHistoryResponse> GetHintHistoryAsync(
-        Guid problemId,
-        Guid userId,
-        CancellationToken cancellationToken = default)
-    {
-        var hints = (await hintRepo.GetByUserAndProblemAsync(userId, problemId)).ToList();
-
-        return new HintHistoryResponse
-        {
-            ProblemId = problemId,
-            TotalHintsUsed = hints.Count,
-            CanRequestMore = hints.Count < MaxHintLevel,
-            Hints = hints.Select(h => new HintHistoryItem
-            {
-                HintLevel = h.HintLevel,
-                HintText = h.ResponseText,
-                CreatedAt = h.CreatedAt
-            }).ToList()
-        };
     }
 }

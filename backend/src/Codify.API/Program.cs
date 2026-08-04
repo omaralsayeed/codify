@@ -67,15 +67,30 @@ builder.Services.AddRateLimiter(options =>
                 QueueLimit = 0
             }));
 
-    // POST /ai/hints — 10 per hour per user
-    options.AddPolicy("ai-hints", httpContext =>
+    // POST /ai/analyze — 20 per hour per user
+    options.AddPolicy("ai-analyze", httpContext =>
         RateLimitPartition.GetSlidingWindowLimiter(
             partitionKey: httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
                           ?? httpContext.Connection.RemoteIpAddress?.ToString()
                           ?? "anonymous",
             factory: _ => new SlidingWindowRateLimiterOptions
             {
-                PermitLimit = 10,
+                PermitLimit = 20,
+                Window = TimeSpan.FromHours(1),
+                SegmentsPerWindow = 6,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }));
+
+    // POST /ai/analytics — 5 per hour per user (expensive computation)
+    options.AddPolicy("ai-analytics", httpContext =>
+        RateLimitPartition.GetSlidingWindowLimiter(
+            partitionKey: httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                          ?? httpContext.Connection.RemoteIpAddress?.ToString()
+                          ?? "anonymous",
+            factory: _ => new SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
                 Window = TimeSpan.FromHours(1),
                 SegmentsPerWindow = 6,
                 QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
