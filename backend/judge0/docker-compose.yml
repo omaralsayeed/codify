@@ -1,0 +1,85 @@
+version: "3.8"
+
+services:
+
+  db:
+    image: postgres:15-alpine
+    container_name: judge0-db
+    environment:
+      POSTGRES_DB: judge0
+      POSTGRES_USER: judge0
+      POSTGRES_PASSWORD: judge0
+    volumes:
+      - judge0-db:/var/lib/postgresql/data
+    networks:
+      - judge0-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: judge0-redis
+    networks:
+      - judge0-network
+
+  server:
+    image: mrkushalsm/judge0:latest
+    container_name: judge0-server
+    privileged: true
+    cgroup: host
+    ports:
+      - "2358:2358"
+    depends_on:
+      - db
+      - redis
+    environment:
+      POSTGRES_HOST: judge0-db
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: judge0
+      POSTGRES_PASSWORD: judge0
+      POSTGRES_DB: judge0
+
+      REDIS_HOST: judge0-redis
+      REDIS_PORT: 6379
+
+      RAILS_ENV: production
+      RAILS_LOG_TO_STDOUT: "true"
+
+    volumes:
+      - judge0-box:/box
+
+    networks:
+      - judge0-network
+
+  worker:
+    image: mrkushalsm/judge0:latest
+    container_name: judge0-worker
+    privileged: true
+    cgroup: host
+    command: /api/scripts/workers
+    depends_on:
+      - db
+      - redis
+    environment:
+      POSTGRES_HOST: judge0-db
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: judge0
+      POSTGRES_PASSWORD: judge0
+      POSTGRES_DB: judge0
+
+      REDIS_HOST: judge0-redis
+      REDIS_PORT: 6379
+
+      RAILS_ENV: production
+      RAILS_LOG_TO_STDOUT: "true"
+
+    volumes:
+      - judge0-box:/box
+
+    networks:
+      - judge0-network
+
+volumes:
+  judge0-db:
+  judge0-box:
+
+networks:
+  judge0-network:

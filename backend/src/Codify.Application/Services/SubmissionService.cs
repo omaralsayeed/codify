@@ -1,23 +1,22 @@
-using Codify.Application.Agents;
 using Codify.Application.DTOs.Feedback;
 using Codify.Application.DTOs.Submissions;
 using Codify.Application.Interfaces;
 using Codify.Domain.Entities;
-using Codify.Domain.Enums;
 using Codify.Domain.Exceptions;
-using Microsoft.Extensions.Logging;
 
 namespace Codify.Application.Services;
 
+/// <summary>
+/// Handles submission CRUD/queries. The actual Judge0 evaluation (running test cases,
+/// computing verdicts, updating counters, triggering the Code Checker Agent) happens
+/// off the request thread — see IJudgeEvaluationService and
+/// Codify.Infrastructure.BackgroundJobs.SubmissionEvaluationBackgroundService.
+/// </summary>
 public class SubmissionService(
     ISubmissionRepository submissionRepo,
     IProblemRepository problemRepo,
-    IUserRepository userRepo,
-    IExecutionService executionService,
-    IPerformanceService performanceService,
     IFeedbackRepository feedbackRepo,
-    ICodeCheckerAgent codeCheckerAgent,
-    ILogger<SubmissionService> logger) : ISubmissionService
+    ISubmissionEvaluationQueue evaluationQueue) : ISubmissionService
 {
     public async Task<IEnumerable<SubmissionSummaryResponse>> GetByProblemAsync(
         Guid problemId, Guid userId, bool isInstructor)
@@ -30,160 +29,20 @@ public class SubmissionService(
     public async Task<SubmissionDetailResponse> CreateAsync(
         CreateSubmissionRequest request, Guid userId)
     {
-        // 1. Validate problem exists and load all test cases
-        var problem = await problemRepo.GetByIdWithTestCasesAsync(request.ProblemId)
+        // 1. Validate the problem exists before we accept the submission
+        _ = await problemRepo.GetByIdWithTestCasesAsync(request.ProblemId)
             ?? throw new NotFoundException($"Problem {request.ProblemId} not found.");
-
-        var testCases = problem.TestCases
-            .Where(tc => !tc.IsDeleted)
-            .OrderBy(tc => tc.OrderIndex)
-            .ToList();
 
         // 2. Persist submission as Pending
         var submission = Submission.Create(request.ProblemId, userId, request.Code, request.Language);
         await submissionRepo.AddAsync(submission);
         await submissionRepo.SaveChangesAsync();
 
-        // 3. Transition to Running
-        submission.MarkAsRunning();
-        await submissionRepo.SaveChangesAsync();
-
-        // 4. Execute each test case
-        int passed = 0;
-        int failed = 0;
-        int totalExecTimeMs = 0;
-        int maxMemoryKb = 0;
-        string? firstFailOutput = null;
-        string? errorMessage = null;
-        SubmissionStatus finalStatus = SubmissionStatus.Accepted;
-
-        foreach (var tc in testCases)
-        {
-            var result = await executionService.EvaluateAsync(
-                request.Code,
-                request.Language.ToString(),
-                tc.InputData,
-                problem.TimeLimitMs,
-                problem.MemoryLimitMb);
-
-            totalExecTimeMs += result.ExecutionTimeMs;
-            maxMemoryKb = Math.Max(maxMemoryKb, result.MemoryUsedKb);
-
-            // Determine per-test-case outcome
-            if (result.CompileError)
-            {
-                finalStatus = SubmissionStatus.CompileError;
-                errorMessage = result.Stderr;
-                failed += testCases.Count - passed; // all remaining fail
-                break;
-            }
-
-            if (result.TimedOut)
-            {
-                finalStatus = SubmissionStatus.TimeLimitExceeded;
-                failed++;
-                firstFailOutput ??= $"Input: {tc.InputData}\nExpected: {tc.ExpectedOutput}\nActual: (timed out)";
-                continue;
-            }
-
-            if (result.RuntimeError)
-            {
-                finalStatus = SubmissionStatus.RuntimeError;
-                errorMessage ??= result.Stderr;
-                failed++;
-                firstFailOutput ??= $"Input: {tc.InputData}\nExpected: {tc.ExpectedOutput}\nActual: (runtime error)";
-                continue;
-            }
-
-            var actual = NormalizeOutput(result.ActualOutput);
-            var expected = NormalizeOutput(tc.ExpectedOutput);
-
-            if (actual == expected)
-            {
-                passed++;
-            }
-            else
-            {
-                failed++;
-                finalStatus = SubmissionStatus.WrongAnswer;
-                firstFailOutput ??= $"Input: {tc.InputData}\nExpected: {tc.ExpectedOutput}\nActual: {result.ActualOutput}";
-            }
-        }
-
-        // 5. Update submission status
-        bool isAccepted = finalStatus == SubmissionStatus.Accepted;
-        if (isAccepted)
-            submission.MarkAsAccepted(totalExecTimeMs, maxMemoryKb, passed, testCases.Count);
-        else
-            submission.MarkAsFailed(finalStatus, passed, testCases.Count);
-
-        // 6. Persist SubmissionResult (detailed pass/fail breakdown)
-        var submissionResult = SubmissionResult.Create(
-            submissionId: submission.Id,
-            passed: passed,
-            failed: failed,
-            total: testCases.Count,
-            errorMessage: errorMessage,
-            outputSummary: firstFailOutput);
-
-        await submissionRepo.AddResultAsync(submissionResult);
-
-        // 7. Update problem-level counters
-        problem.IncrementSubmissionCounters(isAccepted);
-        await problemRepo.SaveChangesAsync();
-
-        // 8. If first accepted submission, increment user's solved counter
-        if (isAccepted)
-        {
-            var previousAccepted = await submissionRepo.HasPreviousAcceptedAsync(userId, request.ProblemId, submission.Id);
-            if (!previousAccepted)
-            {
-                var user = await userRepo.GetByIdAsync(userId);
-                user?.IncrementSolvedProblems();
-                await userRepo.SaveChangesAsync();
-            }
-        }
-
-        // 9. Recalculate performance profile
-        await performanceService.UpdateAfterSubmissionAsync(userId);
-
-        // 10. Final save for submission status + result
-        await submissionRepo.SaveChangesAsync();
-
-        // 11. Trigger the Code Checker Agent asynchronously (fire-and-forget with error guard)
-        //    We don't await here so the API responds immediately without waiting for the AI call.
-        //    The feedback is stored in the background and retrievable via GET /submissions/{id}/feedback.
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                var agentInput = new CodeCheckerAgentInput(
-                    SubmissionId:     submission.Id,
-                    Code:             submission.Code,
-                    Language:         submission.Language.ToString(),
-                    ProblemTitle:     problem.Title,
-                    ProblemStatement: problem.Statement);
-
-                var feedbackItems = await codeCheckerAgent.AnalyzeAsync(agentInput);
-
-                var records = feedbackItems.Select(item =>
-                    FeedbackRecord.Create(submission.Id, item.FeedbackType, item.Message));
-
-                await feedbackRepo.AddRangeAsync(records);
-                await feedbackRepo.SaveChangesAsync();
-
-                logger.LogInformation(
-                    "CodeChecker saved {Count} feedback records for submission {SubmissionId}.",
-                    feedbackItems.Count, submission.Id);
-            }
-            catch (Exception ex)
-            {
-                // Never let a background failure affect the student's submission response
-                logger.LogError(ex,
-                    "CodeChecker background task failed for submission {SubmissionId}.",
-                    submission.Id);
-            }
-        });
+        // 3. Hand off to the background evaluation pipeline and return immediately.
+        //    JudgeEvaluationService (running inside SubmissionEvaluationBackgroundService)
+        //    picks this up, runs every test case through Judge0, and updates the submission's
+        //    status asynchronously. The caller polls GET /submissions/{id} for the result.
+        evaluationQueue.QueueSubmission(submission.Id);
 
         return await GetByIdAsync(submission.Id, userId, isInstructor: false);
     }
@@ -197,11 +56,8 @@ public class SubmissionService(
         if (!isInstructor && submission.UserId != userId)
             throw new ForbiddenException("You do not have access to this submission.");
 
-        return MapToDetail(submission);
+        return MapToDetail(submission, isInstructor);
     }
-
-    private static string NormalizeOutput(string output) =>
-        output.Trim().Replace("\r\n", "\n").Replace("\r", "\n");
 
     public async Task<List<FeedbackResponse>> GetFeedbackAsync(
         Guid submissionId, Guid userId, bool isInstructor)
@@ -238,7 +94,7 @@ public class SubmissionService(
         MemoryUsedKb    = s.MemoryUsedKb
     };
 
-    private static SubmissionDetailResponse MapToDetail(Submission s) => new()
+    private static SubmissionDetailResponse MapToDetail(Submission s, bool isInstructor) => new()
     {
         SubmissionId    = s.Id,
         ProblemId       = s.ProblemId,
@@ -264,6 +120,20 @@ public class SubmissionService(
         {
             Type    = f.FeedbackType.ToString(),
             Message = f.Message
-        }).ToList()
+        }).ToList(),
+        TestCaseResults = s.TestCaseResults
+            .OrderBy(r => r.OrderIndex)
+            .Select(r => new TestCaseResultDetail
+            {
+                TestCaseId      = r.TestCaseId,
+                OrderIndex      = r.OrderIndex,
+                IsSample        = r.IsSample,
+                Verdict         = r.Verdict.ToString(),
+                ExecutionTimeMs = r.ExecutionTimeMs,
+                MemoryUsedKb    = r.MemoryUsedKb,
+                // Hidden test cases stay hidden from students — same rule TestCaseService applies.
+                ActualOutput = (r.IsSample || isInstructor) ? r.ActualOutput : null,
+                Stderr       = (r.IsSample || isInstructor) ? r.Stderr : null
+            }).ToList()
     };
 }

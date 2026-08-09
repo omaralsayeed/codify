@@ -22,10 +22,14 @@ public class SubmissionRepository(CodifyDbContext db) : ISubmissionRepository
             .ToListAsync();
     }
 
+    public async Task<Submission?> GetByIdAsync(Guid id) =>
+        await db.Submissions.FirstOrDefaultAsync(s => s.Id == id);
+
     public async Task<Submission?> GetByIdWithDetailsAsync(Guid id) =>
         await db.Submissions
             .Include(s => s.Result)
             .Include(s => s.FeedbackRecords)
+            .Include(s => s.TestCaseResults)
             .FirstOrDefaultAsync(s => s.Id == id);
 
     public async Task<IEnumerable<Submission>> GetAllByUserAsync(Guid userId) =>

@@ -1,16 +1,21 @@
+using System.Globalization;
 using Codify.Application.DTOs.Execution;
+using Codify.Application.Execution;
 using Codify.Application.Interfaces;
 using Codify.Domain.Exceptions;
+using Microsoft.Extensions.Logging;
 
 namespace Codify.Application.Services;
 
 /// <summary>
-/// Stub execution service.
-/// RunAsync  → used by POST /execution/run ("Run" button, sample cases only).
-/// EvaluateAsync → used by the submission pipeline to judge one test case at a time.
-/// TODO Sprint 2 (Badry): replace EvaluateAsync body with real Docker runner.
+/// RunAsync      → used by POST /execution/run ("Run" button, sample cases only).
+/// EvaluateAsync → used by the submission pipeline (via IJudgeEvaluationService) to judge
+///                 one test case at a time. Backed by Judge0 — see IJudge0Client / Judge0Client.
 /// </summary>
-public class ExecutionService(IProblemRepository problemRepo) : IExecutionService
+public class ExecutionService(
+    IProblemRepository problemRepo,
+    IJudge0Client judge0Client,
+    ILogger<ExecutionService> logger) : IExecutionService
 {
     public async Task<RunCodeResponse> RunAsync(RunCodeRequest request)
     {
@@ -34,8 +39,10 @@ public class ExecutionService(IProblemRepository problemRepo) : IExecutionServic
             };
         }
 
-        // Stub: evaluate each sample case
         var results = new List<SampleTestResult>();
+        var totalExecTimeMs = 0;
+        string? firstStderr = null;
+
         foreach (var tc in sampleCases)
         {
             var eval = await EvaluateAsync(
@@ -44,6 +51,10 @@ public class ExecutionService(IProblemRepository problemRepo) : IExecutionServic
                 tc.InputData,
                 problem.TimeLimitMs,
                 problem.MemoryLimitMb);
+
+            totalExecTimeMs += eval.ExecutionTimeMs;
+            if (!string.IsNullOrWhiteSpace(eval.Stderr))
+                firstStderr ??= eval.Stderr;
 
             results.Add(new SampleTestResult
             {
@@ -60,13 +71,13 @@ public class ExecutionService(IProblemRepository problemRepo) : IExecutionServic
         {
             Status = allPassed ? "Accepted" : "WrongAnswer",
             Stdout = results.FirstOrDefault()?.ActualOutput ?? string.Empty,
-            Stderr = string.Empty,
-            ExecutionTimeMs = 0,
+            Stderr = firstStderr ?? string.Empty,
+            ExecutionTimeMs = totalExecTimeMs,
             TestResults = results
         };
     }
 
-    public Task<TestCaseExecutionResult> EvaluateAsync(
+    public async Task<TestCaseExecutionResult> EvaluateAsync(
         string code,
         string language,
         string input,
@@ -74,22 +85,105 @@ public class ExecutionService(IProblemRepository problemRepo) : IExecutionServic
         int memoryLimitMb,
         CancellationToken cancellationToken = default)
     {
-        // ── STUB ──────────────────────────────────────────────────────────────
-        // Badry replaces this with a real Docker-based runner.
-        // The stub always returns an empty output so the submission pipeline
-        // can exercise the full state machine without a real executor.
-        // ─────────────────────────────────────────────────────────────────────
-        return Task.FromResult(new TestCaseExecutionResult
+        var languageId = Judge0LanguageMap.GetLanguageId(language);
+        if (languageId is null)
         {
-            ActualOutput = string.Empty,
-            Stderr = string.Empty,
-            ExecutionTimeMs = 0,
-            MemoryUsedKb = 0,
-            TimedOut = false,
-            CompileError = false,
-            RuntimeError = false
-        });
+            logger.LogWarning("Judge0 evaluation requested for unsupported language '{Language}'.", language);
+            return new TestCaseExecutionResult
+            {
+                ActualOutput = string.Empty,
+                Stderr = $"Language '{language}' is not supported. Supported: {Judge0LanguageMap.SupportedLanguages}.",
+                RuntimeError = true
+            };
+        }
+
+        var request = new Judge0SubmissionRequest
+        {
+            SourceCode = code,
+            LanguageId = languageId.Value,
+            Stdin = input,
+            CpuTimeLimitSeconds = Math.Max(1, timeLimitMs) / 1000d,
+            MemoryLimitKb = Math.Max(1, memoryLimitMb) * 1024
+        };
+
+        Judge0SubmissionResult result;
+        try
+        {
+            result = await judge0Client.ExecuteAsync(request, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Judge0 execution failed for language {Language}.", language);
+            return new TestCaseExecutionResult
+            {
+                ActualOutput = string.Empty,
+                Stderr = "Judge0 execution failed: " + ex.Message,
+                RuntimeError = true
+            };
+        }
+
+        return MapToExecutionResult(result);
     }
+
+    // ── Private ───────────────────────────────────────────────────
+
+    private static TestCaseExecutionResult MapToExecutionResult(Judge0SubmissionResult result)
+    {
+        var executionTimeMs = ParseTimeToMs(result.TimeSeconds);
+        var memoryUsedKb = result.MemoryKb ?? 0;
+
+        if (result.PollTimedOut || result.StatusId == Judge0Status.TimeLimitExceeded)
+        {
+            return new TestCaseExecutionResult
+            {
+                ActualOutput = result.Stdout ?? string.Empty,
+                Stderr = result.Stderr ?? string.Empty,
+                ExecutionTimeMs = executionTimeMs,
+                MemoryUsedKb = memoryUsedKb,
+                TimedOut = true
+            };
+        }
+
+        if (result.StatusId == Judge0Status.CompilationError)
+        {
+            return new TestCaseExecutionResult
+            {
+                ActualOutput = string.Empty,
+                Stderr = result.CompileOutput ?? result.Message ?? "Compilation failed.",
+                ExecutionTimeMs = executionTimeMs,
+                CompileError = true
+            };
+        }
+
+        if (Judge0Status.IsRuntimeError(result.StatusId)
+            || result.StatusId == Judge0Status.InternalError
+            || result.StatusId == Judge0Status.ExecFormatError)
+        {
+            return new TestCaseExecutionResult
+            {
+                ActualOutput = result.Stdout ?? string.Empty,
+                Stderr = result.Stderr ?? result.Message ?? "Runtime error.",
+                ExecutionTimeMs = executionTimeMs,
+                MemoryUsedKb = memoryUsedKb,
+                RuntimeError = true
+            };
+        }
+
+        // Accepted (3) or WrongAnswer (4) — Codify does its own output comparison
+        // (see JudgeEvaluationService), so both map to a plain result here.
+        return new TestCaseExecutionResult
+        {
+            ActualOutput = result.Stdout ?? string.Empty,
+            Stderr = result.Stderr ?? string.Empty,
+            ExecutionTimeMs = executionTimeMs,
+            MemoryUsedKb = memoryUsedKb
+        };
+    }
+
+    private static int ParseTimeToMs(string? timeSeconds) =>
+        double.TryParse(timeSeconds, NumberStyles.Float, CultureInfo.InvariantCulture, out var seconds)
+            ? (int)Math.Round(seconds * 1000)
+            : 0;
 
     private static string NormalizeOutput(string output) =>
         output.Trim().Replace("\r\n", "\n").Replace("\r", "\n");

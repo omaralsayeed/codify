@@ -8,5 +8,6 @@ public enum SubmissionStatus
     WrongAnswer,
     RuntimeError,
     TimeLimitExceeded,
-    CompileError
+    CompileError,
+    MemoryLimitExceeded
 }
