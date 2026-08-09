@@ -44,7 +44,7 @@
         </thead>
         <tbody>
           @for (problem of filteredProblems; track trackByProblemId($index, problem)) {
-            <tr>
+            <tr [routerLink]="['/problems', problem.id]" class="problem-row">
               <td class="title">{{ problem.title }}</td>
               <td>{{ problem.topicLabel }}</td>
               <td><app-difficulty-badge [difficulty]="problem.difficulty" /></td>
