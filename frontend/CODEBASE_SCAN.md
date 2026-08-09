@@ -23,13 +23,14 @@
 
 ---
 
-### 1 — Login Does NOT Handle `returnUrl` After Redirect
+### 1 — ~~Login Does NOT Handle `returnUrl` After Redirect~~ ✅ FIXED
 
-**Severity:** 🟡 Medium — functional gap, not a crash
+**Severity:** ~~🟡 Medium~~ — resolved
+**Fixed on:** 2026-08-09
 
 **Files:**
 - `src/app/core/guards/auth.guard.ts` — sends `returnUrl` query param ✅
-- `src/app/features/auth/login/login.component.ts` — **ignores it** ❌
+- `src/app/features/auth/login/login.component.ts` — **now reads and uses it** ✅
 
 **Detail:**
 The `authGuard` was updated (our branch) to preserve the intended URL:
@@ -38,15 +39,16 @@ router.navigate(['/auth/login'], {
   queryParams: { returnUrl: state.url },
 });
 ```
-But `login.component.ts` always navigates to `/` on success:
+~~But `login.component.ts` always navigates to `/` on success~~ — **now fixed:**
 ```ts
 this.authService.login(email!, password!).subscribe(result => {
   if (result.success) {
-    this.router.navigate(['/']);  // ← ignores returnUrl
+    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') || '/';
+    this.router.navigateByUrl(returnUrl);  // ← respects returnUrl
   }
 });
 ```
-So if a student tries to access `/progress` while logged out, after login they land on `/` instead of `/progress`.
+`ActivatedRoute` was injected and `navigateByUrl()` is used so full URL strings (including nested path segments) are handled correctly. A student trying to access `/progress` while logged out will now land back on `/progress` after login.
 
 ---
 
@@ -213,7 +215,7 @@ Should be renamed — e.g., `StreakDay` in analytics and `ClassActivityDay` in p
 
 | # | Issue | File(s) | Severity | Type |
 |---|---|---|---|---|
-| 1 | Login ignores `returnUrl` | `login.component.ts` | 🟡 Medium | Functional gap |
+| 1 | ~~Login ignores `returnUrl`~~ ✅ Fixed | `login.component.ts` | ~~🟡 Medium~~ ✅ | Functional gap |
 | 2 | `instructorGuard` redirects to dead `/dashboard` | `instructor.guard.ts` | 🟡 Medium | Bad UX |
 | 3 | `StudentDashboardComponent` is dead stub code | `student-dashboard.component.ts` | 🟠 Low-Med | Dead code |
 | 4 | Hardcoded date in `progress.service.ts` | `progress.service.ts` | 🟡 Low-Med | Stale data |
@@ -228,7 +230,7 @@ Should be renamed — e.g., `StreakDay` in analytics and `ClassActivityDay` in p
 
 ## 🎯 Fix Priority Order (suggested)
 
-1. **Fix #1** — `returnUrl` in login (quick, high value)
+1. ~~**Fix #1** — `returnUrl` in login~~ ✅ Done
 2. **Fix #4** — hardcoded date in progress service (one-liner)
 3. **Fix #2** — instructor guard redirect target (one-liner)
 4. **Fix #10** — rename `DailyActivity` collision (rename across 3 files)
