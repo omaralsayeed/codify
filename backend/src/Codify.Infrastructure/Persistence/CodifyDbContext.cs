@@ -15,6 +15,7 @@ public class CodifyDbContext(DbContextOptions<CodifyDbContext> options) : DbCont
     public DbSet<HintLog> HintLogs => Set<HintLog>();
     public DbSet<PerformanceProfile> PerformanceProfiles => Set<PerformanceProfile>();
     public DbSet<FeedbackRecord> FeedbackRecords => Set<FeedbackRecord>();
+    public DbSet<TestCaseResult> TestCaseResults => Set<TestCaseResult>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

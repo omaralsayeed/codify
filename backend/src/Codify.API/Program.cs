@@ -6,6 +6,7 @@ using Codify.Infrastructure.Persistence;
 using Codify.Infrastructure.Persistence.Seed;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 
@@ -102,7 +103,7 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<CodifyDbContext>();
-    db.Database.EnsureCreated();
+    db.Database.Migrate();
     await ConceptTagSeed.SeedAsync(db);
     await ProblemSeed.SeedAsync(db);
 }
