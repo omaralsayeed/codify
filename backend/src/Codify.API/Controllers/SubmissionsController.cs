@@ -14,8 +14,10 @@ namespace Codify.API.Controllers;
 public class SubmissionsController(ISubmissionService submissionService) : ControllerBase
 {
     /// <summary>
-    /// Submit code for a problem. Returns 202 Accepted with the evaluated submission.
-    /// Triggers the Code Checker Agent in the background after saving.
+    /// Submit code for a problem. Returns 202 Accepted immediately with the submission in
+    /// "Pending"/"Running" status; evaluation happens asynchronously against Judge0.
+    /// Poll GET /submissions/{id} for the final verdict, and the Code Checker Agent runs
+    /// in the background afterward — poll GET /submissions/{id}/feedback for its notes.
     /// Rate limited: 30 requests per hour per user.
     /// </summary>
     [HttpPost]

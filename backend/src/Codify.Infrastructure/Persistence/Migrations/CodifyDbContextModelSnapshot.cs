@@ -393,6 +393,54 @@ namespace Codify.Infrastructure.Persistence.Migrations
                     b.ToTable("TestCases");
                 });
 
+            modelBuilder.Entity("Codify.Domain.Entities.TestCaseResult", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ActualOutput")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ExecutionTimeMs")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsSample")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("MemoryUsedKb")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OrderIndex")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Stderr")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("SubmissionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TestCaseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Verdict")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TestCaseId");
+
+                    b.HasIndex("SubmissionId", "TestCaseId")
+                        .IsUnique();
+
+                    b.ToTable("TestCaseResults");
+                });
+
             modelBuilder.Entity("Codify.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -571,6 +619,25 @@ namespace Codify.Infrastructure.Persistence.Migrations
                     b.Navigation("Problem");
                 });
 
+            modelBuilder.Entity("Codify.Domain.Entities.TestCaseResult", b =>
+                {
+                    b.HasOne("Codify.Domain.Entities.Submission", "Submission")
+                        .WithMany("TestCaseResults")
+                        .HasForeignKey("SubmissionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Codify.Domain.Entities.TestCase", "TestCase")
+                        .WithMany()
+                        .HasForeignKey("TestCaseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Submission");
+
+                    b.Navigation("TestCase");
+                });
+
             modelBuilder.Entity("Codify.Domain.Entities.ConceptTag", b =>
                 {
                     b.Navigation("ProblemTags");
@@ -590,6 +657,8 @@ namespace Codify.Infrastructure.Persistence.Migrations
                     b.Navigation("FeedbackRecords");
 
                     b.Navigation("Result");
+
+                    b.Navigation("TestCaseResults");
                 });
 
             modelBuilder.Entity("Codify.Domain.Entities.User", b =>

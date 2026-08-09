@@ -91,6 +91,17 @@ select {
     font-weight: 600;
     color: $navy;
   }
+
+  .problem-row {
+    cursor: pointer;
+    transition: background 0.15s;
+
+    &:hover {
+      background: var(--ivory);
+
+      .title { color: $blue; }
+    }
+  }
 }
 
 .empty-state {

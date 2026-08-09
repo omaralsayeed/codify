@@ -18,6 +18,24 @@ public class SubmissionDetailResponse
     public decimal? Score { get; set; }
     public SubmissionResultDetail? Result { get; set; }
     public List<FeedbackDetail> AiFeedback { get; set; } = [];
+    public List<TestCaseResultDetail> TestCaseResults { get; set; } = [];
+}
+
+public class TestCaseResultDetail
+{
+    public Guid TestCaseId { get; set; }
+    public int OrderIndex { get; set; }
+    public bool IsSample { get; set; }
+    public string Verdict { get; set; } = string.Empty;
+    public int ExecutionTimeMs { get; set; }
+    public int MemoryUsedKb { get; set; }
+
+    /// <summary>
+    /// Populated only for sample test cases, or when the caller is an instructor —
+    /// hidden test case input/output stays hidden from students, same rule TestCaseService uses.
+    /// </summary>
+    public string? ActualOutput { get; set; }
+    public string? Stderr { get; set; }
 }
 
 public class SubmissionResultDetail

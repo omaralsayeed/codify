@@ -272,7 +272,8 @@ embeddings/
 # Model cache and artifacts
 .cache/
 models/
-*.pkl
+models/
+!frontend/src/app/core/models/
 *.h5
 *.pt
 *.pth

@@ -26,6 +26,7 @@ public class Submission
     public User User { get; private set; } = null!;
     public SubmissionResult? Result { get; private set; }
     public ICollection<FeedbackRecord> FeedbackRecords { get; private set; } = [];
+    public ICollection<TestCaseResult> TestCaseResults { get; private set; } = [];
 
     private Submission() { }
 
