@@ -29,6 +29,10 @@ export class NavbarComponent {
     return user ? `/profile/${toSlug(user.name)}` : '/';
   }
 
+  get isInstructor(): boolean {
+    return this.auth.user()?.role === 'instructor';
+  }
+
   logout(): void {
     this.auth.logout();
     this.isMobileMenuOpen = false;
