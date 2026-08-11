@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormGroup, FormControl, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -57,6 +57,7 @@ function phoneValidator(control: AbstractControl): ValidationErrors | null {
 export class RegisterComponent {
   private authService = inject(AuthService);
   private router = inject(Router);
+  private cdr = inject(ChangeDetectorRef);
 
   showPassword = false;
   showConfirmPassword = false;
@@ -217,11 +218,13 @@ export class RegisterComponent {
           this.router.navigate(['/']);
         } else {
           this.registerError = result.error || 'Registration failed. Please try again.';
+          this.cdr.detectChanges();
         }
       },
       error: err => {
         this.isSubmitting = false;
         this.registerError = err?.error?.message || err?.message || 'Registration failed. Please try again.';
+        this.cdr.detectChanges();
       }
     });
   }
