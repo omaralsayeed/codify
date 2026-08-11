@@ -9,7 +9,8 @@ namespace Codify.Application.Services;
 public class AiHintService(
     IProblemRepository problemRepo,
     IHintRepository hintRepo,
-    ITutorAgent tutorAgent) : IAiHintService
+    ITutorAgent tutorAgent,
+    IPerformanceService performanceService) : IAiHintService
 {
     private const int MaxHintLevel = HintRequest.MaxHintLevel;
 
@@ -60,6 +61,9 @@ public class AiHintService(
 
         await hintRepo.AddAsync(hintLog);
         await hintRepo.SaveChangesAsync();
+
+        // Update performance profile hint count
+        await performanceService.IncrementHintCountAsync(userId);
 
         // Ensure response reflects server-computed level and hasMoreHints
         response.HintLevel = nextLevel;

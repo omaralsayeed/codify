@@ -81,27 +81,28 @@ public class AnalyticsService(IUserRepository userRepo) : IAnalyticsService
 
         return new StudentAnalyticsResponse
         {
-            UserId                   = user.Id,
-            FullName                 = user.FullName,
-            Email                    = user.Email,
-            TotalSolvedProblems      = solvedProblems.Count,
-            EasySolved               = easySolved,
-            MediumSolved             = mediumSolved,
-            HardSolved               = hardSolved,
-            TotalSubmissions         = total,
-            AcceptedSubmissions      = accepted,
-            WrongAnswers             = wrong,
-            RuntimeErrors            = runtime,
-            CompileErrors            = compile,
-            TimeLimitExceeded        = tle,
-            SuccessRatePercent       = successRate,
-            AverageExecutionTimeMs   = avgExecTime,
+            UserId                    = user.Id,
+            FullName                  = user.FullName,
+            Email                     = user.Email,
+            TotalSolvedProblems       = solvedProblems.Count,
+            EasySolved                = easySolved,
+            MediumSolved              = mediumSolved,
+            HardSolved                = hardSolved,
+            TotalSubmissions          = total,
+            AcceptedSubmissions       = accepted,
+            WrongAnswers              = wrong,
+            RuntimeErrors             = runtime,
+            CompileErrors             = compile,
+            TimeLimitExceeded         = tle,
+            SuccessRatePercent        = successRate,
+            AverageExecutionTimeMs    = avgExecTime,
             AverageAttemptsPerProblem = avgAttempts,
-            LanguageBreakdown        = languageBreakdown,
-            WeakTopics               = weakTopics,
-            StrongTopics             = strongTopics,
-            LastSubmissionAt         = lastSubmission,
-            MemberSince              = user.CreatedAt
+            LanguageBreakdown         = languageBreakdown,
+            WeakTopics                = weakTopics,
+            StrongTopics              = strongTopics,
+            TotalHintsUsed            = user.PerformanceProfile?.TotalHintsUsed ?? 0,
+            LastSubmissionAt          = lastSubmission,
+            MemberSince               = user.CreatedAt
         };
     }
 

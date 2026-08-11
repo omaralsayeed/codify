@@ -42,6 +42,9 @@ public class StudentAnalyticsResponse
     // ── Activity ──────────────────────────────────────────────────
     public DateTime? LastSubmissionAt { get; set; }
     public DateTime  MemberSince      { get; set; }
+
+    /// <summary>Total AI hints the student has requested across all problems.</summary>
+    public int TotalHintsUsed { get; set; }
 }
 
 public class LanguageStatItem

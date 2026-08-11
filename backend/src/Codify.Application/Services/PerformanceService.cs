@@ -7,29 +7,31 @@ namespace Codify.Application.Services;
 
 public class PerformanceService(
     IPerformanceRepository performanceRepo,
-    ISubmissionRepository submissionRepo) : IPerformanceService
+    ISubmissionRepository submissionRepo,
+    IHintRepository hintRepo) : IPerformanceService
 {
-    private const float WeakThreshold = 0.40f;
+    private const float WeakThreshold   = 0.40f;
     private const float StrongThreshold = 0.75f;
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Full recalculation — called after every submission evaluation
+    // ─────────────────────────────────────────────────────────────────────────
 
     public async Task UpdateAfterSubmissionAsync(Guid userId)
     {
-        // Load all non-deleted submissions for this user with their problem tags
         var submissions = (await submissionRepo.GetAllByUserAsync(userId)).ToList();
-
         if (submissions.Count == 0) return;
 
-        var total = submissions.Count;
+        var total    = submissions.Count;
         var accepted = submissions.Count(s => s.Status == SubmissionStatus.Accepted);
 
         float successRate = (float)accepted / total;
 
         // Average attempts = total submissions / distinct problems attempted
-        var distinctProblems = submissions.Select(s => s.ProblemId).Distinct().Count();
+        int distinctProblems  = submissions.Select(s => s.ProblemId).Distinct().Count();
         float averageAttempts = distinctProblems > 0 ? (float)total / distinctProblems : 0f;
 
-        // Per-tag performance: group submissions by concept tag
-        // Each submission contributes to all tags of its problem
+        // Per-tag performance: each submission counts toward every concept tag on its problem
         var tagStats = new Dictionary<string, (int Attempts, int Accepted)>();
 
         foreach (var submission in submissions)
@@ -61,7 +63,10 @@ public class PerformanceService(
             .OrderBy(t => t)
             .ToList();
 
-        var weakJson = JsonSerializer.Serialize(weakTopics);
+        // Include current hint count so the profile stays in sync
+        int totalHints = await hintRepo.CountByUserAsync(userId);
+
+        var weakJson   = JsonSerializer.Serialize(weakTopics);
         var strongJson = JsonSerializer.Serialize(strongTopics);
 
         // Upsert the profile
@@ -69,12 +74,34 @@ public class PerformanceService(
         if (profile is null)
         {
             profile = PerformanceProfile.CreateForUser(userId);
-            profile.Update(weakJson, strongJson, successRate, averageAttempts);
+            profile.Update(weakJson, strongJson, successRate, averageAttempts, totalHints);
             await performanceRepo.AddAsync(profile);
         }
         else
         {
-            profile.Update(weakJson, strongJson, successRate, averageAttempts);
+            profile.Update(weakJson, strongJson, successRate, averageAttempts, totalHints);
+        }
+
+        await performanceRepo.SaveChangesAsync();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Lightweight hint-count increment — called after every hint is persisted
+    // ─────────────────────────────────────────────────────────────────────────
+
+    public async Task IncrementHintCountAsync(Guid userId)
+    {
+        var profile = await performanceRepo.GetByUserIdAsync(userId);
+        if (profile is null)
+        {
+            // Profile doesn't exist yet — create a blank one with hint count = 1
+            profile = PerformanceProfile.CreateForUser(userId);
+            profile.IncrementHintCount();
+            await performanceRepo.AddAsync(profile);
+        }
+        else
+        {
+            profile.IncrementHintCount();
         }
 
         await performanceRepo.SaveChangesAsync();

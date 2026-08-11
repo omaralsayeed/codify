@@ -19,6 +19,9 @@ public class HintRepository(CodifyDbContext db) : IHintRepository
             .OrderBy(h => h.HintLevel)
             .ToListAsync();
 
+    public async Task<int> CountByUserAsync(Guid userId) =>
+        await db.HintLogs.CountAsync(h => h.UserId == userId);
+
     public async Task AddAsync(HintLog hintLog) =>
         await db.HintLogs.AddAsync(hintLog);
 

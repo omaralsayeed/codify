@@ -10,6 +10,9 @@ public interface IHintRepository
     /// <summary>Returns all hint logs for this user+problem, ordered by hint level ascending.</summary>
     Task<IEnumerable<HintLog>> GetByUserAndProblemAsync(Guid userId, Guid problemId);
 
+    /// <summary>Returns the total number of hints this user has ever requested across all problems.</summary>
+    Task<int> CountByUserAsync(Guid userId);
+
     Task AddAsync(HintLog hintLog);
     Task SaveChangesAsync();
 }
