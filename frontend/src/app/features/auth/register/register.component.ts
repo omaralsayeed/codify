@@ -20,6 +20,23 @@ function passwordMatchValidator(control: AbstractControl): ValidationErrors | nu
   return password.value === confirmPassword.value ? null : { passwordMismatch: true };
 }
 
+// Custom validator for password strength (min 8 chars, letter + number)
+function passwordStrengthValidator(control: AbstractControl): ValidationErrors | null {
+  const value: string = control.value || '';
+  if (!value) return null;
+
+  if (value.length < 8) {
+    return { tooShort: true };
+  }
+  if (!/[A-Za-z]/.test(value)) {
+    return { noLetter: true };
+  }
+  if (!/\d/.test(value)) {
+    return { noNumber: true };
+  }
+  return null;
+}
+
 // Custom validator for phone number
 function phoneValidator(control: AbstractControl): ValidationErrors | null {
   if (!control.value) {
@@ -44,11 +61,13 @@ export class RegisterComponent {
   showPassword = false;
   showConfirmPassword = false;
   profilePicturePreview: string | null = null;
+  registerError = '';
+  isSubmitting = false;
 
   registerForm = new FormGroup({
     fullName: new FormControl('', [Validators.required]),
     email: new FormControl('', [Validators.required, Validators.email]),
-    password: new FormControl('', [Validators.required]),
+    password: new FormControl('', [Validators.required, passwordStrengthValidator]),
     confirmPassword: new FormControl('', [Validators.required]),
     role: new FormControl<'student' | 'instructor' | ''>('', [Validators.required]),
     organization: new FormControl('', [Validators.required]),
@@ -83,6 +102,26 @@ export class RegisterComponent {
     'Canada',
     'Other'
   ];
+
+  get passwordStrength(): 'weak' | 'fair' | 'strong' | null {
+    const val: string = this.registerForm.get('password')?.value || '';
+    if (!val) return null;
+    let score = 0;
+    if (val.length >= 8) score++;
+    if (val.length >= 12) score++;
+    if (/[A-Z]/.test(val)) score++;
+    if (/\d/.test(val)) score++;
+    if (/[^A-Za-z0-9]/.test(val)) score++;
+    if (score <= 2) return 'weak';
+    if (score <= 3) return 'fair';
+    return 'strong';
+  }
+
+  get passwordStrengthLabel(): string {
+    const s = this.passwordStrength;
+    if (!s) return '';
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
 
   get showOrganizationOther(): boolean {
     return this.registerForm.get('organization')?.value === 'Other';
@@ -130,6 +169,12 @@ export class RegisterComponent {
       return 'Please enter a valid email address';
     }
 
+    if (field === 'password') {
+      if (control.errors['tooShort']) return 'Password must be at least 8 characters';
+      if (control.errors['noLetter']) return 'Password must contain at least one letter';
+      if (control.errors['noNumber']) return 'Password must contain at least one number';
+    }
+
     if (control.errors['invalidPhone']) {
       return 'Phone number must be 10-15 digits';
     }
@@ -154,15 +199,29 @@ export class RegisterComponent {
     }
 
     const { fullName, email, password, role } = this.registerForm.value;
+    this.registerError = '';
+    this.isSubmitting = true;
     
     this.authService.register({
       fullName: fullName!,
       email: email!,
       password: password!,
       role: role as 'student' | 'instructor'
-    }).subscribe(result => {
-      if (result.success) {
-        this.router.navigate(['/']);
+    }).subscribe({
+      next: result => {
+        this.isSubmitting = false;
+        if (result.success) {
+          if (this.profilePicturePreview) {
+            localStorage.setItem('codify_avatar', this.profilePicturePreview);
+          }
+          this.router.navigate(['/']);
+        } else {
+          this.registerError = result.error || 'Registration failed. Please try again.';
+        }
+      },
+      error: err => {
+        this.isSubmitting = false;
+        this.registerError = err?.error?.message || err?.message || 'Registration failed. Please try again.';
       }
     });
   }

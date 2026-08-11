@@ -18,6 +18,7 @@ export class LoginComponent {
 
   showPassword = false;
   loginError = '';
+  isSubmitting = false;
 
   loginForm = new FormGroup({
     email: new FormControl('', [Validators.required, Validators.email]),
@@ -54,13 +55,22 @@ export class LoginComponent {
     }
 
     const { email, password } = this.loginForm.value;
+    this.loginError = '';
+    this.isSubmitting = true;
     
-    this.authService.login(email!, password!).subscribe(result => {
-      if (result.success) {
-        const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') || '/';
-        this.router.navigateByUrl(returnUrl);
-      } else {
-        this.loginError = result.error || 'Invalid email or password';
+    this.authService.login(email!, password!).subscribe({
+      next: result => {
+        this.isSubmitting = false;
+        if (result.success) {
+          const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') || '/';
+          this.router.navigateByUrl(returnUrl);
+        } else {
+          this.loginError = result.error || 'Invalid email or password';
+        }
+      },
+      error: err => {
+        this.isSubmitting = false;
+        this.loginError = err?.error?.message || err?.message || 'Invalid email or password';
       }
     });
   }

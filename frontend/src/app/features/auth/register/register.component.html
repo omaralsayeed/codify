@@ -65,7 +65,7 @@
             id="password"
             [type]="showPassword ? 'text' : 'password'"
             formControlName="password"
-            placeholder="Create a password"
+            placeholder="Create a password (min. 8 characters)"
             [class.error]="registerForm.get('password')?.touched && registerForm.get('password')?.invalid"
           />
           <button
@@ -87,6 +87,31 @@
             }
           </button>
         </div>
+        <!-- Password strength meter -->
+        @if (registerForm.get('password')?.value) {
+          <div class="password-strength" [attr.aria-label]="'Password strength: ' + passwordStrengthLabel">
+            <div class="password-strength__bars">
+              <div class="password-strength__bar"
+                   [class.password-strength__bar--weak]="passwordStrength !== null"
+                   [class.password-strength__bar--fair]="passwordStrength === 'fair' || passwordStrength === 'strong'"
+                   [class.password-strength__bar--strong]="passwordStrength === 'strong'">
+              </div>
+              <div class="password-strength__bar"
+                   [class.password-strength__bar--fair]="passwordStrength === 'fair' || passwordStrength === 'strong'"
+                   [class.password-strength__bar--strong]="passwordStrength === 'strong'">
+              </div>
+              <div class="password-strength__bar"
+                   [class.password-strength__bar--strong]="passwordStrength === 'strong'">
+              </div>
+            </div>
+            <span class="password-strength__label"
+                  [class.password-strength__label--weak]="passwordStrength === 'weak'"
+                  [class.password-strength__label--fair]="passwordStrength === 'fair'"
+                  [class.password-strength__label--strong]="passwordStrength === 'strong'">
+              {{ passwordStrengthLabel }}
+            </span>
+          </div>
+        }
         @if (getErrorMessage('password')) {
           <div class="error-message">{{ getErrorMessage('password') }}</div>
         }
@@ -219,13 +244,32 @@
         </div>
       </div>
 
+      <!-- Registration Error Banner -->
+      @if (registerError) {
+        <div class="error-banner" role="alert">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          {{ registerError }}
+        </div>
+      }
+      <!-- DEBUG: remove after fix confirmed -->
+      <p style="font-size:11px;color:#999;text-align:center">v2-loaded · error={{ registerError || 'none' }} · submitting={{ isSubmitting }}</p>
+
       <!-- Submit Button -->
       <button
         type="submit"
         class="btn-primary"
-        [disabled]="registerForm.invalid"
+        [disabled]="isSubmitting"
       >
-        Create Account
+        @if (isSubmitting) {
+          <span class="btn-spinner" aria-hidden="true"></span>
+          Creating account...
+        } @else {
+          Create Account
+        }
       </button>
 
       <!-- Login Link -->

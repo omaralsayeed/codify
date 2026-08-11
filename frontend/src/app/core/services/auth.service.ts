@@ -1,7 +1,7 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, of, throwError } from 'rxjs';
-import { map, catchError, switchMap } from 'rxjs/operators';
+import { HttpClient } from '@angular/common/http';
+import { Observable, of, TimeoutError } from 'rxjs';
+import { map, catchError, switchMap, timeout } from 'rxjs/operators';
 import { User } from '../models/user.model';
 import { AuthResult, RegisterData } from '../models/auth.model';
 import { mapRole, roleToNumber } from '../utils/enum-mappers';
@@ -50,32 +50,30 @@ export class AuthService {
     return this.http
       .post<ApiEnvelope<LoginApiResponse>>(`${this.baseUrl}/auth/login`, { email, password })
       .pipe(
+        timeout(10000),
         map(response => response.data),
         map(loginData => {
-          // Map backend user structure to frontend User model
           const user: User = {
             id: loginData.user.userId,
             name: loginData.user.fullName,
             email: email,
             role: mapRole(loginData.user.role),
             avatarInitials: this.generateAvatarInitials(loginData.user.fullName),
-            streak: 0 // Will be loaded from analytics later
+            streak: 0
           };
-
-          // Store token and user in localStorage
           try {
             localStorage.setItem('codify_token', loginData.token);
             localStorage.setItem('codify_user', JSON.stringify(user));
           } catch (error) {
             console.error('Failed to persist session:', error);
           }
-
-          // Update currentUser signal
           this._currentUser.set(user);
-
           return { success: true, user };
         }),
         catchError(error => {
+          if (error instanceof TimeoutError) {
+            return of({ success: false, error: 'Server is not responding. Please check your connection.' });
+          }
           const message = error.error?.message || 'Invalid email or password';
           return of({ success: false, error: message });
         })
@@ -83,8 +81,6 @@ export class AuthService {
   }
 
   register(userData: RegisterData): Observable<AuthResult> {
-    // Backend only accepts: fullName, email, password, role (as number)
-    // Extra fields (organization, phoneNumber, country, city) are NOT sent yet
     const body = {
       fullName: userData.fullName,
       email: userData.email,
@@ -93,13 +89,20 @@ export class AuthService {
     };
 
     return this.http
-      .post<ApiEnvelope<RegisterApiResponse>>(`${this.baseUrl}/auth/register`, body)
+      .post<any>(`${this.baseUrl}/auth/register`, body)
       .pipe(
-        // Register returns 201 but NO token - must login after
+        timeout(10000),
         switchMap(() => this.login(userData.email, userData.password)),
         catchError(error => {
-          const message = error.error?.message || 'Registration failed';
-          return of({ success: false, error: message });
+          if (error instanceof TimeoutError) {
+            return of({ success: false, error: 'Server is not responding. Please try again.' } as AuthResult);
+          }
+          const msg =
+            error?.error?.message ||
+            error?.error?.title ||
+            error?.message ||
+            'Registration failed. Please try again.';
+          return of({ success: false, error: msg } as AuthResult);
         })
       );
   }
