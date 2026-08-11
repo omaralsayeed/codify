@@ -5,14 +5,14 @@ namespace Codify.Application.Interfaces;
 public interface IAnalyticsService
 {
     /// <summary>
-    /// Returns analytics for one student.
-    /// Instructors can query any student. Students can only query themselves.
+    /// Returns the full performance breakdown for a student.
+    /// Students can only query their own data; instructors can query any student.
     /// </summary>
-    Task<StudentAnalyticsResponse> GetStudentAnalyticsAsync(Guid studentId);
+    Task<StudentAnalyticsResponse> GetStudentAnalyticsAsync(Guid targetUserId);
 
     /// <summary>
-    /// Returns the instructor's overview: all students who submitted on
-    /// at least one of their authored problems, with per-student summaries.
+    /// Returns a cohort-level overview for an instructor:
+    /// total problems authored, students reached, accept rate, per-student summaries.
     /// </summary>
-    Task<InstructorAnalyticsResponse> GetInstructorAnalyticsAsync(Guid instructorId);
+    Task<InstructorAnalyticsResponse> GetInstructorOverviewAsync(Guid instructorId);
 }

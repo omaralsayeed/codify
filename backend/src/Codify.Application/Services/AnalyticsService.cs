@@ -6,175 +6,178 @@ using Codify.Domain.Exceptions;
 
 namespace Codify.Application.Services;
 
-public class AnalyticsService(IUserRepository userRepository) : IAnalyticsService
+public class AnalyticsService(IUserRepository userRepo) : IAnalyticsService
 {
-    // ────────────────────────────────────────────────────────────────
-    // Student analytics (unchanged)
-    // ────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
+    // Student analytics
+    // ─────────────────────────────────────────────────────────────────────────
 
-    public async Task<StudentAnalyticsResponse> GetStudentAnalyticsAsync(Guid studentId)
+    public async Task<StudentAnalyticsResponse> GetStudentAnalyticsAsync(Guid targetUserId)
     {
-        var user = await userRepository.GetWithAnalyticsDataAsync(studentId)
-            ?? throw new NotFoundException($"Student {studentId} not found.");
+        var user = await userRepo.GetWithAnalyticsDataAsync(targetUserId)
+            ?? throw new NotFoundException($"User {targetUserId} not found.");
 
         var submissions = user.Submissions.ToList();
 
-        var totalSubmissions  = submissions.Count;
-        var accepted          = submissions.Count(s => s.Status == SubmissionStatus.Accepted);
-        var wrongAnswers      = submissions.Count(s => s.Status == SubmissionStatus.WrongAnswer);
-        var runtimeErrors     = submissions.Count(s => s.Status == SubmissionStatus.RuntimeError);
-        var compileErrors     = submissions.Count(s => s.Status == SubmissionStatus.CompileError);
-        var timeLimitExceeded = submissions.Count(s => s.Status == SubmissionStatus.TimeLimitExceeded);
+        // ── Submission counts by status ───────────────────────────────────────
+        int total      = submissions.Count;
+        int accepted   = submissions.Count(s => s.Status == SubmissionStatus.Accepted);
+        int wrong      = submissions.Count(s => s.Status == SubmissionStatus.WrongAnswer);
+        int runtime    = submissions.Count(s => s.Status == SubmissionStatus.RuntimeError);
+        int compile    = submissions.Count(s => s.Status == SubmissionStatus.CompileError);
+        int tle        = submissions.Count(s => s.Status == SubmissionStatus.TimeLimitExceeded);
 
-        var successRate = totalSubmissions > 0
-            ? Math.Round((double)accepted / totalSubmissions * 100, 2)
-            : 0;
+        double successRate = total > 0 ? Math.Round((double)accepted / total * 100, 1) : 0;
 
-        var acceptedSubmissions = submissions.Where(s => s.Status == SubmissionStatus.Accepted).ToList();
+        // ── Average execution time across Accepted submissions ─────────────────
+        var acceptedWithTime = submissions
+            .Where(s => s.Status == SubmissionStatus.Accepted && s.ExecutionTimeMs.HasValue)
+            .ToList();
 
-        var solvedProblemIds = acceptedSubmissions.Select(s => s.ProblemId).Distinct().ToHashSet();
-
-        var easySolved = acceptedSubmissions
-            .Where(s => solvedProblemIds.Contains(s.ProblemId) && s.Problem?.Difficulty == Difficulty.Easy)
-            .Select(s => s.ProblemId).Distinct().Count();
-
-        var mediumSolved = acceptedSubmissions
-            .Where(s => solvedProblemIds.Contains(s.ProblemId) && s.Problem?.Difficulty == Difficulty.Medium)
-            .Select(s => s.ProblemId).Distinct().Count();
-
-        var hardSolved = acceptedSubmissions
-            .Where(s => solvedProblemIds.Contains(s.ProblemId) && s.Problem?.Difficulty == Difficulty.Hard)
-            .Select(s => s.ProblemId).Distinct().Count();
-
-        var acceptedWithTime = acceptedSubmissions.Where(s => s.ExecutionTimeMs.HasValue).ToList();
-        double? avgExecutionTimeMs = acceptedWithTime.Count > 0
-            ? Math.Round(acceptedWithTime.Average(s => s.ExecutionTimeMs!.Value), 2)
+        double? avgExecTime = acceptedWithTime.Count > 0
+            ? Math.Round(acceptedWithTime.Average(s => (double)s.ExecutionTimeMs!.Value), 1)
             : null;
 
-        double avgAttempts = submissions.Count > 0 && solvedProblemIds.Count > 0
-            ? Math.Round((double)totalSubmissions / Math.Max(solvedProblemIds.Count, 1), 2)
+        // ── Distinct problems solved, split by difficulty ─────────────────────
+        var solvedProblems = submissions
+            .Where(s => s.Status == SubmissionStatus.Accepted)
+            .GroupBy(s => s.ProblemId)
+            .Select(g => g.First().Problem)
+            .ToList();
+
+        int easySolved   = solvedProblems.Count(p => p.Difficulty == Difficulty.Easy);
+        int mediumSolved = solvedProblems.Count(p => p.Difficulty == Difficulty.Medium);
+        int hardSolved   = solvedProblems.Count(p => p.Difficulty == Difficulty.Hard);
+
+        // ── Average attempts per problem ──────────────────────────────────────
+        int distinctProblems = submissions.Select(s => s.ProblemId).Distinct().Count();
+        double avgAttempts   = distinctProblems > 0
+            ? Math.Round((double)total / distinctProblems, 2)
             : 0;
 
+        // ── Language breakdown ────────────────────────────────────────────────
         var languageBreakdown = submissions
             .GroupBy(s => s.Language.ToString())
             .Select(g => new LanguageStatItem { Language = g.Key, Submissions = g.Count() })
-            .OrderByDescending(l => l.Submissions)
+            .OrderByDescending(x => x.Submissions)
             .ToList();
 
-        var strongTopics = ParseJsonArray(user.PerformanceProfile?.StrongTopicsJson);
-        var weakTopics   = ParseJsonArray(user.PerformanceProfile?.WeakTopicsJson);
+        // ── Weak / strong topics from persisted PerformanceProfile ────────────
+        var weakTopics   = new List<string>();
+        var strongTopics = new List<string>();
+
+        if (user.PerformanceProfile is not null)
+        {
+            weakTopics   = JsonSerializer.Deserialize<List<string>>(
+                user.PerformanceProfile.WeakTopicsJson)   ?? [];
+            strongTopics = JsonSerializer.Deserialize<List<string>>(
+                user.PerformanceProfile.StrongTopicsJson) ?? [];
+        }
+
+        // ── Last activity ─────────────────────────────────────────────────────
+        DateTime? lastSubmission = submissions.Count > 0
+            ? submissions.Max(s => s.SubmittedAt)
+            : null;
 
         return new StudentAnalyticsResponse
         {
-            UserId                    = user.Id,
-            FullName                  = user.FullName,
-            Email                     = user.Email,
-            TotalSolvedProblems       = solvedProblemIds.Count,
-            EasySolved                = easySolved,
-            MediumSolved              = mediumSolved,
-            HardSolved                = hardSolved,
-            TotalSubmissions          = totalSubmissions,
-            AcceptedSubmissions       = accepted,
-            WrongAnswers              = wrongAnswers,
-            RuntimeErrors             = runtimeErrors,
-            CompileErrors             = compileErrors,
-            TimeLimitExceeded         = timeLimitExceeded,
-            SuccessRatePercent        = successRate,
-            AverageExecutionTimeMs    = avgExecutionTimeMs,
+            UserId                   = user.Id,
+            FullName                 = user.FullName,
+            Email                    = user.Email,
+            TotalSolvedProblems      = solvedProblems.Count,
+            EasySolved               = easySolved,
+            MediumSolved             = mediumSolved,
+            HardSolved               = hardSolved,
+            TotalSubmissions         = total,
+            AcceptedSubmissions      = accepted,
+            WrongAnswers             = wrong,
+            RuntimeErrors            = runtime,
+            CompileErrors            = compile,
+            TimeLimitExceeded        = tle,
+            SuccessRatePercent       = successRate,
+            AverageExecutionTimeMs   = avgExecTime,
             AverageAttemptsPerProblem = avgAttempts,
-            LanguageBreakdown         = languageBreakdown,
-            StrongTopics              = strongTopics,
-            WeakTopics                = weakTopics,
-            LastSubmissionAt          = submissions.Count > 0 ? submissions.Max(s => s.SubmittedAt) : null,
-            MemberSince               = user.CreatedAt
+            LanguageBreakdown        = languageBreakdown,
+            WeakTopics               = weakTopics,
+            StrongTopics             = strongTopics,
+            LastSubmissionAt         = lastSubmission,
+            MemberSince              = user.CreatedAt
         };
     }
 
-    // ────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
     // Instructor analytics
-    // ────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
 
-    public async Task<InstructorAnalyticsResponse> GetInstructorAnalyticsAsync(Guid instructorId)
+    public async Task<InstructorAnalyticsResponse> GetInstructorOverviewAsync(Guid instructorId)
     {
-        var instructor = await userRepository.GetInstructorWithProblemsAndSubmissionsAsync(instructorId)
+        var instructor = await userRepo.GetInstructorWithProblemsAndSubmissionsAsync(instructorId)
             ?? throw new NotFoundException($"Instructor {instructorId} not found.");
 
-        if (instructor.Role != UserRole.Instructor)
-            throw new ForbiddenException("The requested user is not an instructor.");
+        var problems = instructor.AuthoredProblems.ToList();
 
-        var authoredProblems = instructor.AuthoredProblems.ToList();
-
-        // All submissions across every authored problem
-        var allSubmissions = authoredProblems
+        // Flatten all submissions across this instructor's problems
+        var allSubmissions = problems
             .SelectMany(p => p.Submissions)
             .ToList();
 
-        var totalSubmissions = allSubmissions.Count;
-        var totalAccepted    = allSubmissions.Count(s => s.Status == SubmissionStatus.Accepted);
-
-        var overallAcceptRate = totalSubmissions > 0
-            ? Math.Round((double)totalAccepted / totalSubmissions * 100, 2)
+        int totalReceived = allSubmissions.Count;
+        int totalAccepted = allSubmissions.Count(s => s.Status == SubmissionStatus.Accepted);
+        double acceptRate = totalReceived > 0
+            ? Math.Round((double)totalAccepted / totalReceived * 100, 1)
             : 0;
 
-        // Group submissions by student to build per-student summaries
-        var submissionsByStudent = allSubmissions
+        // Distinct students who submitted on at least one of this instructor's problems
+        var studentIds = allSubmissions
+            .Select(s => s.UserId)
+            .Distinct()
+            .ToHashSet();
+
+        // Build per-student summary (scoped to this instructor's problems only)
+        var students = allSubmissions
             .GroupBy(s => s.UserId)
-            .ToList();
-
-        var studentSummaries = submissionsByStudent.Select(group =>
-        {
-            var studentSubmissions = group.ToList();
-
-            // Grab student info from the first submission's User navigation
-            var studentUser = studentSubmissions.First().User;
-
-            var accepted     = studentSubmissions.Count(s => s.Status == SubmissionStatus.Accepted);
-            var total        = studentSubmissions.Count;
-            var successRate  = total > 0 ? Math.Round((double)accepted / total * 100, 2) : 0;
-
-            var problemsSolved = studentSubmissions
-                .Where(s => s.Status == SubmissionStatus.Accepted)
-                .Select(s => s.ProblemId)
-                .Distinct()
-                .Count();
-
-            return new StudentSummaryItem
+            .Select(g =>
             {
-                StudentId           = group.Key,
-                FullName            = studentUser?.FullName ?? "Unknown",
-                Email               = studentUser?.Email    ?? string.Empty,
-                TotalSubmissions    = total,
-                AcceptedSubmissions = accepted,
-                SuccessRatePercent  = successRate,
-                ProblemsSolved      = problemsSolved,
-                LastActivityAt      = studentSubmissions.Max(s => s.SubmittedAt)
-            };
-        })
-        .OrderByDescending(s => s.ProblemsSolved)
-        .ThenByDescending(s => s.SuccessRatePercent)
-        .ToList();
+                // All submissions for this student in this instructor's problem set
+                var studentSubs  = g.ToList();
+                var subUser      = studentSubs.First().User;
+                int stuTotal     = studentSubs.Count;
+                int stuAccepted  = studentSubs.Count(s => s.Status == SubmissionStatus.Accepted);
+                double stuRate   = stuTotal > 0
+                    ? Math.Round((double)stuAccepted / stuTotal * 100, 1)
+                    : 0;
+                int problemsSolved = studentSubs
+                    .Where(s => s.Status == SubmissionStatus.Accepted)
+                    .Select(s => s.ProblemId)
+                    .Distinct()
+                    .Count();
+                DateTime? lastActivity = studentSubs.Max(s => (DateTime?)s.SubmittedAt);
+
+                return new StudentSummaryItem
+                {
+                    StudentId            = g.Key,
+                    FullName             = subUser?.FullName ?? string.Empty,
+                    Email                = subUser?.Email    ?? string.Empty,
+                    TotalSubmissions     = stuTotal,
+                    AcceptedSubmissions  = stuAccepted,
+                    SuccessRatePercent   = stuRate,
+                    ProblemsSolved       = problemsSolved,
+                    LastActivityAt       = lastActivity
+                };
+            })
+            .OrderByDescending(s => s.LastActivityAt)
+            .ToList();
 
         return new InstructorAnalyticsResponse
         {
-            InstructorId             = instructor.Id,
-            FullName                 = instructor.FullName,
-            Email                    = instructor.Email,
-            TotalProblemsAuthored    = authoredProblems.Count,
-            TotalStudentsReached     = submissionsByStudent.Count,
-            TotalSubmissionsReceived = totalSubmissions,
-            OverallAcceptRatePercent = overallAcceptRate,
-            Students                 = studentSummaries
+            InstructorId               = instructor.Id,
+            FullName                   = instructor.FullName,
+            Email                      = instructor.Email,
+            TotalProblemsAuthored      = problems.Count,
+            TotalStudentsReached       = studentIds.Count,
+            TotalSubmissionsReceived   = totalReceived,
+            OverallAcceptRatePercent   = acceptRate,
+            Students                   = students
         };
-    }
-
-    // ────────────────────────────────────────────────────────────────
-    // Helper
-    // ────────────────────────────────────────────────────────────────
-
-    private static List<string> ParseJsonArray(string? json)
-    {
-        if (string.IsNullOrWhiteSpace(json)) return [];
-        try { return JsonSerializer.Deserialize<List<string>>(json) ?? []; }
-        catch (JsonException) { return []; }
     }
 }

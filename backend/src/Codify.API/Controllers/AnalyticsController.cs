@@ -1,7 +1,6 @@
 using Codify.API.Common;
 using Codify.API.Extensions;
 using Codify.Application.Interfaces;
-using Codify.Domain.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,56 +12,36 @@ namespace Codify.API.Controllers;
 public class AnalyticsController(IAnalyticsService analyticsService) : ControllerBase
 {
     /// <summary>
-    /// Returns analytics for a single student.
-    /// Instructors can query any student. Students can only query themselves.
+    /// GET /api/analytics/students/{id}
+    /// Returns the full performance breakdown for a student.
+    /// Students can only view their own data.
+    /// Instructors can view any student's data.
     /// </summary>
-    [HttpGet("students/{studentId:guid}")]
-    public async Task<IActionResult> GetStudentAnalytics(Guid studentId)
+    [HttpGet("students/{id:guid}")]
+    public async Task<IActionResult> GetStudentAnalytics(Guid id)
     {
-        var callerId     = User.GetUserId();
+        var requesterId  = User.GetUserId();
         var isInstructor = User.IsInRole("Instructor");
 
-        if (!isInstructor && callerId != studentId)
-            throw new ForbiddenException("You can only view your own analytics.");
+        // Students may only query their own profile
+        if (!isInstructor && requesterId != id)
+            return Forbid();
 
-        var result = await analyticsService.GetStudentAnalyticsAsync(studentId);
+        var result = await analyticsService.GetStudentAnalyticsAsync(id);
         return Ok(ApiResponse.Ok(result));
     }
 
     /// <summary>
-    /// Convenience route: returns the analytics for the currently logged-in student.
+    /// GET /api/analytics/overview
+    /// Returns cohort-level analytics for the authenticated instructor:
+    /// problems authored, students reached, accept rate, per-student summaries.
     /// </summary>
-    [HttpGet("me")]
-    [Authorize(Roles = "Student")]
-    public async Task<IActionResult> GetMyAnalytics()
-    {
-        var userId = User.GetUserId();
-        var result = await analyticsService.GetStudentAnalyticsAsync(userId);
-        return Ok(ApiResponse.Ok(result));
-    }
-
-    /// <summary>
-    /// Returns the instructor's dashboard: all students who submitted on their
-    /// authored problems, with per-student summaries.
-    /// Instructors can query themselves or any other instructor.
-    /// </summary>
-    [HttpGet("instructors/{instructorId:guid}")]
+    [HttpGet("overview")]
     [Authorize(Roles = "Instructor")]
-    public async Task<IActionResult> GetInstructorAnalytics(Guid instructorId)
-    {
-        var result = await analyticsService.GetInstructorAnalyticsAsync(instructorId);
-        return Ok(ApiResponse.Ok(result));
-    }
-
-    /// <summary>
-    /// Convenience route: returns the analytics for the currently logged-in instructor.
-    /// </summary>
-    [HttpGet("instructor/me")]
-    [Authorize(Roles = "Instructor")]
-    public async Task<IActionResult> GetMyInstructorAnalytics()
+    public async Task<IActionResult> GetInstructorOverview()
     {
         var instructorId = User.GetUserId();
-        var result       = await analyticsService.GetInstructorAnalyticsAsync(instructorId);
+        var result       = await analyticsService.GetInstructorOverviewAsync(instructorId);
         return Ok(ApiResponse.Ok(result));
     }
 }

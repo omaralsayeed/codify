@@ -50,6 +50,7 @@ public static class DependencyInjection
         services.AddScoped<IQuickRunWithTestsService, QuickRunWithTestsService>();
         services.AddScoped<IAiHintService, AiHintService>();
         services.AddScoped<IPerformanceService, PerformanceService>();
+        services.AddScoped<IAnalyticsService, AnalyticsService>();
         services.AddScoped<IJudgeEvaluationService, JudgeEvaluationService>();
 
         // Judge0 (code evaluation)
