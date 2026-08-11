@@ -13,15 +13,10 @@
       </div>
     }
 
-    @if (isLoading) {
-      <div class="loading-state">
-        <p>Loading problems...</p>
-      </div>
-    } @else {
-      <div class="filters">
+      <div class="filters" [class.filters--loading]="isLoading">
         <label class="filter-item">
           Topic
-          <select [(ngModel)]="selectedTopic">
+          <select [(ngModel)]="selectedTopic" [disabled]="isLoading">
             @for (topic of topics; track topic.value) {
               <option [value]="topic.value">{{ topic.label }}</option>
             }
@@ -30,7 +25,7 @@
 
         <label class="filter-item">
           Difficulty
-          <select [(ngModel)]="selectedDifficulty">
+          <select [(ngModel)]="selectedDifficulty" [disabled]="isLoading">
             @for (difficulty of difficulties; track difficulty.value) {
               <option [value]="difficulty.value">{{ difficulty.label }}</option>
             }
@@ -39,11 +34,16 @@
       </div>
 
       <div class="stats">
-        <span>{{ filteredProblems.length }} problems</span>
-        <span>{{ solvedTotal | number }} total solves</span>
+        @if (isLoading) {
+          <span class="skeleton skeleton--short"></span>
+          <span class="skeleton skeleton--short"></span>
+        } @else {
+          <span>{{ filteredProblems.length }} problems</span>
+          <span>{{ solvedTotal | number }} total solves</span>
+        }
       </div>
 
-      <div class="problem-table-wrap">
+      <div class="problem-table-wrap" [class.problem-table-wrap--animated]="animated">
         <table class="problem-table">
           <thead>
             <tr>
@@ -54,23 +54,33 @@
             </tr>
           </thead>
           <tbody>
-            @for (problem of filteredProblems; track trackByProblemId($index, problem)) {
-              <tr [routerLink]="['/problems', problem.id]" class="problem-row">
-                <td class="title">{{ problem.title }}</td>
-                <td>{{ problem.topicLabel }}</td>
-                <td><app-difficulty-badge [difficulty]="problem.difficulty" /></td>
-                <td>{{ problem.solvedCount ?? 0 | number }}</td>
-              </tr>
-            } @empty {
-              <tr>
-                <td colspan="4" class="empty-state">
-                  No problems found for the selected filters.
-                </td>
-              </tr>
+            @if (isLoading) {
+              @for (row of skeletonRows; track row) {
+                <tr class="skeleton-row">
+                  <td><span class="skeleton skeleton--title"></span></td>
+                  <td><span class="skeleton skeleton--topic"></span></td>
+                  <td><span class="skeleton skeleton--badge"></span></td>
+                  <td><span class="skeleton skeleton--number"></span></td>
+                </tr>
+              }
+            } @else {
+              @for (problem of filteredProblems; track trackByProblemId($index, problem)) {
+                <tr [routerLink]="['/problems', problem.id]" class="problem-row">
+                  <td class="title">{{ problem.title }}</td>
+                  <td>{{ problem.topicLabel }}</td>
+                  <td><app-difficulty-badge [difficulty]="problem.difficulty" /></td>
+                  <td>{{ problem.solvedCount ?? 0 | number }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="4" class="empty-state">
+                    No problems found for the selected filters.
+                  </td>
+                </tr>
+              }
             }
           </tbody>
         </table>
       </div>
-    }
   </div>
 </section>

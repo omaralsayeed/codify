@@ -109,6 +109,59 @@ select {
   color: $muted;
 }
 
+// ── Skeleton shimmer ──────────────────────────────────────────────────────────
+
+@keyframes shimmer {
+  0%   { background-position: -600px 0; }
+  100% { background-position:  600px 0; }
+}
+
+.skeleton {
+  display: inline-block;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--border) 25%,
+    var(--ivory)  50%,
+    var(--border) 75%
+  );
+  background-size: 600px 100%;
+  animation: shimmer 1.4s infinite linear;
+
+  &--title  { width: 180px; height: 14px; }
+  &--topic  { width: 120px; height: 14px; }
+  &--badge  { width: 56px;  height: 22px; border-radius: 99px; }
+  &--number { width: 48px;  height: 14px; }
+  &--short  { width: 80px;  height: 12px; }
+}
+
+.skeleton-row td {
+  padding: 18px 18px;
+  border-top: 1px solid var(--border);
+}
+
+// ── Filters disabled state while loading ─────────────────────────────────────
+
+.filters--loading {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+// ── Fade-in when real rows appear ─────────────────────────────────────────────
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+.problem-table-wrap--animated tbody tr {
+  animation: fadeInUp 0.18s ease both;
+
+  @for $i from 1 through 20 {
+    &:nth-child(#{$i}) { animation-delay: #{($i - 1) * 0.03}s; }
+  }
+}
+
 @media (max-width: $mobile) {
   .problem-table {
     th, td {
