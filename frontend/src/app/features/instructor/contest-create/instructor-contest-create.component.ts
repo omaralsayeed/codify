@@ -53,7 +53,7 @@ export class InstructorContestCreateComponent {
   // Arrow functions so `this` is bound correctly when passed as a reference.
 
   readonly searchProblems = (query: string): SelectItem[] =>
-    this.problemSvc.search(query).map(p => ({
+    this.problemSvc.searchSync(query).map(p => ({
       id:         p.id,
       label:      p.title,
       badge:      p.difficulty,

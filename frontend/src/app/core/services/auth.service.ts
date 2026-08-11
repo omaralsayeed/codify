@@ -1,30 +1,40 @@
-import { Injectable, signal, computed } from '@angular/core';
-import { Observable, of } from 'rxjs';
+import { Injectable, signal, computed, inject } from '@angular/core';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Observable, of, throwError } from 'rxjs';
+import { map, catchError, switchMap } from 'rxjs/operators';
 import { User } from '../models/user.model';
 import { AuthResult, RegisterData } from '../models/auth.model';
+import { mapRole, roleToNumber } from '../utils/enum-mappers';
+
+// Backend API response interfaces
+interface LoginApiResponse {
+  token: string;
+  expiresAt: string;
+  user: {
+    userId: string;
+    fullName: string;
+    role: number;
+  };
+}
+
+interface RegisterApiResponse {
+  userId: string;
+  email: string;
+  role: number;
+}
+
+interface ApiEnvelope<T> {
+  data: T;
+}
+
+interface ApiError {
+  message: string;
+}
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  // Mock user list with two test users
-  private mockUsers: User[] = [
-    {
-      id: '1',
-      name: 'Test Student',
-      email: 'student@codify.com',
-      password: '123456',
-      role: 'student',
-      avatarInitials: 'TS',
-      streak: 0
-    },
-    {
-      id: '2',
-      name: 'Test Instructor',
-      email: 'instructor@codify.com',
-      password: '123456',
-      role: 'instructor',
-      avatarInitials: 'TI'
-    }
-  ];
+  private readonly http = inject(HttpClient);
+  private readonly baseUrl = 'http://localhost:5237/api';
 
   // Signal-based state management
   private _currentUser = signal<User | null>(null);
@@ -37,76 +47,61 @@ export class AuthService {
   }
 
   login(email: string, password: string): Observable<AuthResult> {
-    // Validate credentials against mock user list
-    const user = this.mockUsers.find(
-      u => u.email === email && u.password === password
-    );
+    return this.http
+      .post<ApiEnvelope<LoginApiResponse>>(`${this.baseUrl}/auth/login`, { email, password })
+      .pipe(
+        map(response => response.data),
+        map(loginData => {
+          // Map backend user structure to frontend User model
+          const user: User = {
+            id: loginData.user.userId,
+            name: loginData.user.fullName,
+            email: email,
+            role: mapRole(loginData.user.role),
+            avatarInitials: this.generateAvatarInitials(loginData.user.fullName),
+            streak: 0 // Will be loaded from analytics later
+          };
 
-    if (user) {
-      // Generate mock token
-      const token = 'mock-token-' + Date.now();
-      
-      // Create user object without password for storage
-      const userToStore = { ...user };
-      delete userToStore.password;
-      
-      // Store in localStorage
-      try {
-        localStorage.setItem('codify_user', JSON.stringify(userToStore));
-        localStorage.setItem('codify_token', token);
-      } catch (error) {
-        console.error('Failed to persist session:', error);
-      }
-      
-      // Update currentUser signal
-      this._currentUser.set(userToStore);
-      
-      return of({ success: true, user: userToStore });
-    }
+          // Store token and user in localStorage
+          try {
+            localStorage.setItem('codify_token', loginData.token);
+            localStorage.setItem('codify_user', JSON.stringify(user));
+          } catch (error) {
+            console.error('Failed to persist session:', error);
+          }
 
-    return of({ success: false, error: 'Invalid email or password' });
+          // Update currentUser signal
+          this._currentUser.set(user);
+
+          return { success: true, user };
+        }),
+        catchError(error => {
+          const message = error.error?.message || 'Invalid email or password';
+          return of({ success: false, error: message });
+        })
+      );
   }
 
   register(userData: RegisterData): Observable<AuthResult> {
-    // Generate unique user ID
-    const id = Date.now().toString();
-    
-    // Generate avatarInitials from full name
-    const avatarInitials = this.generateAvatarInitials(userData.fullName);
-    
-    // Create User object
-    const newUser: User = {
-      id,
-      name: userData.fullName,
+    // Backend only accepts: fullName, email, password, role (as number)
+    // Extra fields (organization, phoneNumber, country, city) are NOT sent yet
+    const body = {
+      fullName: userData.fullName,
       email: userData.email,
       password: userData.password,
-      role: userData.role,
-      avatarInitials,
-      streak: userData.role === 'student' ? 0 : undefined
+      role: roleToNumber(userData.role)
     };
-    
-    // Add user to mock user list
-    this.mockUsers.push(newUser);
-    
-    // Generate mock token
-    const token = 'mock-token-' + Date.now();
-    
-    // Create user object without password for storage
-    const userToStore = { ...newUser };
-    delete userToStore.password;
-    
-    // Store in localStorage
-    try {
-      localStorage.setItem('codify_user', JSON.stringify(userToStore));
-      localStorage.setItem('codify_token', token);
-    } catch (error) {
-      console.error('Failed to persist session:', error);
-    }
-    
-    // Update currentUser signal
-    this._currentUser.set(userToStore);
-    
-    return of({ success: true, user: userToStore });
+
+    return this.http
+      .post<ApiEnvelope<RegisterApiResponse>>(`${this.baseUrl}/auth/register`, body)
+      .pipe(
+        // Register returns 201 but NO token - must login after
+        switchMap(() => this.login(userData.email, userData.password)),
+        catchError(error => {
+          const message = error.error?.message || 'Registration failed';
+          return of({ success: false, error: message });
+        })
+      );
   }
 
   logout(): void {

@@ -1,10 +1,11 @@
 import { Component, OnInit, OnDestroy, inject, HostListener, signal, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
+import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { SubmissionService } from '../../core/services/submission.service';
 import { HintService } from '../../core/services/hint.service';
+import { ProblemService } from '../../core/services/problem.service';
 import {
   RunCodeResponse,
   SubmissionDetailResponse,
@@ -62,11 +63,23 @@ export class ProblemPageComponent implements OnInit, OnDestroy {
   protected readonly auth          = inject(AuthService);
   private  readonly submissionSvc  = inject(SubmissionService);
   private  readonly hintSvc        = inject(HintService);
+  private  readonly problemSvc     = inject(ProblemService);
+  private  readonly route          = inject(ActivatedRoute);
   private  readonly elRef          = inject(ElementRef);
   private  readonly router         = inject(Router);
 
   /** Direct reference to the code textarea for imperative value sync after hint apply */
   @ViewChild('editorTextarea') private editorTextareaRef?: ElementRef<HTMLTextAreaElement>;
+
+  // ── Problem data ──────────────────────────────────────────────────────────
+  problemId: string = '';
+  problemTitle: string = 'Loading...';
+  problemDifficulty: string = '';
+  problemDescription: string = '';
+  problemConstraints: string[] = [];
+  problemExamples: Array<{input: string; output: string; explanation: string}> = [];
+  isProblemLoading: boolean = true;
+  problemLoadError: string | null = null;
 
   // ── Language configuration ────────────────────────────────────────────────
   languages = [
@@ -347,7 +360,46 @@ public:
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
   ngOnInit(): void {
-    // Services verified — both SubmissionService and HintService return data correctly.
+    // Load problem from route param
+    this.route.paramMap.pipe(takeUntil(this.destroy$)).subscribe(params => {
+      const id = params.get('id');
+      if (id) {
+        this.problemId = id;
+        this.loadProblem(id);
+      }
+    });
+  }
+
+  private loadProblem(id: string): void {
+    this.isProblemLoading = true;
+    this.problemLoadError = null;
+
+    this.problemSvc.getById(id).pipe(takeUntil(this.destroy$)).subscribe({
+      next: (problem) => {
+        this.problemTitle = problem.title;
+        this.problemDifficulty = problem.difficulty;
+        this.problemDescription = problem.description;
+        this.problemConstraints = problem.constraints;
+        this.problemExamples = problem.examples;
+        
+        // Update starter code for current language
+        if (problem.starterCode) {
+          const lang = this.languages.find(l => l.value === this.selectedLanguage);
+          if (lang && problem.starterCode[this.selectedLanguage]) {
+            lang.starterCode = problem.starterCode[this.selectedLanguage];
+            this.currentCode = lang.starterCode;
+            this.originalStarterCode = lang.starterCode;
+          }
+        }
+        
+        this.isProblemLoading = false;
+      },
+      error: (error) => {
+        console.error('Failed to load problem:', error);
+        this.problemLoadError = 'Failed to load problem. Please try again.';
+        this.isProblemLoading = false;
+      }
+    });
   }
 
   ngOnDestroy(): void {
@@ -383,8 +435,7 @@ public:
     if (!this.isBottomPanelOpen) this.isBottomPanelOpen = true;
     this.activeBottomTab = 'testcases';
 
-    // TODO: derive problemId from ActivatedRoute once multi-problem support lands
-    this.submissionSvc.run('00000000-0000-0000-0000-000000000005', this.currentCode, this.selectedLanguage)
+    this.submissionSvc.run(this.problemId, this.currentCode, this.selectedLanguage)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next:  result => { this.runResult = result; this.runPhase = 'done'; },
@@ -417,7 +468,7 @@ public:
     if (!this.isBottomPanelOpen) this.isBottomPanelOpen = true;
     this.activeBottomTab = 'result';
 
-    this.submissionSvc.submit('00000000-0000-0000-0000-000000000005', this.currentCode, this.selectedLanguage)
+    this.submissionSvc.submit(this.problemId, this.currentCode, this.selectedLanguage)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: result => {
@@ -529,7 +580,7 @@ public:
     this.hintError.set(null);
 
     this.hintSvc.getHint({
-      problemId:             '00000000-0000-0000-0000-000000000005',
+      problemId:             this.problemId,
       studentCode:           this.currentCode,
       hintLevel:             requestLevel,
       previousHints:         this.previousHintTexts,

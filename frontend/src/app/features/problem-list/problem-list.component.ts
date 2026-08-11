@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink, RouterModule } from '@angular/router';
@@ -13,7 +13,7 @@ import { DifficultyBadgeComponent } from '../../shared/components/difficulty-bad
   templateUrl: './problem-list.component.html',
   styleUrl: './problem-list.component.scss'
 })
-export class ProblemListComponent {
+export class ProblemListComponent implements OnInit {
   protected readonly topics: TopicOption[] = [
     { label: 'All topics', value: 'all' },
     { label: 'Dynamic Programming', value: 'dynamic-programming' },
@@ -35,11 +35,35 @@ export class ProblemListComponent {
 
   protected selectedTopic: TopicFilter = 'all';
   protected selectedDifficulty: DifficultyFilter = 'all';
+  protected allProblems: Problem[] = [];
+  protected isLoading = true;
+  protected errorMessage = '';
 
   constructor(private readonly problemService: ProblemService) {}
 
+  ngOnInit(): void {
+    this.loadProblems();
+  }
+
+  private loadProblems(): void {
+    this.isLoading = true;
+    this.errorMessage = '';
+    
+    this.problemService.getAll().subscribe({
+      next: (problems) => {
+        this.allProblems = problems;
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Failed to load problems:', error);
+        this.errorMessage = 'Failed to load problems. Please try again.';
+        this.isLoading = false;
+      }
+    });
+  }
+
   protected get filteredProblems(): Problem[] {
-    return this.problemService.getAll().filter(problem => {
+    return this.allProblems.filter(problem => {
       const matchesTopic = this.selectedTopic === 'all' || problem.topic === this.selectedTopic;
       const matchesDifficulty = this.selectedDifficulty === 'all' || problem.difficulty === this.selectedDifficulty;
       return matchesTopic && matchesDifficulty;

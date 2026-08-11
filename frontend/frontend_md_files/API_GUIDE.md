@@ -1,5 +1,19 @@
 # Codify — Backend API Guide
 
+> **⚠️ STATUS UPDATE — August 11, 2026:**  
+> This document is the **original frontend-authored spec** sent to the backend team.  
+> The backend team built Phase 1 with some differences from this spec.  
+> 
+> **📖 Current Integration Docs:**
+> - **[FRONTEND_INTEGRATION_GUIDE.md](./FRONTEND_INTEGRATION_GUIDE.md)** — What the backend actually built, field changes, enum mappings
+> - **[INTEGRATION_JOURNEY.md](./INTEGRATION_JOURNEY.md)** — Complete record of every file changed during integration
+> - **[BACKEND_INTEGRATION_COMPLETE.md](./BACKEND_INTEGRATION_COMPLETE.md)** — Sprint 1 completion summary
+> 
+> **Phase 1 Complete:** Login, Register, Problems List, Problem Detail are now wired to real backend.  
+> **Still Mocked:** Run code, submit, AI hints, analytics, instructor features (see integration docs for details).
+
+---
+
 > Generated from a full frontend codebase scan.  
 > Angular version: **21.2.0** | Backend stack: **ASP.NET Core** | Base URL: `http://localhost:5237/api`
 
