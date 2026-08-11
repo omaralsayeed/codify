@@ -69,7 +69,7 @@ builder.Services.AddRateLimiter(options =>
                 QueueLimit = 0
             }));
 
-    // POST /ai/hints — 10 per hour per user
+    // POST /api/hints — 10 per hour per user
     options.AddPolicy("ai-hints", httpContext =>
         RateLimitPartition.GetSlidingWindowLimiter(
             partitionKey: httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
@@ -78,6 +78,22 @@ builder.Services.AddRateLimiter(options =>
             factory: _ => new SlidingWindowRateLimiterOptions
             {
                 PermitLimit = 10,
+                Window = TimeSpan.FromHours(1),
+                SegmentsPerWindow = 6,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }));
+
+    // GET /api/analytics/* — 60 per hour per user
+    // Analytics endpoints run heavier DB queries, so a lighter cap than execution.
+    options.AddPolicy("analytics", httpContext =>
+        RateLimitPartition.GetSlidingWindowLimiter(
+            partitionKey: httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                          ?? httpContext.Connection.RemoteIpAddress?.ToString()
+                          ?? "anonymous",
+            factory: _ => new SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = 60,
                 Window = TimeSpan.FromHours(1),
                 SegmentsPerWindow = 6,
                 QueueProcessingOrder = QueueProcessingOrder.OldestFirst,

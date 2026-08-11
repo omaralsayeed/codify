@@ -34,6 +34,7 @@ public class HintsController(IAiHintService hintService) : ControllerBase
 
     /// <summary>
     /// Get hint history for the current user on a problem.
+    /// No rate limit — this is a read-only query with no AI or DB write cost.
     /// </summary>
     [HttpGet("history")]
     public async Task<IActionResult> GetHistory(

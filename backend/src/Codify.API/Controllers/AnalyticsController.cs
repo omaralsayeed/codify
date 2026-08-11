@@ -3,12 +3,14 @@ using Codify.API.Extensions;
 using Codify.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Codify.API.Controllers;
 
 [ApiController]
 [Route("api/analytics")]
 [Authorize]
+[EnableRateLimiting("analytics")]
 public class AnalyticsController(IAnalyticsService analyticsService) : ControllerBase
 {
     /// <summary>
