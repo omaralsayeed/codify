@@ -13,9 +13,25 @@
 
     <h1>Request Received</h1>
     <p class="subtitle">
-      Your instructor account is pending admin approval.
-      We'll send you an email once your account is activated.
+      Your details have been sent directly to our admin team.
+      Just wait for an email confirming your account is approved — then you're good to log in.
     </p>
+
+    <!-- Email hint -->
+    <div class="email-hint">
+      <div class="email-hint__icon" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="1.5"
+             stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="4" width="20" height="16" rx="3" ry="3"></rect>
+          <polyline points="2 7 12 13 22 7"></polyline>
+        </svg>
+      </div>
+      <div class="email-hint__text">
+        <span class="email-hint__label">Just wait for an email from us</span>
+        <span class="email-hint__sub">We'll notify you as soon as your account is activated</span>
+      </div>
+    </div>
 
     <div class="info-box">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
@@ -25,7 +41,7 @@
         <line x1="12" y1="8" x2="12" y2="12"></line>
         <line x1="12" y1="16" x2="12.01" y2="16"></line>
       </svg>
-      <span>This usually takes 1–2 business days. Check your inbox for updates.</span>
+      <span>This usually takes 1–2 business days. Keep an eye on your inbox.</span>
     </div>
 
     <a routerLink="/auth/login" class="btn-secondary">Back to Login</a>

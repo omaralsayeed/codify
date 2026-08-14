@@ -65,6 +65,9 @@ export class LoginComponent {
         if (result.success) {
           const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') || '/';
           this.router.navigateByUrl(returnUrl);
+        } else if (result.pendingApproval) {
+          // Instructor account not yet approved — take them to the waiting page
+          this.router.navigate(['/auth/pending-approval']);
         } else {
           this.loginError = result.error || 'Invalid email or password';
           this.cdr.detectChanges();

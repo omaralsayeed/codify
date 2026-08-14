@@ -75,9 +75,9 @@ export class AuthService {
           if (error instanceof TimeoutError) {
             return of({ success: false, error: 'Server is not responding. Please check your connection.' });
           }
-          // Handle pending instructor account
+          // Handle pending instructor account — signal to component to redirect
           if (error?.error?.errorCode === 'ACCOUNT_PENDING') {
-            return of({ success: false, error: 'Your account is pending admin approval. Please check your email.' });
+            return of({ success: false, pendingApproval: true } as AuthResult);
           }
           const message = error.error?.message || 'Invalid email or password';
           return of({ success: false, error: message });

@@ -1,5 +1,4 @@
-using System;
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -11,7 +10,6 @@ namespace Codify.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            // Add Status column — default to 'Active' so all existing users remain active
             migrationBuilder.AddColumn<string>(
                 name: "Status",
                 table: "Users",
@@ -19,7 +17,6 @@ namespace Codify.Infrastructure.Persistence.Migrations
                 nullable: false,
                 defaultValue: "Active");
 
-            // Add Organization column (optional, supplied by instructors at registration)
             migrationBuilder.AddColumn<string>(
                 name: "Organization",
                 table: "Users",
@@ -27,7 +24,6 @@ namespace Codify.Infrastructure.Persistence.Migrations
                 maxLength: 300,
                 nullable: true);
 
-            // Add approval audit columns
             migrationBuilder.AddColumn<Guid>(
                 name: "ReviewedBy",
                 table: "Users",
@@ -44,10 +40,10 @@ namespace Codify.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(name: "ReviewedAt",    table: "Users");
-            migrationBuilder.DropColumn(name: "ReviewedBy",    table: "Users");
-            migrationBuilder.DropColumn(name: "Organization",  table: "Users");
-            migrationBuilder.DropColumn(name: "Status",        table: "Users");
+            migrationBuilder.DropColumn(name: "ReviewedAt",   table: "Users");
+            migrationBuilder.DropColumn(name: "ReviewedBy",   table: "Users");
+            migrationBuilder.DropColumn(name: "Organization", table: "Users");
+            migrationBuilder.DropColumn(name: "Status",       table: "Users");
         }
     }
 }
