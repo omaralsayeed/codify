@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormGroup, FormControl, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -15,6 +15,7 @@ export class LoginComponent {
   private authService = inject(AuthService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  private cdr = inject(ChangeDetectorRef);
 
   showPassword = false;
   loginError = '';
@@ -66,11 +67,13 @@ export class LoginComponent {
           this.router.navigateByUrl(returnUrl);
         } else {
           this.loginError = result.error || 'Invalid email or password';
+          this.cdr.detectChanges();
         }
       },
       error: err => {
         this.isSubmitting = false;
         this.loginError = err?.error?.message || err?.message || 'Invalid email or password';
+        this.cdr.detectChanges();
       }
     });
   }
