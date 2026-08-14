@@ -673,7 +673,7 @@ Sprint 1 (Foundation — do these first, they unblock everything)
 Sprint 2 (Core Pages)
 ├── Feature 1: Overview / Stats dashboard           ✅ DONE
 ├── Feature 2: User Management list                 ✅ DONE
-└── Feature 3: User Detail page                     [~2 hours]
+└── Feature 3: User Detail page                     ✅ DONE
 
 Sprint 3 (Problem Management)
 ├── Feature 4a: Problem list with filters           [~3 hours]
