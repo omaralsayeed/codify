@@ -671,7 +671,7 @@ Sprint 1 (Foundation — do these first, they unblock everything)
 └── Login redirect for admins (login.component.ts) ✅ DONE
 
 Sprint 2 (Core Pages)
-├── Feature 1: Overview / Stats dashboard           [~3 hours]
+├── Feature 1: Overview / Stats dashboard           ✅ DONE
 ├── Feature 2: User Management list                 [~4 hours]
 └── Feature 3: User Detail page                     [~2 hours]
 
@@ -696,7 +696,7 @@ Sprint 4 (Polish + Extras)
 | Admin guard (`src/app/core/guards/admin.guard.ts`) | ✅ Done |
 | Admin shell + routes (`AdminShellComponent`, `admin.routes.ts`) | ✅ Done |
 | Login redirect for admins | ✅ Done |
-| Overview page | ❌ Not built |
+| Overview page | ✅ Done (mocked data) |
 | User management | ❌ Not built |
 | Problem management | ❌ Not built |
 | Backend endpoints | ❌ Not built |
