@@ -4,6 +4,7 @@ export interface AuthResult {
   success: boolean;
   error?: string;
   user?: User;
+  pendingApproval?: boolean; // true when instructor registers and awaits admin approval
 }
 
 export interface RegisterData {
@@ -11,6 +12,7 @@ export interface RegisterData {
   email: string;
   password: string;
   role: 'student' | 'instructor';
+  organization?: string;
 }
 
 export interface LoginFormData {

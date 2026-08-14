@@ -16,4 +16,11 @@ public class RegisterRequest
 
     [Required]
     public UserRole Role { get; set; }
+
+    /// <summary>
+    /// Optional for students, recommended for instructors.
+    /// Stored so admins can see it during the approval review.
+    /// </summary>
+    [MaxLength(300)]
+    public string? Organization { get; set; }
 }

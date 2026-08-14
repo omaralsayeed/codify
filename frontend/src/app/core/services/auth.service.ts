@@ -21,6 +21,7 @@ interface RegisterApiResponse {
   userId: string;
   email: string;
   role: number;
+  status?: string; // 'active' | 'pending' — present once backend adds it
 }
 
 interface ApiEnvelope<T> {
@@ -74,6 +75,10 @@ export class AuthService {
           if (error instanceof TimeoutError) {
             return of({ success: false, error: 'Server is not responding. Please check your connection.' });
           }
+          // Handle pending instructor account
+          if (error?.error?.errorCode === 'ACCOUNT_PENDING') {
+            return of({ success: false, error: 'Your account is pending admin approval. Please check your email.' });
+          }
           const message = error.error?.message || 'Invalid email or password';
           return of({ success: false, error: message });
         })
@@ -85,14 +90,23 @@ export class AuthService {
       fullName: userData.fullName,
       email: userData.email,
       password: userData.password,
-      role: roleToNumber(userData.role)
+      role: roleToNumber(userData.role),
+      organization: userData.organization ?? null
     };
 
     return this.http
-      .post<any>(`${this.baseUrl}/auth/register`, body)
+      .post<ApiEnvelope<RegisterApiResponse>>(`${this.baseUrl}/auth/register`, body)
       .pipe(
         timeout(10000),
-        switchMap(() => this.login(userData.email, userData.password)),
+        switchMap(response => {
+          const data = response.data;
+          // Instructor registered — backend sets status='Pending' (PascalCase from C# enum)
+          if (data.role === 1 && data.status === 'Pending') {
+            return of({ success: true, pendingApproval: true } as AuthResult);
+          }
+          // Student registered — auto-login immediately
+          return this.login(userData.email, userData.password);
+        }),
         catchError(error => {
           if (error instanceof TimeoutError) {
             return of({ success: false, error: 'Server is not responding. Please try again.' } as AuthResult);

@@ -199,19 +199,26 @@ export class RegisterComponent {
       return;
     }
 
-    const { fullName, email, password, role } = this.registerForm.value;
+    const { fullName, email, password, role, organization, organizationOther } = this.registerForm.value;
     this.registerError = '';
     this.isSubmitting = true;
-    
+
+    // Use custom org name if 'Other' was selected
+    const resolvedOrg = organization === 'Other' ? (organizationOther || '') : (organization || '');
+
     this.authService.register({
       fullName: fullName!,
       email: email!,
       password: password!,
-      role: role as 'student' | 'instructor'
+      role: role as 'student' | 'instructor',
+      organization: resolvedOrg || undefined
     }).subscribe({
       next: result => {
         this.isSubmitting = false;
-        if (result.success) {
+        if (result.pendingApproval) {
+          // Instructor registered — redirect to waiting screen
+          this.router.navigate(['/auth/pending-approval']);
+        } else if (result.success) {
           if (this.profilePicturePreview) {
             localStorage.setItem('codify_avatar', this.profilePicturePreview);
           }
