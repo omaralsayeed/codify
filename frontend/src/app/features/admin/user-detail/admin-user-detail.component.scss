@@ -1,0 +1,349 @@
+@use '../../../styles/variables' as *;
+
+// ── Not found ─────────────────────────────────────────────────────────────────
+.not-found {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 24px;
+  text-align: center;
+}
+
+.not-found-icon  { font-size: 40px; margin-bottom: 16px; }
+.not-found-title { font-family: $ff-display; font-size: 20px; color: $navy; margin: 0 0 8px; }
+.not-found-sub   { font-size: 14px; color: $muted; margin: 0 0 20px; }
+
+// ── Back link ─────────────────────────────────────────────────────────────────
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+  color: $blue;
+  text-decoration: none;
+  margin-bottom: 4px;
+
+  &:hover { text-decoration: underline; }
+}
+
+// ── Detail layout ─────────────────────────────────────────────────────────────
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+// ── Profile header ────────────────────────────────────────────────────────────
+.profile-header {
+  background: $white;
+  border: 1px solid $border;
+  border-radius: $r;
+  padding: 24px;
+  box-shadow: $shadow;
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+
+  @media (max-width: $mobile) { flex-direction: column; }
+}
+
+.avatar-lg {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  flex-shrink: 0;
+  letter-spacing: 0.04em;
+
+  &.avatar--blue { background: $blue-lt;  color: $blue;      }
+  &.avatar--gold { background: $gold-lt;  color: $gold-dark; }
+}
+
+.header-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.header-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.user-name {
+  font-family: $ff-display;
+  font-size: 22px;
+  color: $navy;
+  margin: 0;
+}
+
+.user-email {
+  font-size: 13px;
+  color: $muted;
+}
+
+.user-org {
+  font-size: 13px;
+  color: $charcoal;
+  font-weight: 500;
+}
+
+.user-dates {
+  font-size: 12px;
+  color: $muted;
+}
+
+// ── Badges ────────────────────────────────────────────────────────────────────
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+
+  &.badge--blue    { background: $blue-lt;   color: $blue;      }
+  &.badge--gold    { background: $gold-lt;   color: $gold-dark; }
+  &.badge--red     { background: $red-lt;    color: $red;       }
+  &.badge--active  { background: $teal-lt;   color: $teal;      }
+  &.badge--pending { background: $orange-lt; color: $orange;    }
+}
+
+// ── Header action button ──────────────────────────────────────────────────────
+.header-action {
+  flex-shrink: 0;
+  margin-left: auto;
+
+  @media (max-width: $mobile) { margin-left: 0; }
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
+  border-radius: $r;
+  font-size: 13px;
+  font-family: $ff-body;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid;
+  transition: opacity 0.15s, transform 0.12s;
+
+  &:hover  { opacity: 0.88; transform: translateY(-1px); }
+  &:active { transform: translateY(0); }
+
+  &.action-btn--activate {
+    background: $teal;
+    color: $white;
+    border-color: $teal;
+  }
+
+  &.action-btn--suspend {
+    background: transparent;
+    color: $orange;
+    border-color: $orange;
+    &:hover { background: $orange-lt; opacity: 1; }
+  }
+}
+
+// ── Stat pills ────────────────────────────────────────────────────────────────
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+
+  @media (max-width: $tablet) { grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: $mobile) { grid-template-columns: 1fr 1fr; }
+}
+
+.stat-pill {
+  background: $white;
+  border: 1px solid $border;
+  border-radius: $r;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: $shadow;
+}
+
+.stat-icon  { font-size: 20px; line-height: 1; }
+.stat-body  { display: flex; flex-direction: column; gap: 2px; }
+.stat-value { font-family: $ff-display; font-size: 22px; color: $navy; line-height: 1; }
+.stat-label { font-size: 11px; color: $muted; }
+
+// ── Section card ──────────────────────────────────────────────────────────────
+.section-card {
+  background: $white;
+  border: 1px solid $border;
+  border-radius: $r;
+  padding: 20px 24px;
+  box-shadow: $shadow;
+}
+
+.section-title {
+  font-family: $ff-display;
+  font-size: 16px;
+  color: $navy;
+  margin: 0 0 16px;
+}
+
+// ── Submissions list ──────────────────────────────────────────────────────────
+.submission-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.submission-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid $border;
+
+  &:last-child { border-bottom: none; }
+}
+
+.sub-info   { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sub-title  { font-size: 13px; font-weight: 500; color: $navy; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sub-date   { font-size: 11px; color: $muted; }
+
+.status-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+
+  &.status--accepted { background: $teal-lt; color: $teal;   }
+  &.status--wrong    { background: $red-lt;  color: $red;    }
+  &.status--other    { background: $gold-lt; color: $gold;   }
+}
+
+.empty-text { font-size: 13px; color: $muted; margin: 0; }
+
+// ── Instructor info grid ──────────────────────────────────────────────────────
+.info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 0;
+  border-bottom: 1px solid $border;
+  gap: 12px;
+
+  &:last-child { border-bottom: none; }
+}
+
+.info-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: $muted;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.info-value {
+  font-size: 13px;
+  color: $charcoal;
+}
+
+// ── Pending notice ────────────────────────────────────────────────────────────
+.pending-notice {
+  margin-top: 16px;
+  padding: 12px 16px;
+  border-radius: $r;
+  background: $orange-lt;
+  color: $orange;
+  font-size: 13px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.5;
+}
+
+// ── Confirmation modal ────────────────────────────────────────────────────────
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba($navy, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.modal {
+  background: $white;
+  border-radius: $r-lg;
+  padding: 32px 28px;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: $shadow-lg;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+}
+
+.modal-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 700;
+
+  &.modal-icon--activate { background: $teal-lt;   color: $teal;   }
+  &.modal-icon--suspend  { background: $orange-lt; color: $orange; }
+}
+
+.modal-title { font-family: $ff-display; font-size: 20px; color: $navy; margin: 0; }
+.modal-body  { font-size: 14px; color: $muted; margin: 0; line-height: 1.6; }
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.modal-btn {
+  flex: 1;
+  height: 40px;
+  border-radius: $r;
+  font-size: 13px;
+  font-family: $ff-body;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid $border;
+  transition: background 0.15s;
+
+  &.modal-btn--cancel           { background: $white;  color: $charcoal; &:hover { background: $ivory2; } }
+  &.modal-btn--confirm-activate { background: $teal;   color: $white; border-color: $teal;   &:hover { opacity: 0.88; } }
+  &.modal-btn--confirm-suspend  { background: $orange; color: $white; border-color: $orange; &:hover { opacity: 0.88; } }
+}

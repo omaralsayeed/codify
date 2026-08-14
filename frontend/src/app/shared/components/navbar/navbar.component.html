@@ -2,6 +2,9 @@
   <a routerLink="/" class="nav-logo">
     <span class="nav-logo-dot"></span>
     Codify
+    @if (isAdmin) {
+      <span class="nav-admin-badge">ADMIN</span>
+    }
   </a>
 
   <!-- Desktop: Guest links -->
@@ -19,17 +22,20 @@
   <!-- Desktop: Logged-in links -->
   @if (auth.isLoggedIn()) {
     <div class="nav-links nav-links--desktop">
-      <a routerLink="/problems"
-         routerLinkActive="nav-link--active"
-         class="nav-link">Problems</a>
 
-      <a [routerLink]="profileUrl"
-         routerLinkActive="nav-link--active"
-         class="nav-link">Profile</a>
+      @if (!isAdmin) {
+        <a routerLink="/problems"
+           routerLinkActive="nav-link--active"
+           class="nav-link">Problems</a>
 
-      <a routerLink="/progress"
-         routerLinkActive="nav-link--active"
-         class="nav-link">Progress</a>
+        <a [routerLink]="profileUrl"
+           routerLinkActive="nav-link--active"
+           class="nav-link">Profile</a>
+
+        <a routerLink="/progress"
+           routerLinkActive="nav-link--active"
+           class="nav-link">Progress</a>
+      }
 
       @if (isInstructor) {
         <a routerLink="/instructor/dashboard"
@@ -53,50 +59,70 @@
         }
       </div>
 
-      <!-- Streak Badge -->
-      <div class="streak-badge">
-        <span class="streak-emoji">🔥</span>
-        <span class="streak-count">{{ streakDays }}</span>
-        <div class="streak-tooltip">{{ streakDays }} day streak — keep it up!</div>
-      </div>
+      <!-- Streak Badge — hidden for admin -->
+      @if (!isAdmin) {
+        <div class="streak-badge">
+          <span class="streak-emoji">🔥</span>
+          <span class="streak-count">{{ streakDays }}</span>
+          <div class="streak-tooltip">{{ streakDays }} day streak — keep it up!</div>
+        </div>
+      }
 
       <!-- Profile Dropdown -->
       <div class="profile-container">
         <button class="profile-trigger" (click)="toggleProfile($event)" aria-label="Profile menu">
-          <div class="nav-avatar">{{ auth.user()?.avatarInitials }}</div>
+          @if (auth.user()?.avatarUrl) {
+            <img class="nav-avatar nav-avatar--photo" [src]="auth.user()!.avatarUrl" [alt]="auth.user()!.name" />
+          } @else {
+            <div class="nav-avatar">{{ auth.user()?.avatarInitials }}</div>
+          }
         </button>
         @if (isProfileOpen) {
           <div class="profile-panel" (click)="$event.stopPropagation()">
             <div class="profile-header">
-              <div class="profile-avatar-large">{{ auth.user()?.avatarInitials }}</div>
+              @if (auth.user()?.avatarUrl) {
+                <img class="profile-avatar-large profile-avatar-large--photo" [src]="auth.user()!.avatarUrl" [alt]="auth.user()!.name" />
+              } @else {
+                <div class="profile-avatar-large">{{ auth.user()?.avatarInitials }}</div>
+              }
               <div class="profile-info">
                 <div class="profile-name">{{ auth.user()?.name }}</div>
-                <div class="profile-plan">Free Plan</div>
+                <div class="profile-plan">{{ isAdmin ? 'Administrator' : 'Free Plan' }}</div>
               </div>
             </div>
             <div class="quick-actions">
-              <button class="quick-action" (click)="navigateTo(profileUrl)">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="12" cy="7" r="4"></circle>
-                </svg>
-                <span>My Profile</span>
-              </button>
-              <button class="quick-action" (click)="navigateTo('/problems')">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="16 18 22 12 16 6"></polyline>
-                  <polyline points="8 6 2 12 8 18"></polyline>
-                </svg>
-                <span>Problems</span>
-              </button>
-              <button class="quick-action" (click)="navigateTo('/progress')">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="18" y1="20" x2="18" y2="10"></line>
-                  <line x1="12" y1="20" x2="12" y2="4"></line>
-                  <line x1="6" y1="20" x2="6" y2="14"></line>
-                </svg>
-                <span>Progress</span>
-              </button>
+              @if (!isAdmin) {
+                <button class="quick-action" (click)="navigateTo(profileUrl)">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
+                  <span>My Profile</span>
+                </button>
+                <button class="quick-action" (click)="navigateTo('/problems')">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="16 18 22 12 16 6"></polyline>
+                    <polyline points="8 6 2 12 8 18"></polyline>
+                  </svg>
+                  <span>Problems</span>
+                </button>
+                <button class="quick-action" (click)="navigateTo('/progress')">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                    <line x1="6" y1="20" x2="6" y2="14"></line>
+                  </svg>
+                  <span>Progress</span>
+                </button>
+              }
+              @if (isAdmin) {
+                <button class="quick-action quick-action--admin" (click)="navigateTo('/admin/overview')">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                  </svg>
+                  <span>Admin Panel</span>
+                </button>
+              }
               @if (isInstructor) {
                 <button class="quick-action quick-action--teach" (click)="navigateTo('/instructor/dashboard')">
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -108,7 +134,8 @@
                 </button>
               }
             </div>
-            <div class="profile-divider"></div>            <button class="menu-item menu-item--danger" (click)="logout()">
+            <div class="profile-divider"></div>
+            <button class="menu-item menu-item--danger" (click)="logout()">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
                 <polyline points="16 17 21 12 16 7"></polyline>
@@ -141,14 +168,20 @@
             </div>
           }
         </div>
-        <!-- Streak -->
-        <div class="streak-badge streak-badge--mobile">
-          <span class="streak-emoji">🔥</span>
-          <span class="streak-count">{{ streakDays }}</span>
-        </div>
+        <!-- Streak — hidden for admin -->
+        @if (!isAdmin) {
+          <div class="streak-badge streak-badge--mobile">
+            <span class="streak-emoji">🔥</span>
+            <span class="streak-count">{{ streakDays }}</span>
+          </div>
+        }
         <!-- Avatar (opens mobile menu) -->
         <button class="profile-trigger" (click)="toggleMobileMenu($event)" aria-label="Open menu">
-          <div class="nav-avatar">{{ auth.user()?.avatarInitials }}</div>
+          @if (auth.user()?.avatarUrl) {
+            <img class="nav-avatar nav-avatar--photo" [src]="auth.user()!.avatarUrl" [alt]="auth.user()!.name" />
+          } @else {
+            <div class="nav-avatar">{{ auth.user()?.avatarInitials }}</div>
+          }
         </button>
       </div>
     }
@@ -176,24 +209,36 @@
       }
       @if (auth.isLoggedIn()) {
         <div class="mobile-profile-header">
-          <div class="profile-avatar-large">{{ auth.user()?.avatarInitials }}</div>
+          @if (auth.user()?.avatarUrl) {
+            <img class="profile-avatar-large profile-avatar-large--photo" [src]="auth.user()!.avatarUrl" [alt]="auth.user()!.name" />
+          } @else {
+            <div class="profile-avatar-large">{{ auth.user()?.avatarInitials }}</div>
+          }
           <div class="profile-info">
             <div class="profile-name">{{ auth.user()?.name }}</div>
-            <div class="profile-plan">Free Plan</div>
+            <div class="profile-plan">{{ isAdmin ? 'Administrator' : 'Free Plan' }}</div>
           </div>
         </div>
-        <a routerLink="/problems"
-           routerLinkActive="mobile-link--active"
-           class="mobile-link"
-           (click)="isMobileMenuOpen=false">Problems</a>
-        <a [routerLink]="profileUrl"
-           routerLinkActive="mobile-link--active"
-           class="mobile-link"
-           (click)="isMobileMenuOpen=false">Profile</a>
-        <a routerLink="/progress"
-           routerLinkActive="mobile-link--active"
-           class="mobile-link"
-           (click)="isMobileMenuOpen=false">Progress</a>
+        @if (!isAdmin) {
+          <a routerLink="/problems"
+             routerLinkActive="mobile-link--active"
+             class="mobile-link"
+             (click)="isMobileMenuOpen=false">Problems</a>
+          <a [routerLink]="profileUrl"
+             routerLinkActive="mobile-link--active"
+             class="mobile-link"
+             (click)="isMobileMenuOpen=false">Profile</a>
+          <a routerLink="/progress"
+             routerLinkActive="mobile-link--active"
+             class="mobile-link"
+             (click)="isMobileMenuOpen=false">Progress</a>
+        }
+        @if (isAdmin) {
+          <a routerLink="/admin/overview"
+             routerLinkActive="mobile-link--active"
+             class="mobile-link"
+             (click)="isMobileMenuOpen=false">Admin Panel</a>
+        }
         @if (isInstructor) {
           <a routerLink="/instructor/dashboard"
              routerLinkActive="mobile-link--active"

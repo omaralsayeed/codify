@@ -42,6 +42,13 @@ public class UserRepository(CodifyDbContext db) : IUserRepository
             .AsSplitQuery()
             .FirstOrDefaultAsync(u => u.Id == instructorId);
 
+    public async Task<IReadOnlyList<User>> GetPendingInstructorsAsync() =>
+        await db.Users
+            .Where(u => u.Role == Domain.Enums.UserRole.Instructor
+                     && u.Status == Domain.Enums.UserStatus.Pending)
+            .OrderBy(u => u.CreatedAt)
+            .ToListAsync();
+
     public async Task AddAsync(User user) =>
         await db.Users.AddAsync(user);
 

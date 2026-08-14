@@ -33,6 +33,10 @@ export class NavbarComponent {
     return this.auth.user()?.role === 'instructor';
   }
 
+  get isAdmin(): boolean {
+    return this.auth.user()?.role === 'admin';
+  }
+
   logout(): void {
     this.auth.logout();
     this.isMobileMenuOpen = false;

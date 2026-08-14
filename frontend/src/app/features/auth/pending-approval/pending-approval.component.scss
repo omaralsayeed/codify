@@ -1,0 +1,161 @@
+@import '../../../styles/variables';
+
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: $ivory;
+  padding: 20px;
+}
+
+.auth-card {
+  background: $white;
+  border-radius: $r-lg;
+  box-shadow: $shadow;
+  padding: 48px 40px;
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+
+  h1 {
+    font-family: $ff-display;
+    font-size: 28px;
+    color: $navy;
+    margin: 0 0 12px 0;
+  }
+
+  .subtitle {
+    font-family: $ff-body;
+    font-size: 16px;
+    color: $muted;
+    line-height: 1.6;
+    margin: 0 0 28px 0;
+    max-width: 360px;
+  }
+}
+
+// Clock icon wrapper
+.pending-icon {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background-color: #EFF6FF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+  color: $blue;
+}
+
+// Email hint card
+.email-hint {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: linear-gradient(135deg, #EFF6FF 0%, #F0FDF4 100%);
+  border: 1px solid #BFDBFE;
+  border-radius: $r-lg;
+  padding: 20px 24px;
+  margin-bottom: 20px;
+  width: 100%;
+  box-sizing: border-box;
+
+  &__icon {
+    flex-shrink: 0;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: $white;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: $blue;
+    animation: float 3s ease-in-out infinite;
+  }
+
+  &__text {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    text-align: left;
+  }
+
+  &__label {
+    font-family: $ff-body;
+    font-size: 15px;
+    font-weight: 600;
+    color: $navy;
+  }
+
+  &__sub {
+    font-family: $ff-body;
+    font-size: 13px;
+    color: $muted;
+    line-height: 1.4;
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-4px); }
+}
+
+// Info hint box
+.info-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background-color: #F8F9FA;
+  border: 1px solid $border;
+  border-radius: $r;
+  padding: 14px 16px;
+  font-family: $ff-body;
+  font-size: 14px;
+  color: $charcoal;
+  line-height: 1.5;
+  margin-bottom: 32px;
+  text-align: left;
+
+  svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: $blue;
+  }
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  padding: 0 28px;
+  border: 1.5px solid $blue;
+  border-radius: $r;
+  font-family: $ff-body;
+  font-size: 15px;
+  font-weight: 600;
+  color: $blue;
+  text-decoration: none;
+  transition: background-color 0.2s, color 0.2s;
+
+  &:hover {
+    background-color: $blue;
+    color: $white;
+  }
+
+  &:focus {
+    outline: 2px solid $navy;
+    outline-offset: 2px;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 32px 20px;
+  }
+}

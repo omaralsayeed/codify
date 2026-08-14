@@ -89,7 +89,7 @@ export class InstructorContestDetailComponent implements OnInit {
   }
 
   private buildProblemAccuracy(contest: Contest, res: ContestResult[]): ProblemAccuracy[] {
-    const problems = this.problemSvc.getAll();
+    const problems = this.problemSvc.getAllSync();
     const total    = res.length;
 
     return contest.problemIds.map(pid => {

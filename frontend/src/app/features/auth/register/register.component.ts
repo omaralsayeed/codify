@@ -1,8 +1,15 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormGroup, FormControl, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../../core/services/auth.service';
+
+// ── Cloudinary config ──────────────────────────────────────────────────────
+const CLOUDINARY_CLOUD  = 'mg7dsqv2';
+const CLOUDINARY_PRESET = 'MS_codify-imgs';
+const CLOUDINARY_UPLOAD_URL =
+  `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`;
 
 // Custom validator for password matching
 function passwordMatchValidator(control: AbstractControl): ValidationErrors | null {
@@ -18,6 +25,23 @@ function passwordMatchValidator(control: AbstractControl): ValidationErrors | nu
   }
   
   return password.value === confirmPassword.value ? null : { passwordMismatch: true };
+}
+
+// Custom validator for password strength (min 8 chars, letter + number)
+function passwordStrengthValidator(control: AbstractControl): ValidationErrors | null {
+  const value: string = control.value || '';
+  if (!value) return null;
+
+  if (value.length < 8) {
+    return { tooShort: true };
+  }
+  if (!/[A-Za-z]/.test(value)) {
+    return { noLetter: true };
+  }
+  if (!/\d/.test(value)) {
+    return { noNumber: true };
+  }
+  return null;
 }
 
 // Custom validator for phone number
@@ -40,15 +64,22 @@ function phoneValidator(control: AbstractControl): ValidationErrors | null {
 export class RegisterComponent {
   private authService = inject(AuthService);
   private router = inject(Router);
+  private cdr = inject(ChangeDetectorRef);
+  private http = inject(HttpClient);
 
   showPassword = false;
   showConfirmPassword = false;
   profilePicturePreview: string | null = null;
+  /** The raw File selected by the user — kept so we can upload it later */
+  private selectedFile: File | null = null;
+  registerError = '';
+  isSubmitting = false;
+  isUploadingAvatar = false;
 
   registerForm = new FormGroup({
     fullName: new FormControl('', [Validators.required]),
     email: new FormControl('', [Validators.required, Validators.email]),
-    password: new FormControl('', [Validators.required]),
+    password: new FormControl('', [Validators.required, passwordStrengthValidator]),
     confirmPassword: new FormControl('', [Validators.required]),
     role: new FormControl<'student' | 'instructor' | ''>('', [Validators.required]),
     organization: new FormControl('', [Validators.required]),
@@ -84,6 +115,26 @@ export class RegisterComponent {
     'Other'
   ];
 
+  get passwordStrength(): 'weak' | 'fair' | 'strong' | null {
+    const val: string = this.registerForm.get('password')?.value || '';
+    if (!val) return null;
+    let score = 0;
+    if (val.length >= 8) score++;
+    if (val.length >= 12) score++;
+    if (/[A-Z]/.test(val)) score++;
+    if (/\d/.test(val)) score++;
+    if (/[^A-Za-z0-9]/.test(val)) score++;
+    if (score <= 2) return 'weak';
+    if (score <= 3) return 'fair';
+    return 'strong';
+  }
+
+  get passwordStrengthLabel(): string {
+    const s = this.passwordStrength;
+    if (!s) return '';
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+
   get showOrganizationOther(): boolean {
     return this.registerForm.get('organization')?.value === 'Other';
   }
@@ -92,12 +143,13 @@ export class RegisterComponent {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files[0]) {
       const file = input.files[0];
+      this.selectedFile = file;
+
       const reader = new FileReader();
-      
       reader.onload = (e) => {
         this.profilePicturePreview = e.target?.result as string;
+        this.cdr.detectChanges();
       };
-      
       reader.readAsDataURL(file);
     }
   }
@@ -130,6 +182,12 @@ export class RegisterComponent {
       return 'Please enter a valid email address';
     }
 
+    if (field === 'password') {
+      if (control.errors['tooShort']) return 'Password must be at least 8 characters';
+      if (control.errors['noLetter']) return 'Password must contain at least one letter';
+      if (control.errors['noNumber']) return 'Password must contain at least one number';
+    }
+
     if (control.errors['invalidPhone']) {
       return 'Phone number must be 10-15 digits';
     }
@@ -153,17 +211,67 @@ export class RegisterComponent {
       return;
     }
 
-    const { fullName, email, password, role } = this.registerForm.value;
-    
-    this.authService.register({
-      fullName: fullName!,
-      email: email!,
-      password: password!,
-      role: role as 'student' | 'instructor'
-    }).subscribe(result => {
-      if (result.success) {
-        this.router.navigate(['/']);
-      }
-    });
+    const { fullName, email, password, role, organization, organizationOther } = this.registerForm.value;
+    this.registerError = '';
+    this.isSubmitting = true;
+
+    // Use custom org name if 'Other' was selected
+    const resolvedOrg = organization === 'Other' ? (organizationOther || '') : (organization || '');
+
+    // ── Step 1: upload avatar to Cloudinary (if a file was selected) ────────
+    const doRegister = (avatarUrl?: string) => {
+      this.authService.register({
+        fullName: fullName!,
+        email: email!,
+        password: password!,
+        role: role as 'student' | 'instructor',
+        organization: resolvedOrg || undefined
+      }).subscribe({
+        next: result => {
+          this.isSubmitting = false;
+          this.isUploadingAvatar = false;
+          if (result.pendingApproval) {
+            this.router.navigate(['/auth/pending-approval']);
+          } else if (result.success) {
+            if (avatarUrl) {
+              // Push Cloudinary URL into live user signal + localStorage
+              this.authService.setAvatarUrl(avatarUrl);
+            }
+            this.router.navigate(['/']);
+          } else {
+            this.registerError = result.error || 'Registration failed. Please try again.';
+            this.cdr.detectChanges();
+          }
+        },
+        error: err => {
+          this.isSubmitting = false;
+          this.isUploadingAvatar = false;
+          this.registerError = err?.error?.message || err?.message || 'Registration failed. Please try again.';
+          this.cdr.detectChanges();
+        }
+      });
+    };
+
+    if (this.selectedFile) {
+      this.isUploadingAvatar = true;
+      const formData = new FormData();
+      formData.append('file', this.selectedFile);
+      formData.append('upload_preset', CLOUDINARY_PRESET);
+      formData.append('folder', 'codify_avatars');
+
+      this.http.post<{ secure_url: string }>(CLOUDINARY_UPLOAD_URL, formData).subscribe({
+        next: res => {
+          this.isUploadingAvatar = false;
+          doRegister(res.secure_url);
+        },
+        error: () => {
+          // Upload failed — continue registration without image rather than blocking the user
+          this.isUploadingAvatar = false;
+          doRegister();
+        }
+      });
+    } else {
+      doRegister();
+    }
   }
 }

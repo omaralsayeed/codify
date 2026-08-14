@@ -1,0 +1,63 @@
+<section class="overview">
+
+  <!-- ── Page header ──────────────────────────────────────────────────────── -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Platform Overview</h1>
+      <p class="page-sub">Live snapshot of all platform activity — all numbers are mocked until backend is ready.</p>
+    </div>
+    <span class="mock-badge">⚠ Mock data</span>
+  </div>
+
+  <!-- ── Stat cards ───────────────────────────────────────────────────────── -->
+  <div class="stat-grid">
+    @for (card of statCards; track card.label) {
+      <div class="stat-card" [ngClass]="card.colorClass">
+        <span class="stat-icon" aria-hidden="true">{{ card.icon }}</span>
+        <div class="stat-body">
+          <span class="stat-value">{{ card.value }}</span>
+          <span class="stat-label">{{ card.label }}</span>
+          <span class="stat-sub">{{ card.sub }}</span>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- ── Secondary info row ───────────────────────────────────────────────── -->
+  <div class="info-row">
+    @for (item of infoItems; track item.label) {
+      <div class="info-cell">
+        <span class="info-value">{{ item.value }}</span>
+        <span class="info-label">{{ item.label }}</span>
+      </div>
+    }
+  </div>
+
+  <!-- ── Quick actions ────────────────────────────────────────────────────── -->
+  <div class="section-card">
+    <h2 class="section-title">Quick Actions</h2>
+    <p class="section-sub">Common admin tasks.</p>
+    <div class="actions-row">
+      <a class="action-btn action-btn--orange" routerLink="../users" [queryParams]="{status: 'pending'}">
+        <span aria-hidden="true">⏳</span>
+        Review Pending Instructors
+        @if (stats.pendingInstructors > 0) {
+          <span class="action-badge">{{ stats.pendingInstructors }}</span>
+        }
+      </a>
+      <a class="action-btn action-btn--blue" routerLink="../users">
+        <span aria-hidden="true">👥</span>
+        Manage Users
+      </a>
+      <a class="action-btn action-btn--teal" routerLink="../problems/new">
+        <span aria-hidden="true">＋</span>
+        Add New Problem
+      </a>
+      <a class="action-btn action-btn--navy" routerLink="../problems">
+        <span aria-hidden="true">🗂</span>
+        Manage Problems
+      </a>
+    </div>
+  </div>
+
+</section>

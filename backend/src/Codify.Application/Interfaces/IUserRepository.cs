@@ -20,6 +20,9 @@ public interface IUserRepository
     /// </summary>
     Task<User?> GetInstructorWithProblemsAndSubmissionsAsync(Guid instructorId);
 
+    /// <summary>Returns all instructors with Status = Pending, ordered by registration date.</summary>
+    Task<IReadOnlyList<User>> GetPendingInstructorsAsync();
+
     Task AddAsync(User user);
     Task SaveChangesAsync();
 }
