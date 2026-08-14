@@ -4,6 +4,7 @@ namespace Codify.Application.Agents;
 
 public class TutorAgentInput
 {
+    public Guid UserId { get; set; }
     public Guid ProblemId { get; set; }
     public string ProblemTitle { get; set; } = string.Empty;
     public string ProblemStatement { get; set; } = string.Empty;

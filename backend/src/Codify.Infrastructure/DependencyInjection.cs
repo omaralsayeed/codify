@@ -7,6 +7,7 @@ using Codify.Infrastructure.BackgroundJobs;
 using Codify.Infrastructure.Judge0;
 using Codify.Infrastructure.Persistence;
 using Codify.Infrastructure.Repositories;
+using Codify.Infrastructure.Search;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -74,13 +75,51 @@ public static class DependencyInjection
         // AI
         services.Configure<OpenAiOptions>(options =>
         {
-            options.ApiKey = configuration[$"{OpenAiOptions.SectionName}:ApiKey"] ?? string.Empty;
-            options.Model  = configuration[$"{OpenAiOptions.SectionName}:Model"] ?? OpenAiOptions.DefaultModel;
+            options.ApiKey         = configuration[$"{OpenAiOptions.SectionName}:ApiKey"] ?? string.Empty;
+            options.Model          = configuration[$"{OpenAiOptions.SectionName}:Model"] ?? OpenAiOptions.DefaultModel;
+            options.EmbeddingModel = configuration[$"{OpenAiOptions.SectionName}:EmbeddingModel"] ?? OpenAiOptions.DefaultEmbeddingModel;
         });
+
+        // Chroma Cloud (vector database for RAG)
+        services.Configure<ChromaCloudOptions>(configuration.GetSection(ChromaCloudOptions.SectionName));
+
         services.AddSingleton<ILLMClient, OpenAiChatClient>();
         services.AddSingleton<IPromptLoader, PromptLoader>();
-        services.AddScoped<ITutorAgent, TutorAgent>();
-        services.AddScoped<ICodeCheckerAgent, CodeCheckerAgent>();
+
+        // RAG layer: embeddings -> Chroma Cloud vector store -> knowledge base search
+        services.AddHttpClient<IEmbeddingService, OpenAiEmbeddingService>((sp, client) =>
+        {
+            client.BaseAddress = new Uri("https://api.openai.com/v1/");
+            client.Timeout = TimeSpan.FromSeconds(30);
+            var openAi = sp.GetRequiredService<IOptions<OpenAiOptions>>().Value;
+            if (!string.IsNullOrWhiteSpace(openAi.ApiKey))
+                client.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", openAi.ApiKey);
+        });
+
+        services.AddHttpClient<IVectorStore, ChromaCloudVectorStore>((sp, client) =>
+        {
+            var chroma = sp.GetRequiredService<IOptions<ChromaCloudOptions>>().Value;
+            if (!string.IsNullOrWhiteSpace(chroma.Endpoint))
+                client.BaseAddress = new Uri(chroma.Endpoint.TrimEnd('/') + "/");
+            client.Timeout = TimeSpan.FromSeconds(chroma.TimeoutSeconds > 0 ? chroma.TimeoutSeconds : 20);
+            if (!string.IsNullOrWhiteSpace(chroma.ApiKey))
+                client.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", chroma.ApiKey);
+        });
+
+        services.AddScoped<IKnowledgeBaseSearchService, KnowledgeBaseSearchService>();
+
+        // Tutor Agent (agentic tool-calling)
+        services.AddScoped<ITutorAgentTools, TutorAgentTools>();
+        services.AddScoped<ITutorAgent, TutorAgentService>();
+
+        // Code Analysis Agent (static workflow fired after evaluation)
+        services.AddScoped<ICodeCheckerAgent, CodeAnalysisAgentService>();
+
+        // Tagging Agent (static workflow: tags problems + refreshes user tags on progress)
+        services.AddScoped<ITaggingAgent, TaggingAgentService>();
+        services.AddScoped<ITaggingService, TaggingService>();
 
         return services;
     }

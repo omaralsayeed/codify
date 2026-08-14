@@ -14,11 +14,12 @@ public class AiHintServiceTests
     private readonly IProblemRepository _problemRepo = Substitute.For<IProblemRepository>();
     private readonly IHintRepository _hintRepo = Substitute.For<IHintRepository>();
     private readonly ITutorAgent _tutorAgent = Substitute.For<ITutorAgent>();
+    private readonly IPerformanceService _performanceService = Substitute.For<IPerformanceService>();
     private readonly AiHintService _sut;
 
     public AiHintServiceTests()
     {
-        _sut = new AiHintService(_problemRepo, _hintRepo, _tutorAgent);
+        _sut = new AiHintService(_problemRepo, _hintRepo, _tutorAgent, _performanceService);
     }
 
     private static Problem MakeProblem()

@@ -22,7 +22,7 @@ public class JudgeEvaluationService(
     IProblemRepository problemRepo,
     IUserRepository userRepo,
     IExecutionService executionService,
-    IPerformanceService performanceService,
+    ITaggingService taggingService,
     ITestCaseResultRepository testCaseResultRepo,
     IFeedbackRepository feedbackRepo,
     ICodeCheckerAgent codeCheckerAgent,
@@ -153,8 +153,10 @@ public class JudgeEvaluationService(
             }
         }
 
-        // 8. Recalculate performance profile
-        await performanceService.UpdateAfterSubmissionAsync(submission.UserId);
+        // 8. Fire the Tagging Agent's on-progress hook to refresh the student's
+        //    concept-tag profile (weak/strong topics). It reuses the deterministic
+        //    performance recomputation internally.
+        await taggingService.UpdateUserTagsOnProgressAsync(submission.UserId, cancellationToken);
 
         // 9. Final save for submission status + result
         await submissionRepo.SaveChangesAsync();

@@ -1,89 +1,103 @@
-# AGENTS.md
-# Codify — AI Agent Design & Contracts
+﻿# Codify â€” AI Agent Design & Contracts
 
-This document reflects the AI implementation that is actually wired in the backend today. The only runtime agent currently active is the Tutor Agent.
+This document reflects the AI implementation that is actually wired into the backend.
+There are three AI agents. Each has a clearly-scoped responsibility, a defined
+input/output contract, and uses the shared LLM + Chroma Cloud RAG foundation.
+
+| Agent | Type | Trigger | RAG |
+|-------|------|---------|-----|
+| **Tutor Agent** | Agentic (LLM tool calling) | `POST /api/hints` | Yes â€” `search_knowledge_base` |
+| **Code Analysis Agent** | Static workflow (fixed pipeline) | Fired after submission evaluation | No (deterministic heuristics) |
+| **Tagging Agent** | Static workflow (fixed pipeline) | Fired on progress + auto-scan / endpoint | Yes â€” concept grounding |
 
 ## Design Principles
 
-1. Structured output only. The agent returns JSON that the backend can validate.
-2. Controlled scope. The Tutor Agent only gives hints and does not provide full solutions.
-3. Graceful failure. Model errors return a safe fallback hint.
-4. No hallucinated facts. The agent only receives the problem context and student context passed in by the service layer.
+1. **Agentic where it matters.** Only the Tutor Agent uses open-ended LLM tool calling;
+   the model decides which tools to call. The Code Analysis and Tagging agents are
+   deterministic, static workflows (a single LLM call inside a fixed pipeline) because
+   their steps are known in advance.
+2. **Structured output only.** Every agent returns JSON that the backend validates.
+   Malformed or missing output falls back to a safe default â€” never a crash.
+3. **Grounded, no hallucination.** Tools and retrieved Chroma context ground the model
+   in real data. Prompts instruct the model not to invent unavailable information.
+4. **Deterministic-first.** Measurable signals (submission history, code heuristics,
+   per-tag success rates) are computed in C#; the LLM reasons over them.
+5. **Graceful degradation.** Any LLM/Chroma failure returns empty context or a fallback
+   result so the agents never break the request or evaluation pipeline.
+6. **No secrets in code.** All keys/endpoints come from configuration / environment.
 
-## Active Runtime Agent: Tutor Agent
+## Shared Foundation
 
-### Trigger
+### LLM tool calling
+`ILLMClient.CompleteAsync` (single round-trip) and `ILLMClient.CompleteWithToolsAsync`
+(one step of the tool loop) are implemented by `OpenAiChatClient` using the OpenAI SDK.
+Shared message/tool types live in `Codify.Application/Interfaces/LlmContracts.cs`.
 
-`POST /api/ai/hints`
+### Chroma Cloud RAG
+Retrieval-only (documents are pre-populated in Chroma Cloud; nothing is ingested from
+local files at runtime).
 
-### Input Contract
-
-```json
-{
-  "problemId": "uuid",
-  "studentCode": "def solution():\n    ...",
-  "hintLevel": 1,
-  "previousHints": ["Try thinking about lookups."],
-  "attemptCount": 2,
-  "lastSubmissionStatus": "WrongAnswer"
-}
+```
+query -> IEmbeddingService (text-embedding-3-small)
+      -> IVectorStore / ChromaCloudVectorStore (v2 REST, Bearer auth, tenant+database path)
+      -> IKnowledgeBaseSearchService -> agent context
 ```
 
-The service maps this request into `TutorAgentInput` and enriches it with the problem title, problem statement, and concept tags.
+- `ChromaCloudOptions` holds Endpoint / ApiKey / Tenant / Database / CollectionName /
+  SimilarityThreshold, bound from the `ChromaCloud` config section.
+- `ChromaCloudVectorStore` resolves the collection id (get-or-create), builds metadata
+  `where` filters, parses batch query responses, and returns an empty list on any failure.
+- Expected document metadata: `source` (`"concept"`) and `concept_tag`.
 
-### Output Contract
+## Tutor Agent (agentic)
 
-```json
-{
-  "hintText": "Think about which data structure gives you constant-time lookups.",
-  "hintLevel": 1,
-  "followUpQuestion": "What would you store as the key and value?",
-  "hasMoreHints": true
-}
+Progressive hints without revealing the solution. The model decides which tools to call:
+
+| Tool | Purpose |
+|------|---------|
+| `get_attempt_history` | Real attempt count / statuses / prior hint levels. |
+| `search_knowledge_base` | RAG grounding from Chroma when a concept is missing. |
+| `check_partial_code` | Lightweight static observations on the student's code. |
+| `get_previous_hints` | Avoid repeating guidance. |
+
+Loop capped at 5 iterations; hint level clamped to 1..3; `tools_used` +
+`reasoning_summary` persisted to `HintLog` (`ToolsUsedJson`, `ReasoningSummary`).
+
+## Code Analysis Agent (static workflow)
+
+Fired after a submission is evaluated (via `ICodeCheckerAgent`, wired into
+`JudgeEvaluationService`). Fixed pipeline:
+
+```
+code -> CodeAnalysisHeuristics (deterministic signals)
+     -> single LLM call (code-analysis-agent-system.txt)
+     -> feedback items + AI-generated verdict
+     -> FeedbackRecord rows
 ```
 
-### Prompt Template
+Also detects likely **AI-generated code** (confidence threshold 0.6) and emits a
+`FeedbackType.AiGenerated` record when confident.
 
-The active prompt lives in [tutor-agent-system.txt](../../backend/src/Codify.Infrastructure/AI/Prompts/tutor-agent-system.txt) and instructs the model to:
+## Tagging Agent (static workflow)
 
-- never write the complete solution
-- give one hint at a time
-- ask a follow-up question
-- keep the answer concise
-- return valid JSON only
+Classifies a problem's concept tags, grounded in RAG. Fixed pipeline:
 
-### Validation And Fallback
-
-The backend validates the model response after the call:
-
-- `hintText` must be present
-- `hintLevel` must stay within 1 to 3
-- invalid JSON returns a fallback hint
-- exceptions from the OpenAI client return the same fallback hint
-
-Fallback response:
-
-```json
-{
-  "hintText": "Try reviewing the problem constraints. They often hint at the right approach.",
-  "hintLevel": 1,
-  "followUpQuestion": null,
-  "hasMoreHints": true
-}
+```
+problem statement -> IKnowledgeBaseSearchService (concept grounding)
+                  -> single LLM call (tagging-agent-system.txt)
+                  -> validate tags against the allowed ConceptTag list
+                  -> apply ProblemTags
 ```
 
-## Current Gaps
+Fired two ways:
+- **On progress:** `JudgeEvaluationService` calls `ITaggingService.UpdateUserTagsOnProgressAsync`
+  to refresh a student's weak/strong topic profile (reuses `IPerformanceService`).
+- **Tagging untagged problems:** `POST /api/ai/tagging/{problemId}` (one problem),
+  `POST /api/ai/tagging/scan` (all), plus an automatic startup scan
+  (`Tagging:AutoTagUntaggedOnStartup`, only when an OpenAI key is configured).
 
-- No code-checker agent is wired into runtime.
-- No analytics or tagging agent is wired into runtime.
-- No vector retrieval step is wired into the tutor flow yet.
-- Hint persistence to `HintLog` is not implemented yet.
+## Deterministic Analytics (not an agent)
 
-## Planned Extensions
+The student/instructor dashboards (`AnalyticsService` / `AnalyticsController`) compute
+statistics deterministically and are **not** AI agents. They are left unchanged.
 
-If the team resumes the broader multi-agent roadmap, the next additions should be:
-
-1. A retrieval layer for concept context.
-2. A feedback agent for submission analysis.
-3. A performance-profile updater for student weakness tracking.
-4. A proper persistence path for hint history.

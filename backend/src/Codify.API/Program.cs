@@ -1,6 +1,7 @@
 using System.Text;
 using System.Threading.RateLimiting;
 using Codify.API.Middleware;
+using Codify.Application.Interfaces;
 using Codify.Infrastructure;
 using Codify.Infrastructure.Persistence;
 using Codify.Infrastructure.Persistence.Seed;
@@ -99,6 +100,22 @@ builder.Services.AddRateLimiter(options =>
                 QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                 QueueLimit = 0
             }));
+
+    // POST /api/ai/tagging/* — 5 per hour per user
+    // Each tagging call costs an LLM round-trip (and the scan costs one per problem).
+    options.AddPolicy("ai-tagging", httpContext =>
+        RateLimitPartition.GetSlidingWindowLimiter(
+            partitionKey: httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                          ?? httpContext.Connection.RemoteIpAddress?.ToString()
+                          ?? "anonymous",
+            factory: _ => new SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromHours(1),
+                SegmentsPerWindow = 6,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }));
 });
 
 builder.Services.AddAuthorization();
@@ -122,6 +139,33 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate();
     await ConceptTagSeed.SeedAsync(db);
     await ProblemSeed.SeedAsync(db);
+}
+
+// Automatic Tagging Agent scan: tag all currently-untagged problems on startup.
+// Fire-and-forget so it never blocks boot; only runs when the feature is enabled
+// AND an OpenAI key is configured (otherwise every classification would fail).
+var autoTagOnStartup   = builder.Configuration.GetValue("Tagging:AutoTagUntaggedOnStartup", false);
+var openAiKeyPresent   = !string.IsNullOrWhiteSpace(builder.Configuration["OpenAI:ApiKey"]);
+if (autoTagOnStartup && openAiKeyPresent)
+{
+    _ = Task.Run(async () =>
+    {
+        using var scanScope = app.Services.CreateScope();
+        var scanLogger = scanScope.ServiceProvider
+            .GetRequiredService<ILoggerFactory>().CreateLogger("TaggingAutoScan");
+        try
+        {
+            var taggingService = scanScope.ServiceProvider.GetRequiredService<ITaggingService>();
+            var scan = await taggingService.TagAllUntaggedProblemsAsync();
+            scanLogger.LogInformation(
+                "Startup tagging scan tagged {Tagged}/{Found} untagged problems.",
+                scan.Tagged, scan.UntaggedFound);
+        }
+        catch (Exception ex)
+        {
+            scanLogger.LogError(ex, "Startup tagging scan failed.");
+        }
+    });
 }
 
 // Enable Swagger UI. For local debugging it's useful to expose Swagger even when the

@@ -13,9 +13,8 @@ public class SubmissionServiceTests
 {
     private readonly ISubmissionRepository _submissionRepo = Substitute.For<ISubmissionRepository>();
     private readonly IProblemRepository _problemRepo = Substitute.For<IProblemRepository>();
-    private readonly IUserRepository _userRepo = Substitute.For<IUserRepository>();
-    private readonly IExecutionService _executionService = Substitute.For<IExecutionService>();
-    private readonly IPerformanceService _performanceService = Substitute.For<IPerformanceService>();
+    private readonly IFeedbackRepository _feedbackRepo = Substitute.For<IFeedbackRepository>();
+    private readonly ISubmissionEvaluationQueue _evaluationQueue = Substitute.For<ISubmissionEvaluationQueue>();
     private readonly SubmissionService _sut;
 
     public SubmissionServiceTests()
@@ -23,13 +22,12 @@ public class SubmissionServiceTests
         _sut = new SubmissionService(
             _submissionRepo,
             _problemRepo,
-            _userRepo,
-            _executionService,
-            _performanceService);
+            _feedbackRepo,
+            _evaluationQueue);
     }
 
     [Fact]
-    public async Task CreateAsync_ShouldReturnAcceptedSubmission_WhenAllTestCasesPass()
+    public async Task CreateAsync_ShouldPersistPendingSubmission_AndQueueForEvaluation()
     {
         var problemId = Guid.NewGuid();
         var userId = Guid.NewGuid();
@@ -37,19 +35,8 @@ public class SubmissionServiceTests
         problem.TestCases.Add(TestCase.Create(problem.Id, "input1", "output1", true, TestCaseVisibility.Public, 0));
 
         _problemRepo.GetByIdWithTestCasesAsync(problemId).Returns(problem);
-        _executionService.EvaluateAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
-            Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns(new TestCaseExecutionResult
-            {
-                ActualOutput = "output1",
-                ExecutionTimeMs = 10,
-                MemoryUsedKb = 512
-            });
-
         _submissionRepo.GetByIdWithDetailsAsync(Arg.Any<Guid>())
             .Returns(callInfo => Submission.Create(problemId, userId, "code", SubmissionLanguage.Python));
-        _submissionRepo.HasPreviousAcceptedAsync(userId, problemId, Arg.Any<Guid>()).Returns(false);
-        _userRepo.GetByIdAsync(userId).Returns(User.Create("Test", "t@t.com", "hash", UserRole.Student));
 
         var request = new CreateSubmissionRequest
         {
@@ -60,9 +47,11 @@ public class SubmissionServiceTests
 
         var result = await _sut.CreateAsync(request, userId);
 
+        // Submission is persisted and handed off to the background evaluation queue.
         await _submissionRepo.Received(1).AddAsync(Arg.Any<Submission>());
-        await _submissionRepo.Received(1).AddResultAsync(Arg.Any<SubmissionResult>());
-        await _performanceService.Received(1).UpdateAfterSubmissionAsync(userId);
+        await _submissionRepo.Received(1).SaveChangesAsync();
+        _evaluationQueue.Received(1).QueueSubmission(Arg.Any<Guid>());
+        Assert.Equal("Pending", result.Status);
     }
 
     [Fact]
