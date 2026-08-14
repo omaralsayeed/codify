@@ -74,13 +74,15 @@
 
 .brand-badge {
   font-family: $ff-mono;
-  font-size: 9px;
-  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 10px;
   border-radius: 20px;
-  background: rgba($red, 0.2);
-  color: lighten($red, 30%);
-  letter-spacing: 0.06em;
+  background: rgba(30, 10, 10, 0.45);
+  color: lighten($red, 20%);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+  border: 1px solid rgba($red, 0.2);
 }
 
 // ── Nav links ─────────────────────────────────────────────────────────────────

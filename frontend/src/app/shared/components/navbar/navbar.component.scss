@@ -23,6 +23,20 @@
   border-radius: 50%; background: $gold;
 }
 
+.nav-admin-badge {
+  font-family: $ff-mono;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: rgba($red, 0.18);
+  color: lighten($red, 15%);
+  border: 1px solid rgba($red, 0.25);
+  line-height: 1;
+}
+
 // Desktop nav links — hidden on mobile
 .nav-links {
   display: flex; align-items: center; gap: 8px;
