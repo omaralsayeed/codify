@@ -1,162 +1,93 @@
-# Codify — Admin Panel Specification
+# Codify — Admin Panel: Frontend & Backend Handoff
 
-> **Created:** August 14, 2026
-> **Branch:** `admin-page`
-> **Status:** Planning — not yet implemented
-> **Author:** Kiro (AI dev agent)
-
----
-
-## Overview
-
-The Admin Panel is a **completely separate full-screen control system** — not the regular Codify app. When a user with `role = 'admin'` logs in, they are taken directly to the admin panel. There is **no regular navbar**, no student/instructor UI. The admin panel has its own layout: a fixed left sidebar for navigation between sections, and a main content area that changes based on the active section.
-
-Think of it like a back-office control panel — isolated from the student/instructor experience entirely.
-
-Admin capabilities (as requested + recommended additions):
-- View all users (students + instructors) with filters
-- Activate or set any user/instructor to pending
-- Add, edit, and delete problems
-- Platform-wide statistics (user counts, problem counts, submission counts)
+> **Last Updated:** August 14, 2026
+> **Branch:** `admin-page` (branched from `linking-backend-with-frontend`)
+> **Frontend Status:** ✅ Fully built — all pages working with mock data, waiting for backend
+> **Backend Status:** ❌ All admin endpoints still need to be built
+> **Shared by:** Frontend team → Backend team
 
 ---
 
-## Layout Architecture
+## The Story So Far
 
-The admin panel is a **full-screen shell** that replaces the entire page when an admin is logged in. It does NOT use the global `app.html` navbar.
+The frontend team has built a **complete admin panel** on the `admin-page` branch. Every page is fully functional with mock/hardcoded data. The UI is done, the routing is done, the guards are done, the forms are done. The only thing missing is real data from the backend.
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                   ADMIN SHELL (full screen)              │
-│  ┌──────────────┬──────────────────────────────────────┐ │
-│  │              │                                      │ │
-│  │   SIDEBAR    │         MAIN CONTENT AREA            │ │
-│  │   (fixed)    │         (router-outlet)              │ │
-│  │              │                                      │ │
-│  │  🛡 Codify   │  Changes based on active nav item    │ │
-│  │    Admin     │                                      │ │
-│  │  ─────────   │                                      │ │
-│  │  ⊞ Overview  │                                      │ │
-│  │  👥 Users    │                                      │ │
-│  │  🗂 Problems │                                      │ │
-│  │              │                                      │ │
-│  │  ─────────   │                                      │ │
-│  │  👤 [name]   │                                      │ │
-│  │  🚪 Logout   │                                      │ │
-│  └──────────────┴──────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────┘
-```
+The moment the backend delivers the endpoints listed in this document, the frontend will replace the mock data with real HTTP calls and the admin panel will be live.
 
-### Key layout decisions
-- The shell component uses `data: { hideLayout: true }` in its route so the global navbar and footer are hidden
-- The sidebar is always visible (fixed left column, ~220px wide)
-- The sidebar header shows "Codify Admin" branding — clearly signals this is the control panel
-- The sidebar footer shows the logged-in admin's name + a logout button
-- Active nav item is highlighted
-- On mobile: sidebar collapses to a top bar with icon-only nav
+This document tells the backend team exactly what to build, what shape the data needs to be, and what priority to build it in.
 
 ---
 
-## Route Plan
+## What the Admin Panel Is
 
-| Route | Component | Guard | Notes |
-|---|---|---|---|
-| `/admin` | redirect → `/admin/overview` | — | — |
-| `/admin/overview` | AdminOverviewComponent | authGuard + adminGuard | Stats dashboard |
-| `/admin/users` | AdminUsersComponent | authGuard + adminGuard | User list |
-| `/admin/users/:id` | AdminUserDetailComponent | authGuard + adminGuard | Single user view |
-| `/admin/problems` | AdminProblemsComponent | authGuard + adminGuard | Problem list |
-| `/admin/problems/new` | AdminProblemFormComponent | authGuard + adminGuard | Create problem |
-| `/admin/problems/:id/edit` | AdminProblemFormComponent | authGuard + adminGuard | Edit problem |
+The admin panel is a **completely separate full-screen control system** — not the regular Codify student/instructor app. When a user with `role = admin` (role number = **2**) logs in, they are automatically redirected to `/admin/overview` and see a dedicated dark-sidebar control panel. The regular navbar and footer are hidden entirely.
 
-All routes are children of `AdminShellComponent` which carries `data: { hideLayout: true }` to suppress the global navbar and footer.
+### What Admins Can Do (all built on frontend, needs backend)
+1. **Overview dashboard** — see platform stats at a glance
+2. **User management** — view all students and instructors, activate or set-pending any of them
+3. **User detail** — deep dive into a single user's profile, stats, recent submissions
+4. **Problem list** — see all problems including inactive ones, toggle active/inactive
+5. **Problem create/edit** — full form to add new problems or edit existing ones
 
-### Login redirect for admins
+### What Admins Cannot Do (by design)
+- See or manage other admin accounts (admins are hidden from the users list)
+- The admin panel has no access to student-facing features (problems list, code editor, etc.)
 
-When an admin logs in, `auth.service.ts` detects `role === 'admin'` and the login component redirects to `/admin/overview` instead of `/problems`.
+---
 
-In `login.component.ts`:
-```typescript
-if (result.user?.role === 'admin') {
-  this.router.navigateByUrl('/admin/overview');
-} else {
-  this.router.navigateByUrl(returnUrl || '/');
+## Role System — Critical for Backend
+
+The frontend already maps roles as follows. The backend **must** use these exact numbers:
+
+| Role | Backend number | Frontend string |
+|---|---|---|
+| Student | `0` | `'student'` |
+| Instructor | `1` | `'instructor'` |
+| **Admin** | **`2`** | **`'admin'`** |
+
+The login endpoint `POST /api/auth/login` must return `role: 2` for admin users. The frontend `AuthService` already maps this correctly and redirects admins to `/admin/overview` automatically.
+
+**All `/api/admin/*` endpoints must require `[Authorize(Roles = "Admin")]`.**
+
+If a non-admin tries to call an admin endpoint, return `403 Forbidden`.
+
+---
+
+## Global Response Conventions
+
+All responses follow the existing envelope pattern already used by the backend:
+
+```json
+{
+  "data": { ... }
 }
 ```
 
----
-
-## Features — Detailed Breakdown
-
----
-
-### Feature 1 — Platform Overview (Stats Dashboard)
-
-**Priority: 🔴 High — build first**
-
-A summary page showing key platform metrics at a glance. First page the admin sees on login.
-
-#### What It Shows
-- Total registered users (students + instructors combined)
-- Total students count
-- Total instructors count (broken down: active vs pending)
-- Total problems in the platform
-- Total submissions (all time)
-- New registrations today / this week
-- Platform activity chart (submissions per day, last 14 days)
-
-#### Stat Cards (top row)
-```
-[ Total Users ]   [ Total Problems ]   [ Pending Instructors ]   [ Submissions Today ]
-     124                 32                      3                        87
-  ↑ 5 this week     ↑ 2 this week           needs review              vs 64 yesterday
-```
-
-#### Activity Chart
-- Line chart: submissions per day over the last 14 days
-- Reuses the same chart pattern from InstructorOverviewComponent
-
----
-
-#### Frontend Spec
-
-**Component:** `AdminOverviewComponent`
-
-**Data needed:**
-```typescript
-interface AdminStats {
-  totalUsers: number;
-  totalStudents: number;
-  totalInstructors: number;
-  activeInstructors: number;
-  pendingInstructors: number;
-  totalProblems: number;
-  totalSubmissions: number;
-  newUsersToday: number;
-  newUsersThisWeek: number;
-  submissionsToday: number;
-  activityTrend: { date: string; dayLabel: string; submissions: number; }[];
+Error responses:
+```json
+{
+  "message": "Human-readable error description"
 }
 ```
 
-**UI elements:**
-- 4 stat cards in a row (responsive grid)
-- Activity trend SVG chart (bezier curve, same pattern as instructor overview)
-- Secondary stats row (instructors breakdown, new users)
-
-**State:** All data fetched on `ngOnInit`, loading skeleton shown while fetching.
+Standard HTTP codes: `200`, `201`, `400`, `401`, `403`, `404`, `409`, `500`.
 
 ---
 
-#### Backend Spec
+## Backend Endpoints — Build in This Order
 
-**New endpoint:**
-```
-GET /api/admin/stats
-Authorization: Bearer <token> [Admin role required]
-```
+---
 
-**Response:**
+### 1. GET /api/admin/stats
+**Priority: 🔴 Build first — this is the first thing admin sees after login**
+
+Returns platform-wide statistics for the overview dashboard.
+
+**Authorization:** `[Authorize(Roles = "Admin")]`
+
+**Request:** No params needed.
+
+**Response `200`:**
 ```json
 {
   "data": {
@@ -169,128 +100,67 @@ Authorization: Bearer <token> [Admin role required]
     "totalSubmissions": 4820,
     "newUsersToday": 5,
     "newUsersThisWeek": 18,
-    "submissionsToday": 87,
-    "activityTrend": [
-      { "date": "2026-08-01", "dayLabel": "Sat 1", "submissions": 45 },
-      ...
-    ]
+    "submissionsToday": 87
   }
 }
 ```
 
----
-
-### Feature 2 — User Management (View All Users)
-
-**Priority: 🔴 High — build second**
-
-A full table of every registered user on the platform with search, filter, and sort.
-
-#### What It Shows
-- Full name + avatar initials
-- Email address
-- Role badge (Student / Instructor / Admin)
-- Status badge (Active / Pending) — only relevant for instructors
-- Registration date
-- Last active date
-- Problems solved (students) / students managed (instructors)
-- Action button: View Details
-
-#### Filters (top toolbar)
-- Search by name or email (text input)
-- Filter by role: All / Students / Instructors
-- Filter by status: All / Active / Pending
-- Sort by: Name / Date Registered / Last Active
-
-#### Instructor-specific: Activate / Set Pending
-- Instructors have a status pill: green "Active" or orange "Pending"
-- Clicking the pill OR opening the user detail shows a toggle/button
-- Admin can flip the status in one click
-- A confirmation modal appears: "Are you sure you want to activate [name]?"
+**Notes:**
+- `totalUsers` = students + instructors (do NOT count admin accounts)
+- `pendingInstructors` = instructors where status = pending
+- `newUsersToday` = registered today (UTC)
+- `newUsersThisWeek` = registered in the last 7 days
+- `submissionsToday` = submissions created today (UTC)
 
 ---
 
-#### Frontend Spec
+### 2. GET /api/admin/users
+**Priority: 🔴 Build second — core feature**
 
-**Component:** `AdminUsersComponent`
+Returns a paginated, filterable list of all users. **Admins are excluded from this list** — only students and instructors appear.
 
-**Data model:**
-```typescript
-interface AdminUserRow {
-  id: string;
-  name: string;
-  initials: string;
-  email: string;
-  role: 'student' | 'instructor' | 'admin';
-  status: 'active' | 'pending';       // always 'active' for students
-  registeredAt: string;               // ISO date
-  lastActiveAt: string | null;
-  problemsSolved?: number;            // students
-  organization?: string;              // instructors
-}
-```
+**Authorization:** `[Authorize(Roles = "Admin")]`
 
-**UI elements:**
-- Toolbar: search input + role filter dropdown + status filter dropdown
-- Sortable table (Name, Role, Status, Registered, Last Active)
-- Role badge: blue = Student, gold = Instructor, red = Admin
-- Status pill: green = Active, orange = Pending
-- Row click → navigates to `/admin/dashboard/users/:id`
-- Inline action button on instructor rows: "Activate" (if pending) or "Set Pending" (if active)
-- Confirmation modal for status changes
+**Query params:**
 
-**State signals:**
-```typescript
-searchQuery = signal('')
-roleFilter  = signal<'all' | 'student' | 'instructor'>('all')
-statusFilter = signal<'all' | 'active' | 'pending'>('all')
-sortField   = signal<'name' | 'registeredAt' | 'lastActiveAt'>('registeredAt')
-sortDir     = signal<'asc' | 'desc'>('desc')
-users       = signal<AdminUserRow[]>([])
-isLoading   = signal(true)
-```
+| Param | Type | Default | Notes |
+|---|---|---|---|
+| `search` | string | — | Filter by name OR email (case-insensitive contains) |
+| `role` | `student` \| `instructor` | — | Filter by role. Omit = return both |
+| `status` | `active` \| `pending` | — | Filter by status. Omit = return both |
+| `sortBy` | `name` \| `registeredAt` \| `lastActiveAt` | `registeredAt` | Sort field |
+| `sortDir` | `asc` \| `desc` | `desc` | Sort direction |
+| `page` | number | `1` | Page number |
+| `pageSize` | number | `20` | Items per page |
 
----
-
-#### Backend Spec
-
-**New endpoints:**
-
-```
-GET  /api/admin/users
-GET  /api/admin/users/:id
-PATCH /api/admin/users/:id/status
-```
-
-**GET /api/admin/users**
-
-Query params:
-| Param | Type | Notes |
-|---|---|---|
-| `role` | `student` \| `instructor` \| `admin` | Filter by role |
-| `status` | `active` \| `pending` | Filter by status |
-| `search` | string | Name or email search |
-| `sortBy` | `name` \| `registeredAt` \| `lastActiveAt` | Sort field |
-| `sortDir` | `asc` \| `desc` | Sort direction |
-| `page` | number | Pagination |
-| `pageSize` | number | Default 20 |
-
-**Response:**
+**Response `200`:**
 ```json
 {
   "data": {
     "users": [
       {
         "id": "uuid",
-        "name": "Jane Doe",
-        "initials": "JD",
-        "email": "jane@example.com",
+        "name": "Karim Ahmed",
+        "initials": "KA",
+        "email": "karim@example.com",
         "role": 0,
         "status": "active",
-        "registeredAt": "2026-07-01T10:00:00Z",
+        "registeredAt": "2026-06-01T10:00:00Z",
         "lastActiveAt": "2026-08-13T14:22:00Z",
-        "problemsSolved": 14,
+        "problemsSolved": 38,
         "organization": null
+      },
+      {
+        "id": "uuid",
+        "name": "Dr. Hana Saad",
+        "initials": "HS",
+        "email": "hana@university.edu",
+        "role": 1,
+        "status": "active",
+        "registeredAt": "2026-05-15T09:00:00Z",
+        "lastActiveAt": "2026-08-13T08:00:00Z",
+        "problemsSolved": null,
+        "organization": "Cairo University"
       }
     ],
     "total": 124,
@@ -300,9 +170,75 @@ Query params:
 }
 ```
 
-**PATCH /api/admin/users/:id/status**
+**Field notes:**
+- `role` — return as number (`0` = student, `1` = instructor). Frontend maps it.
+- `status` — `"active"` or `"pending"` as a string. Students are always `"active"`.
+- `initials` — first letter of first name + first letter of last name, uppercase (e.g. "Karim Ahmed" → "KA"). Backend can generate this or frontend will derive it.
+- `problemsSolved` — for students: count of accepted submissions. For instructors: `null`.
+- `organization` — for instructors: their institution. For students: `null`.
+- `lastActiveAt` — last time the user made any request (submission, login, etc.). `null` if never active after registration.
 
-Request body:
+---
+
+### 3. GET /api/admin/users/:id
+**Priority: 🔴 Build alongside #2**
+
+Returns full detail for a single user.
+
+**Authorization:** `[Authorize(Roles = "Admin")]`
+
+**Response `200`:**
+```json
+{
+  "data": {
+    "id": "uuid",
+    "name": "Karim Ahmed",
+    "initials": "KA",
+    "email": "karim@example.com",
+    "role": 0,
+    "status": "active",
+    "registeredAt": "2026-06-01T10:00:00Z",
+    "lastActiveAt": "2026-08-13T14:22:00Z",
+    "organization": null,
+    "problemsSolved": 38,
+    "avgScore": 92,
+    "streak": 14,
+    "totalSubmissions": 61,
+    "recentSubmissions": [
+      {
+        "problemTitle": "Two Sum",
+        "status": "Accepted",
+        "submittedAt": "2026-08-13T10:45:00Z"
+      },
+      {
+        "problemTitle": "Valid Parentheses",
+        "status": "WrongAnswer",
+        "submittedAt": "2026-08-12T16:20:00Z"
+      }
+    ]
+  }
+}
+```
+
+**Field notes:**
+- `avgScore` — average score across all accepted submissions (0–100). `null` for instructors.
+- `streak` — current daily streak. `null` for instructors.
+- `totalSubmissions` — total submission count. `0` for instructors.
+- `recentSubmissions` — last 5 submissions, newest first. Empty array `[]` for instructors.
+- `recentSubmissions[].status` — same SubmissionStatus enum values as the existing submissions endpoint: `"Accepted"`, `"WrongAnswer"`, `"RuntimeError"`, etc.
+
+**Response `404`:** User not found or is an admin (admins cannot be viewed via this endpoint).
+
+---
+
+### 4. PATCH /api/admin/users/:id/status
+**Priority: 🔴 Build alongside #2 — core admin action**
+
+Activates or sets a user to pending. Works for both students and instructors. Cannot be used on admin accounts.
+
+**Authorization:** `[Authorize(Roles = "Admin")]`
+
+**Request body:**
 ```json
 { "status": "active" }
 ```
@@ -311,190 +247,85 @@ or
 { "status": "pending" }
 ```
 
-Response `200`: Updated user object.
-Response `400`: Invalid status value.
-Response `404`: User not found.
-Response `403`: Cannot change status of another admin.
+**Response `200`:** The full updated user object (same shape as `GET /api/admin/users/:id`).
+
+**Response `400`:** Invalid status value (anything other than `"active"` or `"pending"`).
+
+**Response `403`:** Target user is an admin — cannot change admin status.
+
+**Response `404`:** User not found.
+
+**Side effects:**
+- If setting an instructor to `"active"` who was `"pending"` — this is the approval action. The backend should send the approval email at this point (see `INSTRUCTOR_APPROVAL_FLOW.md`).
+- If setting a student to `"pending"` — they will not be able to log in (login endpoint should return `403` with `errorCode: "ACCOUNT_PENDING"` for pending accounts).
 
 ---
 
-### Feature 3 — User Detail Page
+### 5. GET /api/admin/problems
+**Priority: 🔴 Build alongside users — core feature**
 
-**Priority: 🟡 Medium — build after users list**
+Returns ALL problems including inactive ones. The existing `GET /api/problems` only returns active problems. This admin endpoint returns everything.
 
-A full profile view for any user from the admin perspective.
+**Authorization:** `[Authorize(Roles = "Admin")]`
 
-#### What It Shows
-- All profile fields (name, email, role, status, organization, registered date)
-- For students: problems solved, avg score, streak, recent submissions
-- For instructors: pending/active status with change button, organization, recent activity
-- Danger zone: ability to change role (with confirmation)
+**Query params:**
 
----
+| Param | Type | Default | Notes |
+|---|---|---|---|
+| `search` | string | — | Filter by title (case-insensitive contains) |
+| `difficulty` | `0` \| `1` \| `2` | — | Filter by difficulty number. Omit = all |
+| `tag` | string | — | Filter by tag name. Omit = all |
+| `isActive` | `true` \| `false` | — | Filter by active status. Omit = all |
+| `sortBy` | `title` \| `difficulty` \| `solvedCount` \| `createdAt` | `createdAt` | Sort field |
+| `sortDir` | `asc` \| `desc` | `desc` | Sort direction |
+| `page` | number | `1` | Page number |
+| `pageSize` | number | `20` | Items per page |
 
-#### Frontend Spec
-
-**Component:** `AdminUserDetailComponent`
-
-**Data model:**
-```typescript
-interface AdminUserDetail extends AdminUserRow {
-  streak?: number;
-  avgScore?: number;
-  totalSubmissions?: number;
-  recentSubmissions?: {
-    problemTitle: string;
-    status: string;
-    submittedAt: string;
-  }[];
+**Response `200`:**
+```json
+{
+  "data": {
+    "problems": [
+      {
+        "id": "uuid",
+        "title": "Two Sum",
+        "difficulty": 0,
+        "tags": ["Arrays", "Hash Map"],
+        "solvedCount": 36045,
+        "totalSubmissions": 48200,
+        "isActive": true,
+        "createdAt": "2026-04-01T10:00:00Z"
+      }
+    ],
+    "total": 32,
+    "page": 1,
+    "pageSize": 20
+  }
 }
 ```
 
-**UI elements:**
-- Back button → returns to users list
-- Profile header: avatar initials, name, email, role badge, status pill
-- Stats row (for students): problems solved, avg score, streak
-- Recent submissions table (last 5)
-- For instructors: status section with Activate / Set Pending button + confirmation
-- Danger zone section (role change) — visually separated, red border
-
 ---
 
-#### Backend Spec
+### 6. POST /api/problems
+**Priority: 🔴 Build alongside #5**
 
-**GET /api/admin/users/:id**
+Creates a new problem. This endpoint already exists in the API spec but needs to be implemented and restricted to admins.
 
-Response: Full user detail (same as user row + extra fields above).
+**Authorization:** `[Authorize(Roles = "Admin")]`
 
----
-
-### Feature 4 — Problem Management (View + Add + Edit)
-
-**Priority: 🔴 High — build alongside users**
-
-Full CRUD for problems. Admin can see all problems, add new ones, edit existing ones.
-
-#### Problem List View
-
-**Filters:**
-- Search by title
-- Filter by difficulty: All / Easy / Medium / Hard
-- Filter by topic/tag: All / Arrays / Graphs / Trees / etc.
-- Filter by status: All / Active / Inactive
-- Sort by: Title / Difficulty / Solved Count / Created Date
-
-**Table columns:**
-- Title
-- Difficulty badge (Easy / Medium / Hard)
-- Tags (joined: "Arrays · Hash Map")
-- Solved count
-- Status (Active / Inactive toggle)
-- Created date
-- Actions: Edit button | Deactivate/Activate toggle
-
-#### Problem Form (Add / Edit)
-
-A form page used for both creating new problems and editing existing ones.
-
-**Fields:**
-```
-Title *                     [text input]
-Difficulty *                [dropdown: Easy / Medium / Hard]
-Tags *                      [multi-select or comma-separated input]
-Problem Statement *         [large textarea]
-Constraints                 [textarea — one per line]
-Sample Test Cases           [repeatable block: Input + Expected Output]
-Active                      [toggle — default true]
-Time Limit (ms)             [number — default 2000]
-Memory Limit (MB)           [number — default 256]
-```
-
-**Validation:**
-- Title: required, min 3 chars
-- Difficulty: required
-- Tags: at least 1
-- Statement: required, min 50 chars
-- At least 1 sample test case
-
-**On submit:**
-- POST `/api/problems` (new) or PATCH `/api/problems/:id` (edit)
-- Success → redirect back to problems list with success toast
-- Error → inline validation messages
-
----
-
-#### Frontend Spec
-
-**Components:**
-- `AdminProblemsComponent` — list with filters, table, action buttons
-- `AdminProblemFormComponent` — shared form for create + edit (reads `:id` from route if editing)
-
-**Data model:**
-```typescript
-interface AdminProblemRow {
-  id: string;
-  title: string;
-  difficulty: 'easy' | 'medium' | 'hard';
-  tags: string[];
-  solvedCount: number;
-  isActive: boolean;
-  createdAt: string;
-}
-
-interface AdminProblemForm {
-  title: string;
-  difficulty: 'easy' | 'medium' | 'hard';
-  tags: string[];
-  statement: string;
-  constraints: string;        // newline-separated
-  sampleTestCases: {
-    input: string;
-    expectedOutput: string;
-  }[];
-  isActive: boolean;
-  timeLimitMs: number;
-  memoryLimitMb: number;
-}
-```
-
-**State for list:**
-```typescript
-searchQuery      = signal('')
-difficultyFilter = signal<'all' | 'easy' | 'medium' | 'hard'>('all')
-tagFilter        = signal<string>('all')
-statusFilter     = signal<'all' | 'active' | 'inactive'>('all')
-sortField        = signal<'title' | 'difficulty' | 'solvedCount' | 'createdAt'>('createdAt')
-sortDir          = signal<'asc' | 'desc'>('desc')
-problems         = signal<AdminProblemRow[]>([])
-isLoading        = signal(true)
-```
-
----
-
-#### Backend Spec
-
-**New/updated endpoints:**
-
-```
-GET    /api/admin/problems              — paginated list with filters (admin view, includes inactive)
-POST   /api/problems                   — create problem [Admin only]
-PATCH  /api/problems/:id               — update problem fields [Admin only]
-PATCH  /api/problems/:id/status        — toggle active/inactive [Admin only]
-DELETE /api/problems/:id               — soft delete (sets isActive = false) [Admin only]
-```
-
-**Note:** `GET /api/problems` already exists for students/instructors but only returns `isActive = true`. Admin gets a separate endpoint that returns all problems including inactive ones.
-
-**POST /api/problems** request body:
+**Request body:**
 ```json
 {
   "title": "Two Sum",
   "difficulty": 0,
   "tags": ["Arrays", "Hash Map"],
-  "statement": "Given an array of integers...",
+  "statement": "Given an array of integers nums and an integer target...",
   "constraints": "2 <= nums.length <= 10^4\n-10^9 <= nums[i] <= 10^9",
   "sampleTestCases": [
-    { "input": "nums = [2,7,11,15], target = 9", "expectedOutput": "[0,1]" }
+    {
+      "input": "nums = [2,7,11,15], target = 9",
+      "expectedOutput": "[0,1]"
+    }
   ],
   "isActive": true,
   "timeLimitMs": 2000,
@@ -502,250 +333,257 @@ DELETE /api/problems/:id               — soft delete (sets isActive = false) [
 }
 ```
 
-**PATCH /api/problems/:id** — same shape, all fields optional (partial update).
+**Validation (return `400` if violated):**
+- `title`: required, min 3 chars, must be unique
+- `difficulty`: required, must be `0`, `1`, or `2`
+- `tags`: required, at least 1 tag
+- `statement`: required, min 50 chars
+- `sampleTestCases`: required, at least 1, each must have non-empty `input` and `expectedOutput`
+- `timeLimitMs`: positive integer, default `2000` if omitted
+- `memoryLimitMb`: positive integer, default `256` if omitted
 
-**Response `201`:** Created problem (full shape matching GET /api/problems/:id).
-**Response `400`:** Validation error.
-**Response `403`:** Not an admin.
+**Response `201`:** The created problem in full detail (same shape as `GET /api/problems/:id`).
 
----
+**Response `400`:** Validation failure — `{ "message": "..." }`.
 
-### Feature 5 — Admin Shell + Sidebar Layout
-
-**Priority: 🔴 High — the container that holds everything else**
-
-The shell is the full-screen layout wrapper for the entire admin panel. It replaces the regular app layout.
-
-#### What It Is
-- A standalone Angular component (`AdminShellComponent`) that wraps all admin child routes via `<router-outlet>`
-- Has a fixed left sidebar with navigation links
-- Has a main content area (right side) that renders the active child route
-- Uses `data: { hideLayout: true }` to suppress the global navbar and footer
-- The sidebar header displays "Codify Admin" branding
-- The sidebar footer shows the admin's name and a logout button
-- Active sidebar link is highlighted using `routerLinkActive="active"`
-
-#### Sidebar Nav Items
-```
-⊞  Overview          → /admin/overview
-👥  Users            → /admin/users
-🗂  Problems         → /admin/problems
-```
-
-#### Sidebar Footer
-```
-👤  [Admin Name]
-🚪  Log out
-```
+**Response `409`:** Title already exists — `{ "message": "A problem with this title already exists." }`.
 
 ---
 
-#### Frontend Spec
+### 7. PATCH /api/problems/:id
+**Priority: 🔴 Build alongside #6**
 
-**Files to create:**
-```
-src/app/features/admin/
-├── shell/
-│   ├── admin-shell.component.ts
-│   ├── admin-shell.component.html
-│   └── admin-shell.component.scss
-└── admin.routes.ts
-```
+Updates an existing problem. All fields are optional — only send what changed (partial update).
 
-**`admin-shell.component.ts`:**
-```typescript
-@Component({
-  selector: 'app-admin-shell',
-  standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
-  templateUrl: './admin-shell.component.html',
-  styleUrl: './admin-shell.component.scss',
-})
-export class AdminShellComponent {
-  readonly auth = inject(AuthService);
+**Authorization:** `[Authorize(Roles = "Admin")]`
 
-  logout(): void {
-    this.auth.logout();
-    this.router.navigate(['/auth/login']);
-  }
-}
-```
-
-**`admin.routes.ts`:**
-```typescript
-export const ADMIN_ROUTES: Routes = [
-  {
-    path: '',
-    component: AdminShellComponent,
-    canActivate: [authGuard, adminGuard],
-    data: { hideLayout: true },
-    children: [
-      { path: '', redirectTo: 'overview', pathMatch: 'full' },
-      { path: 'overview',          loadComponent: () => import('./overview/admin-overview.component') },
-      { path: 'users',             loadComponent: () => import('./users/admin-users.component') },
-      { path: 'users/:id',         loadComponent: () => import('./user-detail/admin-user-detail.component') },
-      { path: 'problems',          loadComponent: () => import('./problems/admin-problems.component') },
-      { path: 'problems/new',      loadComponent: () => import('./problem-form/admin-problem-form.component') },
-      { path: 'problems/:id/edit', loadComponent: () => import('./problem-form/admin-problem-form.component') },
-    ]
-  }
-];
-```
-
-**In `app.routes.ts`** — add the admin module:
-```typescript
+**Request body** (all fields optional):
+```json
 {
-  path: 'admin',
-  loadChildren: () => import('./features/admin/admin.routes').then(m => m.ADMIN_ROUTES),
+  "title": "Updated Title",
+  "difficulty": 1,
+  "tags": ["Arrays"],
+  "statement": "Updated statement...",
+  "constraints": "Updated constraints...",
+  "sampleTestCases": [
+    { "input": "...", "expectedOutput": "..." }
+  ],
+  "isActive": false,
+  "timeLimitMs": 3000,
+  "memoryLimitMb": 512
 }
 ```
 
-**Styling approach:** Mirror `instructor-shell.component.scss` — same sidebar pattern (`$navy2` background, `$ivory` main area) but with a red/shield accent color instead of gold to clearly distinguish it as the admin control panel.
+**Response `200`:** The updated problem in full detail.
 
-No backend changes needed for the shell itself.
+**Response `400`:** Validation failure.
 
----
-
-### Feature 6 — Admin Guard + Role Enforcement
-
-**Priority: 🔴 High — security, must exist before any admin route**
-
-A route guard that blocks non-admin users from accessing `/admin/**`.
+**Response `404`:** Problem not found.
 
 ---
 
-#### Frontend Spec
+### 8. PATCH /api/problems/:id/status
+**Priority: 🟡 Medium — needed for the toggle in the problems list**
 
-**File:** `src/app/core/guards/admin.guard.ts`
+Toggles a problem's active/inactive status. Separated from PATCH so it's a clean single-purpose action.
 
+**Authorization:** `[Authorize(Roles = "Admin")]`
+
+**Request body:**
+```json
+{ "isActive": false }
+```
+
+**Response `200`:** `{ "data": { "id": "uuid", "isActive": false } }`
+
+**Response `404`:** Problem not found.
+
+**Notes:**
+- This is a soft operation — the problem record is kept, just hidden from students.
+- Existing submissions to this problem are not affected.
+
+---
+
+### 9. DELETE /api/problems/:id
+**Priority: 🟡 Medium — soft delete only**
+
+Soft-deletes a problem. Sets `isActive = false` and marks it as deleted. The record is never physically removed from the database.
+
+**Authorization:** `[Authorize(Roles = "Admin")]`
+
+**Response `200`:** `{ "data": { "id": "uuid", "deleted": true } }`
+
+**Response `404`:** Problem not found.
+
+**Notes:**
+- Do NOT hard-delete. Submissions reference problem IDs — deleting problems would break submission history.
+- A soft-deleted problem behaves like inactive: not visible to students, not returned by `GET /api/problems`.
+- It IS returned by `GET /api/admin/problems` with `isActive: false`.
+
+---
+
+## Frontend Files Changed (for backend team reference)
+
+These are all the Angular files that were created or modified on the `admin-page` branch. The backend team does not need to touch these but should know what exists so they understand what each endpoint maps to.
+
+### New files created
+
+```
+src/app/core/guards/admin.guard.ts                         ← blocks non-admins from /admin/**
+src/app/features/admin/
+├── admin.routes.ts                                        ← all admin routes
+├── shell/
+│   ├── admin-shell.component.ts/html/scss                 ← full-screen layout + sidebar
+├── overview/
+│   └── admin-overview.component.ts/html/scss              ← maps to GET /api/admin/stats
+├── users/
+│   └── admin-users.component.ts/html/scss                 ← maps to GET /api/admin/users
+├── user-detail/
+│   └── admin-user-detail.component.ts/html/scss           ← maps to GET /api/admin/users/:id
+├── problems/
+│   └── admin-problems.component.ts/html/scss              ← maps to GET /api/admin/problems
+└── problem-form/
+    └── admin-problem-form.component.ts/html/scss          ← maps to POST + PATCH /api/problems/:id
+```
+
+### Modified files
+
+```
+src/app/core/models/user.model.ts          ← role now includes 'admin'
+src/app/core/utils/enum-mappers.ts         ← mapRole(2) → 'admin', roleToNumber('admin') → 2
+src/app/core/services/auth.service.ts      ← isValidUser() accepts role === 'admin'
+src/app/app.routes.ts                      ← added /admin lazy-loaded module
+src/app/features/auth/login/login.component.ts  ← admin redirected to /admin/overview
+```
+
+---
+
+## How the Frontend Will Wire Up Each Endpoint
+
+Once each backend endpoint is ready, the frontend will replace the mock data with a real HTTP call. Here is exactly what that looks like for each feature:
+
+### Overview stats
 ```typescript
-export const adminGuard: CanActivateFn = () => {
-  const authService = inject(AuthService);
-  const router = inject(Router);
-
-  if (!authService.isLoggedIn()) {
-    router.navigate(['/auth/login']);
-    return false;
-  }
-
-  if (authService.user()?.role === 'admin') {
-    return true;
-  }
-
-  router.navigate(['/']);
-  return false;
-};
+// In admin-overview.component.ts — replace MOCK_STATS with:
+this.http.get<{data: AdminStats}>(`${baseUrl}/admin/stats`, { headers })
+  .pipe(map(r => r.data))
+  .subscribe(stats => this.stats.set(stats));
 ```
 
-Also requires updating `User` model, `enum-mappers.ts`, and `auth.service.ts` to recognize `role = 'admin'` (role = 2 in backend).
-
-No backend changes needed for the guard itself — the backend already enforces `[Authorize(Roles = "Admin")]` on admin endpoints.
-
----
-
-## Recommended Additional Features (Future Sprints)
-
-These were not in the original request but are strongly recommended for a complete admin panel.
-
-| # | Feature | Why | Priority |
-|---|---|---|---|
-| A | **Audit Log** | Track every admin action (who activated who, who edited which problem) — critical for accountability | 🟡 Medium |
-| B | **Bulk Actions** | Select multiple users → bulk activate/deactivate. Makes managing large cohorts fast | 🟡 Medium |
-| C | **Problem Test Cases Manager** | Full CRUD for hidden test cases (not just sample ones) — currently no UI for this | 🟡 Medium |
-| D | **Role Change** | Admin can promote a student to instructor or demote an instructor | 🟡 Medium |
-| E | **Admin Notifications** | Bell icon shows new pending instructor requests so admin doesn't have to manually check | 🟠 Low-Med |
-| F | **Export Data** | Export user list or submission stats as CSV | 🟢 Low |
-| G | **Announcement Banner** | Admin posts a platform-wide banner message (e.g. maintenance notice) | 🟢 Low |
-| H | **Problem Import/Export** | Bulk import problems via JSON/CSV — useful when seeding a new instance | 🟢 Low |
-
----
-
-## Implementation Priority Order
-
-Work through features in this exact order:
-
+### Users list
+```typescript
+// In admin-users.component.ts — replace MOCK_USERS with:
+this.http.get<{data: {users: AdminUserRow[], total: number}}>
+  (`${baseUrl}/admin/users`, { headers, params })
+  .pipe(map(r => r.data.users))
+  .subscribe(users => this.allUsers.set(users));
 ```
-Sprint 1 (Foundation — do these first, they unblock everything)
-├── Feature 6: Admin Guard + Role System update     ✅ DONE
-├── Feature 5: Admin Shell + Sidebar layout         ✅ DONE
-└── Login redirect for admins (login.component.ts) ✅ DONE
 
-Sprint 2 (Core Pages)
-├── Feature 1: Overview / Stats dashboard           ✅ DONE
-├── Feature 2: User Management list                 ✅ DONE
-└── Feature 3: User Detail page                     ✅ DONE
+### User status toggle
+```typescript
+// In admin-users.component.ts + admin-user-detail.component.ts:
+this.http.patch<{data: AdminUserRow}>
+  (`${baseUrl}/admin/users/${id}/status`, { status: newStatus }, { headers })
+  .subscribe(r => /* update signal */);
+```
 
-Sprint 3 (Problem Management)
-├── Feature 4a: Problem list with filters           ✅ DONE
-└── Feature 4b: Problem add/edit form              ✅ DONE
+### Problems list
+```typescript
+// In admin-problems.component.ts — replace MOCK_PROBLEMS with:
+this.http.get<{data: {problems: AdminProblemRow[], total: number}}>
+  (`${baseUrl}/admin/problems`, { headers, params })
+  .pipe(map(r => r.data.problems))
+  .subscribe(problems => this.allProblems.set(problems));
+```
 
-Sprint 4 (Polish + Extras)
-├── Feature A: Audit log                            [~3 hours]
-├── Feature B: Bulk actions                         [~2 hours]
-└── Feature D: Role change                          [~1 hour]
+### Problem create/edit
+```typescript
+// In admin-problem-form.component.ts — replace setTimeout mock with:
+const url = isEdit
+  ? `${baseUrl}/problems/${id}`
+  : `${baseUrl}/problems`;
+const method = isEdit ? 'patch' : 'post';
+this.http[method]<{data: any}>(url, body, { headers })
+  .subscribe({ next: () => router.navigate(['../../../problems']), error: ... });
 ```
 
 ---
 
-## Current State (August 14, 2026)
+## Build Priority Order for Backend Team
 
-| Item | Status |
-|---|---|
-| Branch `admin-page` created | ✅ Done |
-| Role system updated (user model, enum-mappers, auth service) | ✅ Done |
-| Admin guard (`src/app/core/guards/admin.guard.ts`) | ✅ Done |
-| Admin shell + routes (`AdminShellComponent`, `admin.routes.ts`) | ✅ Done |
-| Login redirect for admins | ✅ Done |
-| Overview page | ✅ Done (mocked data) |
-| User management | ✅ Done (mocked data) |
-| Problem management | ✅ Done (list + form, mocked data) |
-| Backend endpoints | ❌ Not built |
+```
+Phase 1 — Unblocks Overview + Users pages (build together)
+├── GET  /api/admin/stats                  ← overview dashboard
+├── GET  /api/admin/users                  ← users list
+├── GET  /api/admin/users/:id              ← user detail
+└── PATCH /api/admin/users/:id/status      ← activate/set-pending
 
-### Feature 5 — Completed Changes
+Phase 2 — Unblocks Problem Management (build after Phase 1)
+├── GET  /api/admin/problems               ← problems list (incl. inactive)
+├── POST /api/problems                     ← create problem
+└── PATCH /api/problems/:id               ← edit problem
 
-| File | Change |
-|---|---|
-| `src/app/features/admin/shell/admin-shell.component.ts` | **NEW** — shell component with logout |
-| `src/app/features/admin/shell/admin-shell.component.html` | **NEW** — sidebar with brand, nav links, admin user footer |
-| `src/app/features/admin/shell/admin-shell.component.scss` | **NEW** — full-screen layout, navy sidebar with red accent, sticky sidebar |
-| `src/app/features/admin/admin.routes.ts` | **NEW** — all admin routes under `AdminShellComponent` with `hideLayout: true` |
-| `src/app/features/admin/overview/admin-overview.component.ts` | **NEW** — placeholder (Feature 1 will fill this) |
-| `src/app/features/admin/users/admin-users.component.ts` | **NEW** — placeholder (Feature 2 will fill this) |
-| `src/app/features/admin/user-detail/admin-user-detail.component.ts` | **NEW** — placeholder (Feature 3 will fill this) |
-| `src/app/features/admin/problems/admin-problems.component.ts` | **NEW** — placeholder (Feature 4a will fill this) |
-| `src/app/features/admin/problem-form/admin-problem-form.component.ts` | **NEW** — placeholder (Feature 4b will fill this) |
-| `src/app/app.routes.ts` | Added `/admin` lazy-loaded module |
-| `src/app/features/auth/login/login.component.ts` | Admin login redirect → `/admin/overview` |
-
-**Build verification:** `npx tsc --noEmit` → ✅ zero errors
-
-| File | Change |
-|---|---|
-| `src/app/core/models/user.model.ts` | Added `'admin'` to `role` union type |
-| `src/app/core/utils/enum-mappers.ts` | Added `'admin'` to `UserRole` type; updated `mapRole()` (2→admin) and `roleToNumber()` (admin→2) |
-| `src/app/core/services/auth.service.ts` | Updated `isValidUser()` to accept `role === 'admin'` |
-| `src/app/core/guards/admin.guard.ts` | **NEW** — blocks non-admin users from `/admin/**`, redirects guests to login, non-admins to `/` |
-
-**Build verification:** `npx tsc --noEmit` → ✅ zero errors
+Phase 3 — Nice to have (build after Phase 2)
+├── PATCH /api/problems/:id/status         ← toggle active/inactive
+└── DELETE /api/problems/:id              ← soft delete
+```
 
 ---
 
-## Backend Endpoint Summary
+## Endpoint Summary Table
 
-All admin endpoints require `[Authorize(Roles = "Admin")]`.
+All endpoints require `Authorization: Bearer <token>` header and `[Authorize(Roles = "Admin")]`.
 
-| Method | Endpoint | Feature | Priority |
-|---|---|---|---|
-| GET | `/api/admin/stats` | Overview dashboard | 🔴 High |
-| GET | `/api/admin/users` | User list | 🔴 High |
-| GET | `/api/admin/users/:id` | User detail | 🟡 Medium |
-| PATCH | `/api/admin/users/:id/status` | Activate/pending toggle | 🔴 High |
-| GET | `/api/admin/problems` | Problem list (incl. inactive) | 🔴 High |
-| POST | `/api/problems` | Create problem | 🔴 High |
-| PATCH | `/api/problems/:id` | Edit problem | 🔴 High |
-| PATCH | `/api/problems/:id/status` | Toggle active/inactive | 🟡 Medium |
-| DELETE | `/api/problems/:id` | Soft delete problem | 🟡 Medium |
+| # | Method | Endpoint | Purpose | Phase |
+|---|---|---|---|---|
+| 1 | GET | `/api/admin/stats` | Overview dashboard stats | 1 |
+| 2 | GET | `/api/admin/users` | User list with filters | 1 |
+| 3 | GET | `/api/admin/users/:id` | Single user detail | 1 |
+| 4 | PATCH | `/api/admin/users/:id/status` | Change user status | 1 |
+| 5 | GET | `/api/admin/problems` | Problem list incl. inactive | 2 |
+| 6 | POST | `/api/problems` | Create new problem | 2 |
+| 7 | PATCH | `/api/problems/:id` | Edit existing problem | 2 |
+| 8 | PATCH | `/api/problems/:id/status` | Toggle active/inactive | 3 |
+| 9 | DELETE | `/api/problems/:id` | Soft delete problem | 3 |
 
 ---
 
-*Spec written by Kiro — August 14, 2026*
+## Testing the Frontend Right Now (Without Backend)
+
+The admin panel is fully testable today using this browser console snippet:
+
+```javascript
+localStorage.setItem('codify_token', 'any-token');
+localStorage.setItem('codify_user', JSON.stringify({
+  id: 'admin-001',
+  name: 'Admin User',
+  email: 'admin@codify.com',
+  role: 'admin',
+  avatarInitials: 'AU',
+  streak: 0
+}));
+location.href = '/admin/overview';
+```
+
+All pages, filters, modals, and forms work with mock data. Once the backend is ready, each component will be updated to call real endpoints one at a time.
+
+---
+
+## Questions for the Backend Team
+
+1. **User `status` field** — does the existing `Users` table have a `status` column (`active` / `pending`)? If not, it needs to be added as part of the instructor approval flow (see `INSTRUCTOR_APPROVAL_FLOW.md`).
+
+2. **`initials` field** — should the backend compute and return this, or should the frontend derive it from `name`? Frontend can derive it — let us know your preference.
+
+3. **`lastActiveAt` field** — does the backend currently track this? If not, this can be the last `updatedAt` on the user record or the last submission timestamp as a proxy.
+
+4. **`avgScore` for students** — how is this calculated? Average score across all submissions, or only accepted ones?
+
+5. **Problem `createdAt`** — is this already stored on the problem entity? The frontend sorts by it in the admin problems list.
+
+6. **Admin seeding** — how will the first admin account be created? The register form only supports `student` and `instructor` roles. Admin accounts likely need to be seeded directly in the database or created via a separate admin-creation script.
+
+---
+
+*Document maintained by the Frontend team — August 14, 2026*
+*Branch: `admin-page` | Base: `linking-backend-with-frontend`*
