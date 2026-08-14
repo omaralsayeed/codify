@@ -676,7 +676,7 @@ Sprint 2 (Core Pages)
 └── Feature 3: User Detail page                     ✅ DONE
 
 Sprint 3 (Problem Management)
-├── Feature 4a: Problem list with filters           [~3 hours]
+├── Feature 4a: Problem list with filters           ✅ DONE
 └── Feature 4b: Problem add/edit form              [~4 hours]
 
 Sprint 4 (Polish + Extras)

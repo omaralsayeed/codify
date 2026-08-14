@@ -1,0 +1,235 @@
+<section class="problems">
+
+  <!-- ── Page header ──────────────────────────────────────────────────────── -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Problems</h1>
+      <p class="page-sub">
+        {{ totalCount() }} total ·
+        <span class="count--easy">{{ easyCount() }} easy</span> ·
+        <span class="count--medium">{{ mediumCount() }} medium</span> ·
+        <span class="count--hard">{{ hardCount() }} hard</span> ·
+        {{ activeCount() }} active · {{ inactiveCount() }} inactive
+      </p>
+    </div>
+    <a class="add-btn" routerLink="../problems/new" aria-label="Add new problem">
+      <span aria-hidden="true">＋</span> Add Problem
+    </a>
+  </div>
+
+  <!-- ── Toolbar ──────────────────────────────────────────────────────────── -->
+  <div class="toolbar">
+
+    <!-- Search -->
+    <div class="search-wrap">
+      <span class="search-icon" aria-hidden="true">🔍</span>
+      <input
+        class="search-input"
+        type="search"
+        placeholder="Search by title…"
+        [ngModel]="searchQuery()"
+        (ngModelChange)="searchQuery.set($event)"
+        aria-label="Search problems"
+      />
+    </div>
+
+    <!-- Difficulty filter -->
+    <select class="filter-select"
+            [ngModel]="difficultyFilter()"
+            (ngModelChange)="difficultyFilter.set($event)"
+            aria-label="Filter by difficulty">
+      <option value="all">All levels</option>
+      <option value="easy">Easy</option>
+      <option value="medium">Medium</option>
+      <option value="hard">Hard</option>
+    </select>
+
+    <!-- Tag filter -->
+    <select class="filter-select"
+            [ngModel]="tagFilter()"
+            (ngModelChange)="tagFilter.set($event)"
+            aria-label="Filter by tag">
+      <option value="all">All tags</option>
+      @for (tag of allTags; track tag) {
+        <option [value]="tag">{{ tag }}</option>
+      }
+    </select>
+
+    <!-- Status filter -->
+    <select class="filter-select"
+            [ngModel]="statusFilter()"
+            (ngModelChange)="statusFilter.set($event)"
+            aria-label="Filter by status">
+      <option value="all">All statuses</option>
+      <option value="active">Active</option>
+      <option value="inactive">Inactive</option>
+    </select>
+
+    <!-- Clear -->
+    @if (hasActiveFilters) {
+      <button class="clear-btn" (click)="clearFilters()">✕ Clear</button>
+    }
+
+  </div>
+
+  <!-- ── Table ────────────────────────────────────────────────────────────── -->
+  @if (filteredProblems().length > 0) {
+    <div class="table-wrap">
+      <table class="problems-table" aria-label="Problems list">
+        <thead>
+          <tr>
+            <th scope="col" class="col-title sortable"
+                (click)="sortBy('title')"
+                [attr.aria-sort]="sortField() === 'title' ? (sortDir() === 'asc' ? 'ascending' : 'descending') : 'none'">
+              Title <span class="sort-icon" aria-hidden="true">{{ sortIcon('title') }}</span>
+            </th>
+            <th scope="col" class="col-diff sortable"
+                (click)="sortBy('difficulty')"
+                [attr.aria-sort]="sortField() === 'difficulty' ? (sortDir() === 'asc' ? 'ascending' : 'descending') : 'none'">
+              Difficulty <span class="sort-icon" aria-hidden="true">{{ sortIcon('difficulty') }}</span>
+            </th>
+            <th scope="col" class="col-tags">Tags</th>
+            <th scope="col" class="col-solved sortable"
+                (click)="sortBy('solvedCount')"
+                [attr.aria-sort]="sortField() === 'solvedCount' ? (sortDir() === 'asc' ? 'ascending' : 'descending') : 'none'">
+              Solved <span class="sort-icon" aria-hidden="true">{{ sortIcon('solvedCount') }}</span>
+            </th>
+            <th scope="col" class="col-accept">Accept %</th>
+            <th scope="col" class="col-status">Status</th>
+            <th scope="col" class="col-created sortable"
+                (click)="sortBy('createdAt')"
+                [attr.aria-sort]="sortField() === 'createdAt' ? (sortDir() === 'asc' ? 'ascending' : 'descending') : 'none'">
+              Created <span class="sort-icon" aria-hidden="true">{{ sortIcon('createdAt') }}</span>
+            </th>
+            <th scope="col" class="col-actions"><span class="sr-only">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (p of filteredProblems(); track p.id) {
+            <tr class="problem-row" [class.problem-row--inactive]="!p.isActive">
+
+              <!-- Title -->
+              <td class="col-title">
+                <a class="problem-title-link"
+                   [routerLink]="['../problems', p.id, 'edit']"
+                   [attr.aria-label]="'Edit ' + p.title">
+                  {{ p.title }}
+                </a>
+              </td>
+
+              <!-- Difficulty -->
+              <td class="col-diff">
+                <span class="diff-badge" [ngClass]="difficultyClass(p.difficulty)">
+                  {{ p.difficulty | titlecase }}
+                </span>
+              </td>
+
+              <!-- Tags -->
+              <td class="col-tags">
+                <div class="tags-wrap">
+                  @for (tag of p.tags; track tag) {
+                    <span class="tag-chip">{{ tag }}</span>
+                  }
+                </div>
+              </td>
+
+              <!-- Solved count -->
+              <td class="col-solved">
+                {{ p.solvedCount | number }}
+              </td>
+
+              <!-- Accept rate -->
+              <td class="col-accept">
+                <span class="accept-rate">{{ acceptRate(p) }}</span>
+              </td>
+
+              <!-- Status toggle -->
+              <td class="col-status" (click)="$event.stopPropagation()">
+                <div class="status-cell">
+                  <span class="status-badge" [class.status-badge--active]="p.isActive"
+                                             [class.status-badge--inactive]="!p.isActive">
+                    {{ p.isActive ? 'Active' : 'Inactive' }}
+                  </span>
+                  <button class="toggle-btn"
+                          [ngClass]="p.isActive ? 'toggle-btn--deactivate' : 'toggle-btn--activate'"
+                          (click)="requestToggle(p, $event)"
+                          [attr.aria-label]="p.isActive ? 'Deactivate ' + p.title : 'Activate ' + p.title">
+                    {{ p.isActive ? 'Deactivate' : 'Activate' }}
+                  </button>
+                </div>
+              </td>
+
+              <!-- Created -->
+              <td class="col-created">
+                <span class="date-text">{{ formatDate(p.createdAt) }}</span>
+              </td>
+
+              <!-- Edit link -->
+              <td class="col-actions">
+                <a class="edit-link"
+                   [routerLink]="['../problems', p.id, 'edit']"
+                   [attr.aria-label]="'Edit ' + p.title"
+                   (click)="$event.stopPropagation()">
+                  ✏
+                </a>
+              </td>
+
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <p class="results-count">
+      Showing {{ filteredProblems().length }} of {{ totalCount() }} problems
+    </p>
+
+  } @else {
+    <div class="empty-state">
+      <span class="empty-icon" aria-hidden="true">🗂</span>
+      <p class="empty-title">No problems found</p>
+      <p class="empty-sub">
+        @if (hasActiveFilters) {
+          Try adjusting your search or filters.
+        } @else {
+          No problems added yet.
+        }
+      </p>
+      @if (hasActiveFilters) {
+        <button class="clear-btn" (click)="clearFilters()">Clear filters</button>
+      }
+    </div>
+  }
+
+</section>
+
+<!-- ── Confirmation modal ──────────────────────────────────────────────────── -->
+@if (confirmProblem()) {
+  <div class="modal-overlay" (click)="closeModal()" role="dialog" aria-modal="true">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-icon"
+           [class.modal-icon--activate]="confirmToggleType() === 'activate'"
+           [class.modal-icon--deactivate]="confirmToggleType() === 'deactivate'">
+        {{ confirmToggleType() === 'activate' ? '✓' : '⊘' }}
+      </div>
+      <h2 class="modal-title">
+        {{ confirmToggleType() === 'activate' ? 'Activate problem?' : 'Deactivate problem?' }}
+      </h2>
+      <p class="modal-body">
+        @if (confirmToggleType() === 'activate') {
+          <strong>{{ confirmProblem()!.title }}</strong> will become visible to students.
+        } @else {
+          <strong>{{ confirmProblem()!.title }}</strong> will be hidden from students. Existing submissions are kept.
+        }
+      </p>
+      <div class="modal-actions">
+        <button class="modal-btn modal-btn--cancel" (click)="closeModal()">Cancel</button>
+        <button class="modal-btn"
+                [ngClass]="confirmToggleType() === 'activate' ? 'modal-btn--confirm-activate' : 'modal-btn--confirm-deactivate'"
+                (click)="confirmToggle()">
+          {{ confirmToggleType() === 'activate' ? 'Yes, activate' : 'Yes, deactivate' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
