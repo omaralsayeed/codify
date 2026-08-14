@@ -566,7 +566,7 @@ Work through features in this exact order:
 
 ```
 Sprint 1 (Foundation — do these first, they unblock everything)
-├── Feature 6: Admin Guard + Role System update     [~1 hour]
+├── Feature 6: Admin Guard + Role System update     ✅ DONE
 ├── Feature 5: Admin navbar link                    [~30 min]
 └── Admin Shell + Routes scaffold                   [~1 hour]
 
@@ -592,14 +592,25 @@ Sprint 4 (Polish + Extras)
 | Item | Status |
 |---|---|
 | Branch `admin-page` created | ✅ Done |
-| Admin guard | ❌ Not built |
-| Role system updated (user model, enum-mappers, auth service) | ❌ Not built |
+| Role system updated (user model, enum-mappers, auth service) | ✅ Done |
+| Admin guard (`src/app/core/guards/admin.guard.ts`) | ✅ Done |
 | Admin shell + routes | ❌ Not built |
 | Admin navbar link | ❌ Not built |
 | Overview page | ❌ Not built |
 | User management | ❌ Not built |
 | Problem management | ❌ Not built |
 | Backend endpoints | ❌ Not built |
+
+### Feature 6 — Completed Changes
+
+| File | Change |
+|---|---|
+| `src/app/core/models/user.model.ts` | Added `'admin'` to `role` union type |
+| `src/app/core/utils/enum-mappers.ts` | Added `'admin'` to `UserRole` type; updated `mapRole()` (2→admin) and `roleToNumber()` (admin→2) |
+| `src/app/core/services/auth.service.ts` | Updated `isValidUser()` to accept `role === 'admin'` |
+| `src/app/core/guards/admin.guard.ts` | **NEW** — blocks non-admin users from `/admin/**`, redirects guests to login, non-admins to `/` |
+
+**Build verification:** `npx tsc --noEmit` → ✅ zero errors
 
 ---
 

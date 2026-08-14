@@ -200,7 +200,7 @@ export class AuthService {
       typeof user.id === 'string' &&
       typeof user.name === 'string' &&
       typeof user.email === 'string' &&
-      (user.role === 'student' || user.role === 'instructor') &&
+      (user.role === 'student' || user.role === 'instructor' || user.role === 'admin') &&
       typeof user.avatarInitials === 'string'
     );
   }

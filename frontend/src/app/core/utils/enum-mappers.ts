@@ -4,7 +4,7 @@
  */
 
 export type Difficulty = 'easy' | 'medium' | 'hard';
-export type UserRole = 'student' | 'instructor';
+export type UserRole = 'student' | 'instructor' | 'admin';
 export type SubmissionLanguage = 'Python' | 'CSharp';
 
 /**
@@ -34,17 +34,23 @@ export function difficultyToNumber(value: Difficulty): number {
 
 /**
  * Map backend role number to frontend string
- * Backend: 0 = Student, 1 = Instructor
+ * Backend: 0 = Student, 1 = Instructor, 2 = Admin
  */
 export function mapRole(value: number): UserRole {
-  return value === 0 ? 'student' : 'instructor';
+  if (value === 0) return 'student';
+  if (value === 1) return 'instructor';
+  if (value === 2) return 'admin';
+  return 'student';
 }
 
 /**
  * Map frontend role string to backend number
  */
 export function roleToNumber(value: UserRole): number {
-  return value === 'student' ? 0 : 1;
+  if (value === 'student')    return 0;
+  if (value === 'instructor') return 1;
+  if (value === 'admin')      return 2;
+  return 0;
 }
 
 /**
