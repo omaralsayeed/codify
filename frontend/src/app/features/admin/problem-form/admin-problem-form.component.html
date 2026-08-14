@@ -1,0 +1,281 @@
+<div class="form-page">
+
+  <!-- ── Page header ──────────────────────────────────────────────────────── -->
+  <div class="page-header">
+    <a class="back-link" routerLink="../../problems">← Back to problems</a>
+    <h1 class="page-title">{{ pageTitle() }}</h1>
+    @if (isEditMode()) {
+      <p class="page-sub">Editing: <strong>{{ form().title }}</strong></p>
+    } @else {
+      <p class="page-sub">Fill in the details below to add a new problem to the platform.</p>
+    }
+  </div>
+
+  <!-- ── Success banner ───────────────────────────────────────────────────── -->
+  @if (submitSuccess()) {
+    <div class="success-banner" role="alert">
+      <span aria-hidden="true">✓</span>
+      {{ isEditMode() ? 'Changes saved!' : 'Problem created!' }} Redirecting…
+    </div>
+  }
+
+  <form class="form" (ngSubmit)="onSubmit()" novalidate>
+    <div class="form-body">
+
+      <!-- ── LEFT COLUMN ──────────────────────────────────────────────────── -->
+      <div class="form-col">
+
+        <!-- Title -->
+        <div class="field-group">
+          <label class="field-label" for="title">
+            Title <span class="required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="title"
+            class="field-input"
+            type="text"
+            placeholder="e.g. Two Sum"
+            [class.field-input--error]="errors()['title']"
+            [ngModel]="form().title"
+            (ngModelChange)="updateField('title', $event)"
+            name="title"
+            autocomplete="off"
+            maxlength="120"
+          />
+          @if (errors()['title']) {
+            <span class="field-error" role="alert">{{ errors()['title'] }}</span>
+          }
+        </div>
+
+        <!-- Difficulty -->
+        <div class="field-group">
+          <label class="field-label" for="difficulty">
+            Difficulty <span class="required" aria-hidden="true">*</span>
+          </label>
+          <div class="difficulty-options" role="group" aria-labelledby="difficulty-label">
+            @for (d of ['easy', 'medium', 'hard']; track d) {
+              <button
+                type="button"
+                class="diff-option"
+                [ngClass]="[difficultyClass(d), form().difficulty === d ? 'diff-option--selected' : '']"
+                (click)="updateField('difficulty', $any(d))"
+                [attr.aria-pressed]="form().difficulty === d"
+              >
+                {{ d | titlecase }}
+              </button>
+            }
+          </div>
+          @if (errors()['difficulty']) {
+            <span class="field-error" role="alert">{{ errors()['difficulty'] }}</span>
+          }
+        </div>
+
+        <!-- Tags -->
+        <div class="field-group">
+          <label class="field-label">
+            Tags <span class="required" aria-hidden="true">*</span>
+            <span class="field-hint">Select all that apply</span>
+          </label>
+          <div class="tags-grid" role="group" aria-label="Available tags">
+            @for (tag of availableTags; track tag) {
+              <button
+                type="button"
+                class="tag-option"
+                [class.tag-option--selected]="hasTag(tag)"
+                (click)="toggleTag(tag)"
+                [attr.aria-pressed]="hasTag(tag)"
+              >
+                {{ tag }}
+              </button>
+            }
+          </div>
+          @if (form().tags.length > 0) {
+            <div class="selected-tags" aria-live="polite">
+              <span class="selected-label">Selected:</span>
+              @for (tag of form().tags; track tag) {
+                <span class="selected-chip">{{ tag }}</span>
+              }
+            </div>
+          }
+          @if (errors()['tags']) {
+            <span class="field-error" role="alert">{{ errors()['tags'] }}</span>
+          }
+        </div>
+
+        <!-- Active toggle -->
+        <div class="field-group field-group--inline">
+          <label class="field-label" for="isActive">Visible to students</label>
+          <div class="toggle-wrap">
+            <button
+              id="isActive"
+              type="button"
+              class="toggle"
+              [class.toggle--on]="form().isActive"
+              (click)="updateField('isActive', !form().isActive)"
+              [attr.aria-checked]="form().isActive"
+              role="switch"
+            >
+              <span class="toggle-knob"></span>
+            </button>
+            <span class="toggle-label">{{ form().isActive ? 'Active' : 'Inactive' }}</span>
+          </div>
+        </div>
+
+        <!-- Limits row -->
+        <div class="limits-row">
+          <div class="field-group">
+            <label class="field-label" for="timeLimit">Time Limit (ms)</label>
+            <input
+              id="timeLimit"
+              class="field-input field-input--short"
+              type="number"
+              min="100" max="10000" step="100"
+              [ngModel]="form().timeLimitMs"
+              (ngModelChange)="updateField('timeLimitMs', +$event)"
+              name="timeLimit"
+            />
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="memoryLimit">Memory Limit (MB)</label>
+            <input
+              id="memoryLimit"
+              class="field-input field-input--short"
+              type="number"
+              min="16" max="1024" step="16"
+              [ngModel]="form().memoryLimitMb"
+              (ngModelChange)="updateField('memoryLimitMb', +$event)"
+              name="memoryLimit"
+            />
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ── RIGHT COLUMN ─────────────────────────────────────────────────── -->
+      <div class="form-col">
+
+        <!-- Problem statement -->
+        <div class="field-group">
+          <label class="field-label" for="statement">
+            Problem Statement <span class="required" aria-hidden="true">*</span>
+            <span class="field-hint">Supports plain text. Min 50 characters.</span>
+          </label>
+          <textarea
+            id="statement"
+            class="field-textarea field-textarea--tall"
+            placeholder="Describe the problem clearly. Include what the input and output represent…"
+            [class.field-input--error]="errors()['statement']"
+            [ngModel]="form().statement"
+            (ngModelChange)="updateField('statement', $event)"
+            name="statement"
+            rows="10"
+            maxlength="8000"
+          ></textarea>
+          <div class="char-count">{{ form().statement.length }} / 8000</div>
+          @if (errors()['statement']) {
+            <span class="field-error" role="alert">{{ errors()['statement'] }}</span>
+          }
+        </div>
+
+        <!-- Constraints -->
+        <div class="field-group">
+          <label class="field-label" for="constraints">
+            Constraints
+            <span class="field-hint">One per line, e.g. "2 &lt;= nums.length &lt;= 10^4"</span>
+          </label>
+          <textarea
+            id="constraints"
+            class="field-textarea"
+            placeholder="2 <= nums.length <= 10^4&#10;-10^9 <= nums[i] <= 10^9"
+            [ngModel]="form().constraints"
+            (ngModelChange)="updateField('constraints', $event)"
+            name="constraints"
+            rows="4"
+          ></textarea>
+        </div>
+
+        <!-- Sample test cases -->
+        <div class="field-group">
+          <div class="testcase-header">
+            <label class="field-label">
+              Sample Test Cases <span class="required" aria-hidden="true">*</span>
+            </label>
+            <button type="button" class="add-testcase-btn" (click)="addTestCase()">
+              + Add case
+            </button>
+          </div>
+
+          @if (errors()['testCases']) {
+            <span class="field-error" role="alert">{{ errors()['testCases'] }}</span>
+          }
+
+          <div class="testcases-list">
+            @for (tc of form().testCases; track trackByIndex($index); let i = $index) {
+              <div class="testcase-card">
+                <div class="testcase-num">
+                  <span class="tc-index">Case {{ i + 1 }}</span>
+                  @if (form().testCases.length > 1) {
+                    <button
+                      type="button"
+                      class="remove-tc-btn"
+                      (click)="removeTestCase(i)"
+                      [attr.aria-label]="'Remove test case ' + (i + 1)"
+                    >✕</button>
+                  }
+                </div>
+                <div class="testcase-fields">
+                  <div class="tc-field">
+                    <label class="tc-label" [for]="'tc-input-' + i">Input</label>
+                    <textarea
+                      [id]="'tc-input-' + i"
+                      class="field-textarea field-textarea--mono"
+                      placeholder="e.g. nums = [2,7,11,15], target = 9"
+                      [ngModel]="tc.input"
+                      (ngModelChange)="updateTestCase(i, 'input', $event)"
+                      [name]="'tc-input-' + i"
+                      rows="2"
+                    ></textarea>
+                  </div>
+                  <div class="tc-field">
+                    <label class="tc-label" [for]="'tc-output-' + i">Expected Output</label>
+                    <textarea
+                      [id]="'tc-output-' + i"
+                      class="field-textarea field-textarea--mono"
+                      placeholder="e.g. [0,1]"
+                      [ngModel]="tc.expectedOutput"
+                      (ngModelChange)="updateTestCase(i, 'expectedOutput', $event)"
+                      [name]="'tc-output-' + i"
+                      rows="2"
+                    ></textarea>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── Form footer ───────────────────────────────────────────────────── -->
+    <div class="form-footer">
+      <button type="button" class="btn-cancel" (click)="onCancel()">
+        Cancel
+      </button>
+      <button
+        type="submit"
+        class="btn-submit"
+        [disabled]="isSubmitting()"
+        [class.btn-submit--loading]="isSubmitting()"
+      >
+        @if (isSubmitting()) {
+          <span class="spinner" aria-hidden="true"></span>
+          Saving…
+        } @else {
+          {{ submitLabel() }}
+        }
+      </button>
+    </div>
+
+  </form>
+</div>

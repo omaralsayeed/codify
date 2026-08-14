@@ -1,0 +1,494 @@
+@use '../../../styles/variables' as *;
+
+// ── Page layout ───────────────────────────────────────────────────────────────
+.form-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 1100px;
+}
+
+// ── Page header ───────────────────────────────────────────────────────────────
+.page-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+  color: $blue;
+  text-decoration: none;
+  margin-bottom: 4px;
+
+  &:hover { text-decoration: underline; }
+}
+
+.page-title {
+  font-family: $ff-display;
+  font-size: 22px;
+  color: $navy;
+  margin: 0;
+}
+
+.page-sub {
+  font-size: 13px;
+  color: $muted;
+  margin: 0;
+}
+
+// ── Success banner ────────────────────────────────────────────────────────────
+.success-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  background: $teal-lt;
+  color: $teal;
+  border: 1px solid rgba($teal, 0.3);
+  border-radius: $r;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+// ── Form two-column layout ────────────────────────────────────────────────────
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: $white;
+  border: 1px solid $border;
+  border-radius: $r;
+  box-shadow: $shadow;
+  overflow: hidden;
+}
+
+.form-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+
+  @media (max-width: $tablet) { grid-template-columns: 1fr; }
+}
+
+.form-col {
+  padding: 28px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+
+  &:first-child {
+    border-right: 1px solid $border;
+
+    @media (max-width: $tablet) {
+      border-right: none;
+      border-bottom: 1px solid $border;
+    }
+  }
+}
+
+// ── Field groups ──────────────────────────────────────────────────────────────
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  &.field-group--inline {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+}
+
+.field-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: $charcoal;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.required {
+  color: $red;
+}
+
+.field-hint {
+  font-size: 11px;
+  font-weight: 400;
+  color: $muted;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+// ── Text inputs ───────────────────────────────────────────────────────────────
+.field-input {
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid $border;
+  border-radius: $r;
+  font-family: $ff-body;
+  font-size: 14px;
+  color: $charcoal;
+  background: $white;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+
+  &:focus {
+    border-color: $blue;
+    box-shadow: 0 0 0 3px rgba($blue, 0.12);
+  }
+
+  &::placeholder { color: $muted; }
+
+  &.field-input--error { border-color: $red; }
+  &.field-input--short { max-width: 120px; }
+}
+
+// ── Textareas ─────────────────────────────────────────────────────────────────
+.field-textarea {
+  padding: 10px 12px;
+  border: 1px solid $border;
+  border-radius: $r;
+  font-family: $ff-body;
+  font-size: 13px;
+  color: $charcoal;
+  background: $white;
+  outline: none;
+  resize: vertical;
+  width: 100%;
+  box-sizing: border-box;
+  line-height: 1.6;
+  transition: border-color 0.15s, box-shadow 0.15s;
+
+  &:focus {
+    border-color: $blue;
+    box-shadow: 0 0 0 3px rgba($blue, 0.12);
+  }
+
+  &::placeholder { color: $muted; }
+
+  &.field-textarea--tall { min-height: 200px; }
+
+  &.field-textarea--mono {
+    font-family: $ff-mono;
+    font-size: 12px;
+  }
+
+  &.field-input--error { border-color: $red; }
+}
+
+.char-count {
+  font-size: 11px;
+  color: $muted;
+  text-align: right;
+  margin-top: -2px;
+}
+
+// ── Field error ───────────────────────────────────────────────────────────────
+.field-error {
+  font-size: 12px;
+  color: $red;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  &::before { content: '⚠ '; }
+}
+
+// ── Difficulty options ────────────────────────────────────────────────────────
+.difficulty-options {
+  display: flex;
+  gap: 8px;
+}
+
+.diff-option {
+  flex: 1;
+  padding: 8px 0;
+  border-radius: $r;
+  font-size: 13px;
+  font-family: $ff-body;
+  font-weight: 600;
+  cursor: pointer;
+  border: 2px solid $border;
+  background: $white;
+  color: $muted;
+  transition: all 0.15s;
+
+  &:hover { border-color: currentColor; }
+
+  &.badge--easy {
+    &.diff-option--selected { background: $teal-lt; color: $teal; border-color: $teal; }
+    &:hover:not(.diff-option--selected) { color: $teal; border-color: rgba($teal, 0.4); }
+  }
+
+  &.badge--medium {
+    &.diff-option--selected { background: $gold-lt; color: $gold-dark; border-color: $gold; }
+    &:hover:not(.diff-option--selected) { color: $gold-dark; border-color: rgba($gold, 0.4); }
+  }
+
+  &.badge--hard {
+    &.diff-option--selected { background: $red-lt; color: $red; border-color: $red; }
+    &:hover:not(.diff-option--selected) { color: $red; border-color: rgba($red, 0.4); }
+  }
+}
+
+// ── Tag selector ──────────────────────────────────────────────────────────────
+.tags-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag-option {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid $border;
+  background: $white;
+  color: $charcoal;
+  transition: all 0.12s;
+
+  &:hover { border-color: $navy; color: $navy; background: $ivory2; }
+
+  &.tag-option--selected {
+    background: $navy;
+    color: $white;
+    border-color: $navy;
+  }
+}
+
+.selected-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  background: $ivory;
+  border-radius: $r;
+  border: 1px solid $border;
+}
+
+.selected-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: $muted;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.selected-chip {
+  padding: 2px 8px;
+  background: $navy;
+  color: $white;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+// ── Active toggle ─────────────────────────────────────────────────────────────
+.toggle-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toggle {
+  width: 44px;
+  height: 24px;
+  border-radius: 12px;
+  background: $muted;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.2s;
+  flex-shrink: 0;
+
+  &.toggle--on { background: $teal; }
+}
+
+.toggle-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: $white;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+
+  .toggle--on & { transform: translateX(20px); }
+}
+
+.toggle-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: $charcoal;
+}
+
+// ── Limits row ────────────────────────────────────────────────────────────────
+.limits-row {
+  display: flex;
+  gap: 16px;
+}
+
+// ── Test cases ────────────────────────────────────────────────────────────────
+.testcase-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.add-testcase-btn {
+  padding: 5px 12px;
+  border-radius: $r;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: $ff-body;
+  color: $blue;
+  background: $blue-lt;
+  border: 1px solid rgba($blue, 0.3);
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover { background: darken($blue-lt, 4%); }
+}
+
+.testcases-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.testcase-card {
+  background: $ivory;
+  border: 1px solid $border;
+  border-radius: $r;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.testcase-num {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tc-index {
+  font-size: 11px;
+  font-weight: 700;
+  color: $muted;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.remove-tc-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid $border;
+  background: $white;
+  color: $muted;
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s, color 0.12s;
+
+  &:hover { background: $red-lt; color: $red; border-color: $red; }
+}
+
+.testcase-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+
+  @media (max-width: $mobile) { grid-template-columns: 1fr; }
+}
+
+.tc-field { display: flex; flex-direction: column; gap: 4px; }
+
+.tc-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: $muted;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+// ── Form footer ───────────────────────────────────────────────────────────────
+.form-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 20px 28px;
+  border-top: 1px solid $border;
+  background: $ivory;
+}
+
+.btn-cancel {
+  padding: 10px 20px;
+  border-radius: $r;
+  font-size: 13px;
+  font-family: $ff-body;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid $border;
+  background: $white;
+  color: $charcoal;
+  transition: background 0.15s;
+
+  &:hover { background: $ivory2; }
+}
+
+.btn-submit {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  border-radius: $r;
+  font-size: 13px;
+  font-family: $ff-body;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  background: $navy;
+  color: $white;
+  transition: opacity 0.15s, transform 0.12s;
+
+  &:hover:not(:disabled)  { opacity: 0.88; transform: translateY(-1px); }
+  &:active:not(:disabled) { transform: translateY(0); }
+  &:disabled              { opacity: 0.55; cursor: not-allowed; }
+
+  &.btn-submit--loading { opacity: 0.75; }
+}
+
+// ── Spinner ───────────────────────────────────────────────────────────────────
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba($white, 0.35);
+  border-top-color: $white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

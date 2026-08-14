@@ -677,7 +677,7 @@ Sprint 2 (Core Pages)
 
 Sprint 3 (Problem Management)
 ├── Feature 4a: Problem list with filters           ✅ DONE
-└── Feature 4b: Problem add/edit form              [~4 hours]
+└── Feature 4b: Problem add/edit form              ✅ DONE
 
 Sprint 4 (Polish + Extras)
 ├── Feature A: Audit log                            [~3 hours]
@@ -698,7 +698,7 @@ Sprint 4 (Polish + Extras)
 | Login redirect for admins | ✅ Done |
 | Overview page | ✅ Done (mocked data) |
 | User management | ✅ Done (mocked data) |
-| Problem management | ❌ Not built |
+| Problem management | ✅ Done (list + form, mocked data) |
 | Backend endpoints | ❌ Not built |
 
 ### Feature 5 — Completed Changes
