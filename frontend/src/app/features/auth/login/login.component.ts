@@ -63,6 +63,11 @@ export class LoginComponent {
       next: result => {
         this.isSubmitting = false;
         if (result.success) {
+          // Admins go straight to the admin panel — not the regular app
+          if (result.user?.role === 'admin') {
+            this.router.navigateByUrl('/admin/overview');
+            return;
+          }
           const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') || '/';
           this.router.navigateByUrl(returnUrl);
         } else if (result.pendingApproval) {

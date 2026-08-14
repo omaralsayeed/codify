@@ -9,7 +9,9 @@
 
 ## Overview
 
-The Admin Panel is a separate dashboard accessible only to users with `role = 'admin'`. It sits at `/admin/dashboard` and gives platform administrators full control over users, instructors, and problems. It is completely separate from the Instructor dashboard.
+The Admin Panel is a **completely separate full-screen control system** — not the regular Codify app. When a user with `role = 'admin'` logs in, they are taken directly to the admin panel. There is **no regular navbar**, no student/instructor UI. The admin panel has its own layout: a fixed left sidebar for navigation between sections, and a main content area that changes based on the active section.
+
+Think of it like a back-office control panel — isolated from the student/instructor experience entirely.
 
 Admin capabilities (as requested + recommended additions):
 - View all users (students + instructors) with filters
@@ -19,17 +21,68 @@ Admin capabilities (as requested + recommended additions):
 
 ---
 
+## Layout Architecture
+
+The admin panel is a **full-screen shell** that replaces the entire page when an admin is logged in. It does NOT use the global `app.html` navbar.
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                   ADMIN SHELL (full screen)              │
+│  ┌──────────────┬──────────────────────────────────────┐ │
+│  │              │                                      │ │
+│  │   SIDEBAR    │         MAIN CONTENT AREA            │ │
+│  │   (fixed)    │         (router-outlet)              │ │
+│  │              │                                      │ │
+│  │  🛡 Codify   │  Changes based on active nav item    │ │
+│  │    Admin     │                                      │ │
+│  │  ─────────   │                                      │ │
+│  │  ⊞ Overview  │                                      │ │
+│  │  👥 Users    │                                      │ │
+│  │  🗂 Problems │                                      │ │
+│  │              │                                      │ │
+│  │  ─────────   │                                      │ │
+│  │  👤 [name]   │                                      │ │
+│  │  🚪 Logout   │                                      │ │
+│  └──────────────┴──────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Key layout decisions
+- The shell component uses `data: { hideLayout: true }` in its route so the global navbar and footer are hidden
+- The sidebar is always visible (fixed left column, ~220px wide)
+- The sidebar header shows "Codify Admin" branding — clearly signals this is the control panel
+- The sidebar footer shows the logged-in admin's name + a logout button
+- Active nav item is highlighted
+- On mobile: sidebar collapses to a top bar with icon-only nav
+
+---
+
 ## Route Plan
 
-| Route | Component | Guard |
-|---|---|---|
-| `/admin/dashboard` | AdminShellComponent | authGuard + adminGuard |
-| `/admin/dashboard/overview` | AdminOverviewComponent | authGuard + adminGuard |
-| `/admin/dashboard/users` | AdminUsersComponent | authGuard + adminGuard |
-| `/admin/dashboard/users/:id` | AdminUserDetailComponent | authGuard + adminGuard |
-| `/admin/dashboard/problems` | AdminProblemsComponent | authGuard + adminGuard |
-| `/admin/dashboard/problems/new` | AdminProblemFormComponent | authGuard + adminGuard |
-| `/admin/dashboard/problems/:id/edit` | AdminProblemFormComponent | authGuard + adminGuard |
+| Route | Component | Guard | Notes |
+|---|---|---|---|
+| `/admin` | redirect → `/admin/overview` | — | — |
+| `/admin/overview` | AdminOverviewComponent | authGuard + adminGuard | Stats dashboard |
+| `/admin/users` | AdminUsersComponent | authGuard + adminGuard | User list |
+| `/admin/users/:id` | AdminUserDetailComponent | authGuard + adminGuard | Single user view |
+| `/admin/problems` | AdminProblemsComponent | authGuard + adminGuard | Problem list |
+| `/admin/problems/new` | AdminProblemFormComponent | authGuard + adminGuard | Create problem |
+| `/admin/problems/:id/edit` | AdminProblemFormComponent | authGuard + adminGuard | Edit problem |
+
+All routes are children of `AdminShellComponent` which carries `data: { hideLayout: true }` to suppress the global navbar and footer.
+
+### Login redirect for admins
+
+When an admin logs in, `auth.service.ts` detects `role === 'admin'` and the login component redirects to `/admin/overview` instead of `/problems`.
+
+In `login.component.ts`:
+```typescript
+if (result.user?.role === 'admin') {
+  this.router.navigateByUrl('/admin/overview');
+} else {
+  this.router.navigateByUrl(returnUrl || '/');
+}
+```
 
 ---
 
@@ -457,52 +510,99 @@ DELETE /api/problems/:id               — soft delete (sets isActive = false) [
 
 ---
 
-### Feature 5 — Admin Navbar Link (Navigation Entry Point)
+### Feature 5 — Admin Shell + Sidebar Layout
 
-**Priority: 🔴 High — needed for any admin to reach the panel**
+**Priority: 🔴 High — the container that holds everything else**
 
-Add an "Admin" link in the navbar and profile dropdown, visible only when `user.role === 'admin'`.
+The shell is the full-screen layout wrapper for the entire admin panel. It replaces the regular app layout.
+
+#### What It Is
+- A standalone Angular component (`AdminShellComponent`) that wraps all admin child routes via `<router-outlet>`
+- Has a fixed left sidebar with navigation links
+- Has a main content area (right side) that renders the active child route
+- Uses `data: { hideLayout: true }` to suppress the global navbar and footer
+- The sidebar header displays "Codify Admin" branding
+- The sidebar footer shows the admin's name and a logout button
+- Active sidebar link is highlighted using `routerLinkActive="active"`
+
+#### Sidebar Nav Items
+```
+⊞  Overview          → /admin/overview
+👥  Users            → /admin/users
+🗂  Problems         → /admin/problems
+```
+
+#### Sidebar Footer
+```
+👤  [Admin Name]
+🚪  Log out
+```
 
 ---
 
 #### Frontend Spec
 
-In `navbar.component.ts` — add getter:
+**Files to create:**
+```
+src/app/features/admin/
+├── shell/
+│   ├── admin-shell.component.ts
+│   ├── admin-shell.component.html
+│   └── admin-shell.component.scss
+└── admin.routes.ts
+```
+
+**`admin-shell.component.ts`:**
 ```typescript
-get isAdmin(): boolean {
-  return this.auth.user()?.role === 'admin';
+@Component({
+  selector: 'app-admin-shell',
+  standalone: true,
+  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  templateUrl: './admin-shell.component.html',
+  styleUrl: './admin-shell.component.scss',
+})
+export class AdminShellComponent {
+  readonly auth = inject(AuthService);
+
+  logout(): void {
+    this.auth.logout();
+    this.router.navigate(['/auth/login']);
+  }
 }
 ```
 
-In `navbar.component.html` — add in 3 places (same pattern as `isInstructor`):
+**`admin.routes.ts`:**
+```typescript
+export const ADMIN_ROUTES: Routes = [
+  {
+    path: '',
+    component: AdminShellComponent,
+    canActivate: [authGuard, adminGuard],
+    data: { hideLayout: true },
+    children: [
+      { path: '', redirectTo: 'overview', pathMatch: 'full' },
+      { path: 'overview',          loadComponent: () => import('./overview/admin-overview.component') },
+      { path: 'users',             loadComponent: () => import('./users/admin-users.component') },
+      { path: 'users/:id',         loadComponent: () => import('./user-detail/admin-user-detail.component') },
+      { path: 'problems',          loadComponent: () => import('./problems/admin-problems.component') },
+      { path: 'problems/new',      loadComponent: () => import('./problem-form/admin-problem-form.component') },
+      { path: 'problems/:id/edit', loadComponent: () => import('./problem-form/admin-problem-form.component') },
+    ]
+  }
+];
+```
 
-1. Desktop nav links:
-```html
-@if (isAdmin) {
-  <a routerLink="/admin/dashboard" routerLinkActive="nav-link--active"
-     class="nav-link nav-link--admin">Admin</a>
+**In `app.routes.ts`** — add the admin module:
+```typescript
+{
+  path: 'admin',
+  loadChildren: () => import('./features/admin/admin.routes').then(m => m.ADMIN_ROUTES),
 }
 ```
 
-2. Desktop profile dropdown quick actions:
-```html
-@if (isAdmin) {
-  <button class="quick-action quick-action--admin"
-          (click)="navigateTo('/admin/dashboard')">
-    🛡️ <span>Admin Panel</span>
-  </button>
-}
-```
+**Styling approach:** Mirror `instructor-shell.component.scss` — same sidebar pattern (`$navy2` background, `$ivory` main area) but with a red/shield accent color instead of gold to clearly distinguish it as the admin control panel.
 
-3. Mobile menu:
-```html
-@if (isAdmin) {
-  <a routerLink="/admin/dashboard" class="mobile-link mobile-link--admin"
-     (click)="isMobileMenuOpen=false">Admin Panel</a>
-}
-```
-
-No backend work needed for this feature.
+No backend changes needed for the shell itself.
 
 ---
 
@@ -567,8 +667,8 @@ Work through features in this exact order:
 ```
 Sprint 1 (Foundation — do these first, they unblock everything)
 ├── Feature 6: Admin Guard + Role System update     ✅ DONE
-├── Feature 5: Admin navbar link                    [~30 min]
-└── Admin Shell + Routes scaffold                   [~1 hour]
+├── Feature 5: Admin Shell + Sidebar layout         ✅ DONE
+└── Login redirect for admins (login.component.ts) ✅ DONE
 
 Sprint 2 (Core Pages)
 ├── Feature 1: Overview / Stats dashboard           [~3 hours]
@@ -594,14 +694,30 @@ Sprint 4 (Polish + Extras)
 | Branch `admin-page` created | ✅ Done |
 | Role system updated (user model, enum-mappers, auth service) | ✅ Done |
 | Admin guard (`src/app/core/guards/admin.guard.ts`) | ✅ Done |
-| Admin shell + routes | ❌ Not built |
-| Admin navbar link | ❌ Not built |
+| Admin shell + routes (`AdminShellComponent`, `admin.routes.ts`) | ✅ Done |
+| Login redirect for admins | ✅ Done |
 | Overview page | ❌ Not built |
 | User management | ❌ Not built |
 | Problem management | ❌ Not built |
 | Backend endpoints | ❌ Not built |
 
-### Feature 6 — Completed Changes
+### Feature 5 — Completed Changes
+
+| File | Change |
+|---|---|
+| `src/app/features/admin/shell/admin-shell.component.ts` | **NEW** — shell component with logout |
+| `src/app/features/admin/shell/admin-shell.component.html` | **NEW** — sidebar with brand, nav links, admin user footer |
+| `src/app/features/admin/shell/admin-shell.component.scss` | **NEW** — full-screen layout, navy sidebar with red accent, sticky sidebar |
+| `src/app/features/admin/admin.routes.ts` | **NEW** — all admin routes under `AdminShellComponent` with `hideLayout: true` |
+| `src/app/features/admin/overview/admin-overview.component.ts` | **NEW** — placeholder (Feature 1 will fill this) |
+| `src/app/features/admin/users/admin-users.component.ts` | **NEW** — placeholder (Feature 2 will fill this) |
+| `src/app/features/admin/user-detail/admin-user-detail.component.ts` | **NEW** — placeholder (Feature 3 will fill this) |
+| `src/app/features/admin/problems/admin-problems.component.ts` | **NEW** — placeholder (Feature 4a will fill this) |
+| `src/app/features/admin/problem-form/admin-problem-form.component.ts` | **NEW** — placeholder (Feature 4b will fill this) |
+| `src/app/app.routes.ts` | Added `/admin` lazy-loaded module |
+| `src/app/features/auth/login/login.component.ts` | Admin login redirect → `/admin/overview` |
+
+**Build verification:** `npx tsc --noEmit` → ✅ zero errors
 
 | File | Change |
 |---|---|
