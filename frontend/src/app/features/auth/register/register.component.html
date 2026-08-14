@@ -260,9 +260,12 @@
       <button
         type="submit"
         class="btn-primary"
-        [disabled]="isSubmitting"
+        [disabled]="isSubmitting || isUploadingAvatar"
       >
-        @if (isSubmitting) {
+        @if (isUploadingAvatar) {
+          <span class="btn-spinner" aria-hidden="true"></span>
+          Uploading photo...
+        } @else if (isSubmitting) {
           <span class="btn-spinner" aria-hidden="true"></span>
           Creating account...
         } @else {

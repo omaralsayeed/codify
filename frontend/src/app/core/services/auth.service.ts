@@ -54,12 +54,19 @@ export class AuthService {
         timeout(10000),
         map(response => response.data),
         map(loginData => {
+          // Re-hydrate the Cloudinary URL that was stored during registration.
+          // The backend login response doesn't return avatarUrl, so we look it
+          // up in localStorage keyed by userId to survive logout/login cycles.
+          const storedAvatarUrl =
+            localStorage.getItem(`codify_avatar_${loginData.user.userId}`) ?? undefined;
+
           const user: User = {
             id: loginData.user.userId,
             name: loginData.user.fullName,
             email: email,
             role: mapRole(loginData.user.role),
             avatarInitials: this.generateAvatarInitials(loginData.user.fullName),
+            avatarUrl: storedAvatarUrl,
             streak: 0
           };
           try {
@@ -122,12 +129,30 @@ export class AuthService {
   }
 
   logout(): void {
-    // Remove from localStorage
     localStorage.removeItem('codify_user');
     localStorage.removeItem('codify_token');
-    
-    // Set currentUser signal to null
+    // Note: codify_avatar_<userId> is intentionally kept so the image
+    // is restored on next login without backend involvement.
     this._currentUser.set(null);
+  }
+
+  /**
+   * Called after a successful Cloudinary upload during registration.
+   * Stores the URL keyed by userId so it survives logout/login cycles
+   * on the same browser, then patches the live user signal immediately.
+   */
+  setAvatarUrl(url: string): void {
+    const current = this._currentUser();
+    if (!current) return;
+    const updated: User = { ...current, avatarUrl: url };
+    this._currentUser.set(updated);
+    try {
+      // Keyed by userId — multiple users on the same browser each get their own entry
+      localStorage.setItem(`codify_avatar_${current.id}`, url);
+      localStorage.setItem('codify_user', JSON.stringify(updated));
+    } catch {
+      // localStorage full — image still visible in memory for this session
+    }
   }
 
   private restoreSession(): void {

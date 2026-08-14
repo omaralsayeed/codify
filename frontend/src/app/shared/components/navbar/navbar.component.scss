@@ -52,6 +52,11 @@
   font-size: 13px; font-weight: 600; font-family: $ff-mono;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
+
+  &--photo {
+    object-fit: cover;
+    background: transparent;
+  }
 }
 
 // Mobile right side: icons + hamburger
@@ -211,6 +216,11 @@
   font-size: 18px; font-weight: 600; font-family: $ff-mono;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
+
+  &--photo {
+    object-fit: cover;
+    background: transparent;
+  }
 }
 
 .profile-info { flex: 1; min-width: 0; }

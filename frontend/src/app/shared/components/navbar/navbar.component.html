@@ -63,12 +63,20 @@
       <!-- Profile Dropdown -->
       <div class="profile-container">
         <button class="profile-trigger" (click)="toggleProfile($event)" aria-label="Profile menu">
-          <div class="nav-avatar">{{ auth.user()?.avatarInitials }}</div>
+          @if (auth.user()?.avatarUrl) {
+            <img class="nav-avatar nav-avatar--photo" [src]="auth.user()!.avatarUrl" [alt]="auth.user()!.name" />
+          } @else {
+            <div class="nav-avatar">{{ auth.user()?.avatarInitials }}</div>
+          }
         </button>
         @if (isProfileOpen) {
           <div class="profile-panel" (click)="$event.stopPropagation()">
             <div class="profile-header">
-              <div class="profile-avatar-large">{{ auth.user()?.avatarInitials }}</div>
+              @if (auth.user()?.avatarUrl) {
+                <img class="profile-avatar-large profile-avatar-large--photo" [src]="auth.user()!.avatarUrl" [alt]="auth.user()!.name" />
+              } @else {
+                <div class="profile-avatar-large">{{ auth.user()?.avatarInitials }}</div>
+              }
               <div class="profile-info">
                 <div class="profile-name">{{ auth.user()?.name }}</div>
                 <div class="profile-plan">Free Plan</div>
@@ -148,7 +156,11 @@
         </div>
         <!-- Avatar (opens mobile menu) -->
         <button class="profile-trigger" (click)="toggleMobileMenu($event)" aria-label="Open menu">
-          <div class="nav-avatar">{{ auth.user()?.avatarInitials }}</div>
+          @if (auth.user()?.avatarUrl) {
+            <img class="nav-avatar nav-avatar--photo" [src]="auth.user()!.avatarUrl" [alt]="auth.user()!.name" />
+          } @else {
+            <div class="nav-avatar">{{ auth.user()?.avatarInitials }}</div>
+          }
         </button>
       </div>
     }
@@ -176,7 +188,11 @@
       }
       @if (auth.isLoggedIn()) {
         <div class="mobile-profile-header">
-          <div class="profile-avatar-large">{{ auth.user()?.avatarInitials }}</div>
+          @if (auth.user()?.avatarUrl) {
+            <img class="profile-avatar-large profile-avatar-large--photo" [src]="auth.user()!.avatarUrl" [alt]="auth.user()!.name" />
+          } @else {
+            <div class="profile-avatar-large">{{ auth.user()?.avatarInitials }}</div>
+          }
           <div class="profile-info">
             <div class="profile-name">{{ auth.user()?.name }}</div>
             <div class="profile-plan">Free Plan</div>

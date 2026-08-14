@@ -2,32 +2,32 @@
 
 ---
 
-## 1. What Exists Right Now
+## 1. What Existed Before (Original Broken State)
 
 ### Register Page
 - A file input (`<input type="file" accept="image/jpeg,image/png,image/webp">`) lets the user pick a photo before signing up.
 - `onProfilePictureSelect()` reads the file with `FileReader` and stores it as a base64 data URL in the component variable `profilePicturePreview`.
 - This preview is shown inside the register form (the circle above the fields).
-- After a **successful registration**, this line runs:
+- After a **successful registration**, this line ran:
   ```typescript
   if (this.profilePicturePreview) {
     localStorage.setItem('codify_avatar', this.profilePicturePreview);
   }
   ```
-  The base64 image is written to `localStorage` under the key `codify_avatar`. That is the **only persistence** — no upload to any server happens.
+  The base64 image was written to `localStorage` under the key `codify_avatar`. That was the **only persistence** — no upload to any server happened.
 
 ### Profile Page (`/profile/:username`)
-- On `ngOnInit`, the component reads `localStorage.getItem('codify_avatar')` into `savedAvatar`.
-- If `savedAvatar` is not null, the template shows `<img [src]="savedAvatar">`.
-- Otherwise it shows a colored circle with the user's **avatar initials** (e.g., "JS").
+- On `ngOnInit`, the component read `localStorage.getItem('codify_avatar')` into `savedAvatar`.
+- If `savedAvatar` was not null, the template showed `<img [src]="savedAvatar">`.
+- Otherwise it showed a colored circle with the user's **avatar initials** (e.g., "JS").
 
 ### Navbar / Header (all pages after login)
-- **Both desktop and mobile** avatars only show `avatarInitials`:
+- **Both desktop and mobile** avatars only showed `avatarInitials`:
   ```html
   <div class="nav-avatar">{{ auth.user()?.avatarInitials }}</div>
   ```
-- The profile dropdown large avatar also uses `avatarInitials`.
-- **No image is shown anywhere in the navbar — ever.**
+- The profile dropdown large avatar also used `avatarInitials`.
+- **No image was shown anywhere in the navbar — ever.**
 
 ### User Model
 ```typescript
@@ -42,115 +42,239 @@ export interface User {
   joinedAt?: string;
 }
 ```
-There is **no `profileImageUrl` or `avatarUrl` field** in the User interface.
+There was **no `profileImageUrl` or `avatarUrl` field** in the User interface.
 
 ### Auth Service — Login & Session Restore
-- On login the API response only returns `{ userId, fullName, role }` — no image URL.
-- The `User` object built from the login response has no image field.
-- On page refresh, `restoreSession()` reads the user from `localStorage['codify_user']` — also no image field.
+- On login the API response only returned `{ userId, fullName, role }` — no image URL.
+- The `User` object built from the login response had no image field.
+- On page refresh, `restoreSession()` read the user from `localStorage['codify_user']` — also no image field.
 
 ---
 
-## 2. Why the Photo Is Not Working / Not Appearing
+## 2. Why the Photo Was Not Working / Not Appearing
 
 | # | Problem | Root Cause |
 |---|---------|------------|
-| 1 | **Image never uploaded to any server** | `onSubmit()` calls `authService.register(...)` with only text fields. The file is never included in the HTTP request. The backend never receives it. |
-| 2 | **Image stored as raw base64 in localStorage** | Base64 bloats the image size by ~33%. A 300 KB photo becomes ~400 KB of text sitting in localStorage (5–10 MB limit). On any other device or browser it is completely invisible. |
-| 3 | **Navbar always shows initials, never the image** | The navbar template reads `auth.user()?.avatarInitials`. There is no conditional `<img>` tag. Even if `codify_avatar` is in localStorage, the navbar will never display it. |
-| 4 | **No `profileImageUrl` field in User model or auth service** | Even if the backend were to return an image URL, there is no field in the `User` interface to store it, and the auth service does not map it. |
-| 5 | **`codify_avatar` is NOT cleared on logout** | `auth.logout()` removes `codify_user` and `codify_token` but not `codify_avatar`. A different user logging in on the same browser sees the previous user's photo. |
-| 6 | **Profile page only loads image from localStorage** | The profile page never calls the backend to fetch a profile image URL. It only checks `localStorage`, so the feature only half-works on the same browser, same device, never shared. |
-| 7 | **Auto-login after register does not re-read localStorage** | After register, the app calls `login()` internally. The login response builds a fresh `User` object — it does not read `codify_avatar`. So when the navbar renders right after registration, the image is still invisible in the nav. |
+| 1 | **Image never uploaded to any server** | `onSubmit()` called `authService.register(...)` with only text fields. The file was never included in the HTTP request. The backend never received it. |
+| 2 | **Image stored as raw base64 in localStorage** | Base64 bloats the image size by ~33%. A 300 KB photo becomes ~400 KB of text in localStorage (5–10 MB limit). On any other device or browser it was completely invisible. |
+| 3 | **Navbar always showed initials, never the image** | The navbar template read `auth.user()?.avatarInitials`. There was no conditional `<img>` tag. Even if `codify_avatar` was in localStorage, the navbar would never display it. |
+| 4 | **No `profileImageUrl` field in User model or auth service** | Even if the backend were to return an image URL, there was no field in the `User` interface to store it, and the auth service did not map it. |
+| 5 | **`codify_avatar` was NOT cleared on logout** | `auth.logout()` removed `codify_user` and `codify_token` but not `codify_avatar`. A different user logging in on the same browser would see the previous user's photo. |
+| 6 | **Profile page only loaded image from localStorage** | The profile page never called the backend to fetch a profile image URL. It only checked `localStorage`, so the feature only half-worked on the same browser, same device — never shared. |
+| 7 | **Auto-login after register did not re-read localStorage** | After register, the app called `login()` internally. The login response built a fresh `User` object — it did not read `codify_avatar`. So the navbar showed no image right after registration. |
+| 8 | **Logout/login cycle wiped the URL** | `login()` always rebuilt the User from the API response and overwrote `codify_user` in localStorage — losing the Cloudinary URL that `setAvatarUrl()` had saved. |
 
 ---
 
 ## 3. Best Free Options for Hosting Profile Images
 
-### Option A — Cloudinary (Recommended for this project)
+### Option A — Cloudinary ✅ (Chosen)
 
 **Why it fits best:**
 - Purpose-built for image hosting. No backend storage code needed.
 - Free tier: **25 GB storage + 25 GB bandwidth/month** — more than enough for a learning platform.
-- Returns a permanent HTTPS URL you simply save in your database as a string.
+- Returns a permanent HTTPS URL you simply save as a string.
 - Built-in on-the-fly transformations (auto crop to face, resize, compress, WebP conversion) via URL parameters — no extra code.
-- Has a direct browser upload API (`unsigned upload`) so the Angular frontend can upload directly from the browser without routing through your backend, keeping your .NET backend simple.
+- Has a direct browser upload API (`unsigned upload`) so Angular uploads directly without routing through the backend.
 
-**How it would work here:**
+**How it works here:**
 ```
 Register form picks file
     ↓
-Angular calls Cloudinary Upload API (POST to https://api.cloudinary.com/v1_1/<cloud>/image/upload)
+Angular calls Cloudinary Upload API
     ↓
 Cloudinary returns { secure_url: "https://res.cloudinary.com/..." }
     ↓
-Angular includes that URL in the register POST to your .NET backend
+URL stored in localStorage keyed by userId
     ↓
-Backend stores the URL string in the Users table
-    ↓
-Login response returns the URL → saved in User object → shown in navbar + profile
+User signal patched → photo appears in navbar + profile instantly
 ```
 
-**Cost:** Free forever for small/medium projects. Paid plans start at $89/month if you outgrow the free tier.
-
 ---
 
-### Option B — AWS S3 + CloudFront (Free Tier)
+### Option B — AWS S3 + CloudFront
 
-**Why it could work:**
 - AWS Free Tier gives **5 GB S3 storage + 15 GB outbound transfer/month for 12 months**.
-- After 12 months the free tier expires and you pay per GB (very cheap but no longer free).
-- Requires more setup: S3 bucket policy, IAM user/role, CORS config, presigned URLs or a backend endpoint to generate upload URLs.
-- Your .NET backend generates a **presigned S3 URL**, the Angular app uploads directly to S3, then saves the resulting S3/CloudFront URL.
-
-**Verdict for this project:** More complex to set up, free tier expires, and it is not purpose-built for image serving. Good if you are already on AWS, but Cloudinary is faster to integrate.
+- After 12 months the free tier expires.
+- Requires more setup: S3 bucket policy, IAM user/role, CORS config, presigned URLs.
+- **Verdict:** More complex, free tier expires. Good if already on AWS.
 
 ---
 
-### Option C — Supabase Storage (Free)
+### Option C — Supabase Storage
 
-**Why it could work:**
 - Free tier: **1 GB storage + 2 GB bandwidth/month** (smaller than Cloudinary).
-- Open-source and self-hostable.
-- Has a simple JavaScript/TypeScript SDK for direct browser uploads.
-- Returns a public URL after upload.
-- If you are already using Supabase for your database, this is a natural fit.
-
-**Verdict for this project:** Free tier is tight for images. Good only if you are already on Supabase.
+- **Verdict:** Free tier is tight for images. Good only if already on Supabase.
 
 ---
 
 ### Option D — Firebase Storage (Google)
 
-**Why it could work:**
 - Free Spark plan: **5 GB storage + 1 GB/day download**.
-- Google-grade CDN, very fast delivery.
-- Angular SDK available (`@angular/fire`).
-- Requires a Google account and Firebase project setup.
-
-**Verdict for this project:** 1 GB/day download cap can be hit easily on a growing platform. More setup overhead than Cloudinary.
+- **Verdict:** 1 GB/day download cap can be hit easily. More setup overhead than Cloudinary.
 
 ---
 
-## 4. Recommendation Summary
+### Comparison Table
 
 | Service | Free Storage | Free Bandwidth | Setup Effort | Best For |
 |---------|-------------|----------------|--------------|----------|
-| **Cloudinary** ✅ | 25 GB | 25 GB/mo | Low | This project — just save the URL |
+| **Cloudinary** ✅ | 25 GB | 25 GB/mo | Low | This project |
 | AWS S3 | 5 GB (12 mo) | 15 GB/mo | High | Already on AWS |
 | Supabase | 1 GB | 2 GB/mo | Medium | Already on Supabase |
 | Firebase | 5 GB | 1 GB/day | Medium | Already on Firebase |
 
-**Go with Cloudinary.** It requires the least backend changes, has the most generous free tier for images, and its transformation URLs (auto-crop to face, resize to 200×200, compress) mean you never serve bloated originals.
+---
+
+## 4. Cloudinary Dashboard Setup (Done)
+
+| Setting | Value |
+|---------|-------|
+| Cloud name | `mg7dsqv2` |
+| Upload preset | `MS_codify-imgs` |
+| Signing mode | Unsigned (Angular uploads directly from the browser) |
+| Asset folder | `codify_avatars` |
 
 ---
 
-## 5. What Needs to Be Fixed (Summary)
+## 5. What We Implemented (Frontend + Cloudinary Only — No Backend Changes)
 
-1. Add `profileImageUrl?: string` to the `User` model.
-2. Update the `LoginApiResponse` and `RegisterApiResponse` interfaces to include the image URL.
-3. Map `profileImageUrl` in `auth.service.ts` when building the `User` object.
-4. In `register.component.ts`, upload the selected file to Cloudinary first, get the URL, then include it in the register POST body.
-5. Update `logout()` to also remove `codify_avatar` from localStorage.
-6. In `navbar.component.html`, replace the initials-only `<div class="nav-avatar">` with a conditional: show `<img>` if `profileImageUrl` exists, otherwise show initials.
-7. In `profile.component.ts`, read `profileImageUrl` from the `User` object (via auth service) instead of — or in addition to — localStorage.
+### The Strategy
+Store the Cloudinary URL in localStorage **keyed by `userId`** (`codify_avatar_<userId>`). On every login, the auth service reads this key using the `userId` returned by the API and merges `avatarUrl` back into the User object. The URL survives logout/login cycles without the backend ever touching it.
+
+---
+
+### `src/app/core/models/user.model.ts`
+Added `avatarUrl?: string`:
+```typescript
+export interface User {
+  ...
+  avatarInitials: string;
+  avatarUrl?: string;  // Cloudinary URL — set after photo upload
+  ...
+}
+```
+
+---
+
+### `src/app/core/services/auth.service.ts`
+
+**`login()`** — re-hydrates the Cloudinary URL on every login:
+```typescript
+const storedAvatarUrl =
+  localStorage.getItem(`codify_avatar_${loginData.user.userId}`) ?? undefined;
+
+const user: User = {
+  id: loginData.user.userId,
+  ...
+  avatarUrl: storedAvatarUrl,  // restored from localStorage by userId
+};
+```
+
+**`setAvatarUrl(url)`** — new method, called after a successful Cloudinary upload:
+```typescript
+setAvatarUrl(url: string): void {
+  const current = this._currentUser();
+  if (!current) return;
+  const updated: User = { ...current, avatarUrl: url };
+  this._currentUser.set(updated);
+  localStorage.setItem(`codify_avatar_${current.id}`, url); // keyed by userId
+  localStorage.setItem('codify_user', JSON.stringify(updated));
+}
+```
+
+**`logout()`** — clears session keys but keeps the avatar key so it survives:
+```typescript
+logout(): void {
+  localStorage.removeItem('codify_user');
+  localStorage.removeItem('codify_token');
+  // codify_avatar_<userId> intentionally kept — re-read on next login
+  this._currentUser.set(null);
+}
+```
+
+---
+
+### `src/app/features/auth/register/register.component.ts`
+- Added `HttpClient` injection and Cloudinary constants.
+- `onProfilePictureSelect()` now stores the raw `File` object alongside the base64 preview.
+- `onSubmit()` two-step flow:
+  1. If a file was selected → `POST multipart/form-data` to Cloudinary → get `secure_url`
+  2. Register user → call `authService.setAvatarUrl(secure_url)` → navigate home
+  - If Cloudinary upload fails → registration still completes, no image, user never blocked.
+- `isUploadingAvatar` flag drives button label: `"Uploading photo..."` → `"Creating account..."`
+
+---
+
+### `src/app/shared/components/navbar/navbar.component.html`
+All 4 avatar spots (desktop trigger, desktop dropdown, mobile trigger, mobile menu header) now conditionally show an `<img>` or fall back to the initials `<div>`:
+```html
+@if (auth.user()?.avatarUrl) {
+  <img class="nav-avatar nav-avatar--photo"
+       [src]="auth.user()!.avatarUrl"
+       [alt]="auth.user()!.name" />
+} @else {
+  <div class="nav-avatar">{{ auth.user()?.avatarInitials }}</div>
+}
+```
+
+---
+
+### `src/app/shared/components/navbar/navbar.component.scss`
+Added `&--photo` modifier to `.nav-avatar` and `.profile-avatar-large`:
+```scss
+&--photo {
+  object-fit: cover;
+  background: transparent;
+}
+```
+
+---
+
+### `src/app/features/profile/profile.component.ts`
+`ngOnInit` reads `avatarUrl` from the auth service signal first, falls back to the old `codify_avatar` localStorage key for sessions that existed before this change:
+```typescript
+const currentUser = this.authService.currentUser();
+this.savedAvatar =
+  currentUser?.avatarUrl ??
+  localStorage.getItem('codify_avatar');
+```
+
+---
+
+## 6. Complete Flow After Implementation
+
+```
+User picks photo → Angular uploads to Cloudinary
+        ↓
+Cloudinary returns secure_url
+        ↓
+User registers (backend — text only)
+        ↓
+setAvatarUrl(secure_url) called:
+  • saves  codify_avatar_<userId>  in localStorage
+  • patches live user signal
+        ↓
+Navbar + profile show photo immediately ✅
+        ↓
+User logs out
+  • codify_user + codify_token cleared
+  • codify_avatar_<userId> kept ✅
+        ↓
+User logs back in
+  • login() reads codify_avatar_<userId> using userId from API
+  • merges avatarUrl into User object
+  • photo restored instantly ✅
+```
+
+---
+
+## 7. Known Limitations (Accepted Trade-offs)
+
+| Scenario | Behaviour |
+|----------|-----------|
+| User clears browser data | Avatar URL lost — they'd need to re-upload |
+| Different browser / device | No avatar shown — URL lives only in the original browser's localStorage |
+| Change photo after registration | Not yet implemented — needs an "Edit Profile" upload flow |
+
+When the backend eventually adds `avatarUrl` to the Users table and login response, the `codify_avatar_<userId>` localStorage key can simply be removed — no other frontend changes needed.
