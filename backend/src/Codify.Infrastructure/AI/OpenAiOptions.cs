@@ -14,7 +14,6 @@ public class OpenAiOptions
 
     /// <summary>
     /// Custom base URL for OpenAI API calls. If empty, uses the official OpenAI API.
-    /// Example: "http://apiaccess.iti.net.eg/api/v1/student/chat"
     /// </summary>
     public string BaseUrl { get; set; } = string.Empty;
 }
