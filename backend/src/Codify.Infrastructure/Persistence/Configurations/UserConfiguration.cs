@@ -14,6 +14,10 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.HasIndex(u => u.Email).IsUnique();
         builder.Property(u => u.PasswordHash).IsRequired();
         builder.Property(u => u.Role).HasConversion<string>();
+        builder.Property(u => u.Status).HasConversion<string>().IsRequired().HasDefaultValue(Domain.Enums.UserStatus.Active);
+        builder.Property(u => u.Organization).HasMaxLength(300);
+        builder.Property(u => u.ReviewedBy);
+        builder.Property(u => u.ReviewedAt);
         builder.Property(u => u.CreatedAt).IsRequired();
         builder.Property(u => u.UpdatedAt).IsRequired();
         builder.Property(u => u.IsDeleted).IsRequired().HasDefaultValue(false);

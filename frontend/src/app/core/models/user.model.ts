@@ -2,8 +2,9 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'student' | 'instructor';
+  role: 'student' | 'instructor' | 'admin';
   avatarInitials: string;
+  avatarUrl?: string;  // Cloudinary URL set after profile image upload
   streak?: number;
   username?: string;   // URL-safe slug derived from name, e.g. "test_student"
   joinedAt?: string;   // ISO date string

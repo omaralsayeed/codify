@@ -1,0 +1,228 @@
+<section class="users">
+
+  <!-- ── Page header ──────────────────────────────────────────────────────── -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Users</h1>
+      <p class="page-sub">
+        {{ totalCount() }} total ·
+        {{ studentCount() }} students ·
+        {{ instructorCount() }} instructors
+        @if (pendingCount() > 0) {
+          · <span class="pending-alert">{{ pendingCount() }} pending approval</span>
+        }
+      </p>
+    </div>
+  </div>
+
+  <!-- ── Toolbar ──────────────────────────────────────────────────────────── -->
+  <div class="toolbar">
+
+    <!-- Search -->
+    <div class="search-wrap">
+      <span class="search-icon" aria-hidden="true">🔍</span>
+      <input
+        class="search-input"
+        type="search"
+        placeholder="Search by name or email…"
+        [ngModel]="searchQuery()"
+        (ngModelChange)="searchQuery.set($event)"
+        aria-label="Search users"
+      />
+    </div>
+
+    <!-- Role filter -->
+    <select
+      class="filter-select"
+      [ngModel]="roleFilter()"
+      (ngModelChange)="roleFilter.set($event)"
+      aria-label="Filter by role"
+    >
+      <option value="all">All roles</option>
+      <option value="student">Students</option>
+      <option value="instructor">Instructors</option>
+    </select>
+
+    <!-- Status filter -->
+    <select
+      class="filter-select"
+      [ngModel]="statusFilter()"
+      (ngModelChange)="statusFilter.set($event)"
+      aria-label="Filter by status"
+    >
+      <option value="all">All statuses</option>
+      <option value="active">Active</option>
+      <option value="pending">Pending</option>
+    </select>
+
+    <!-- Clear filters -->
+    @if (hasActiveFilters) {
+      <button class="clear-btn" (click)="clearFilters()" aria-label="Clear all filters">
+        ✕ Clear
+      </button>
+    }
+
+  </div>
+
+  <!-- ── Table ────────────────────────────────────────────────────────────── -->
+  @if (filteredUsers().length > 0) {
+    <div class="table-wrap">
+      <table class="users-table" aria-label="User list">
+        <thead>
+          <tr>
+            <th scope="col" class="col-user sortable"
+                (click)="sortBy('name')"
+                [attr.aria-sort]="sortField() === 'name' ? (sortDir() === 'asc' ? 'ascending' : 'descending') : 'none'">
+              User <span class="sort-icon" aria-hidden="true">{{ sortIcon('name') }}</span>
+            </th>
+            <th scope="col" class="col-role sortable"
+                (click)="sortBy('role')"
+                [attr.aria-sort]="sortField() === 'role' ? (sortDir() === 'asc' ? 'ascending' : 'descending') : 'none'">
+              Role <span class="sort-icon" aria-hidden="true">{{ sortIcon('role') }}</span>
+            </th>
+            <th scope="col" class="col-status">Status</th>
+            <th scope="col" class="col-org">Organization / Solved</th>
+            <th scope="col" class="col-registered sortable"
+                (click)="sortBy('registeredAt')"
+                [attr.aria-sort]="sortField() === 'registeredAt' ? (sortDir() === 'asc' ? 'ascending' : 'descending') : 'none'">
+              Registered <span class="sort-icon" aria-hidden="true">{{ sortIcon('registeredAt') }}</span>
+            </th>
+            <th scope="col" class="col-active sortable"
+                (click)="sortBy('lastActiveAt')"
+                [attr.aria-sort]="sortField() === 'lastActiveAt' ? (sortDir() === 'asc' ? 'ascending' : 'descending') : 'none'">
+              Last Active <span class="sort-icon" aria-hidden="true">{{ sortIcon('lastActiveAt') }}</span>
+            </th>
+            <th scope="col" class="col-action"><span class="sr-only">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (user of filteredUsers(); track user.id) {
+            <tr class="user-row"
+                [routerLink]="['../users', user.id]"
+                tabindex="0"
+                [attr.aria-label]="'View ' + user.name + ' details'">
+
+              <!-- Avatar + name + email -->
+              <td class="col-user">
+                <div class="user-cell">
+                  <div class="avatar" [ngClass]="avatarClass(user.role)" aria-hidden="true">
+                    {{ user.initials }}
+                  </div>
+                  <div class="user-info">
+                    <span class="user-name">{{ user.name }}</span>
+                    <span class="user-email">{{ user.email }}</span>
+                  </div>
+                </div>
+              </td>
+
+              <!-- Role badge -->
+              <td class="col-role">
+                <span class="badge" [ngClass]="roleBadgeClass(user.role)">
+                  {{ user.role | titlecase }}
+                </span>
+              </td>
+
+              <!-- Status badge + toggle for instructors -->
+              <td class="col-status" (click)="$event.stopPropagation()">
+                <div class="status-cell">
+                  <span class="badge" [ngClass]="statusBadgeClass(user.status)">
+                    {{ user.status | titlecase }}
+                  </span>
+                  @if (user.role !== 'admin') {
+                    <button
+                      class="toggle-btn"
+                      [ngClass]="user.status === 'pending' ? 'toggle-btn--activate' : 'toggle-btn--suspend'"
+                      (click)="requestStatusChange(user, $event)"
+                      [attr.aria-label]="user.status === 'pending' ? 'Activate ' + user.name : 'Set ' + user.name + ' to pending'"
+                    >
+                      {{ user.status === 'pending' ? 'Activate' : 'Set Pending' }}
+                    </button>
+                  }
+                </div>
+              </td>
+
+              <!-- Organization (instructors) or problems solved (students) -->
+              <td class="col-org">
+                @if (user.role === 'instructor') {
+                  <span class="org-text">{{ user.organization ?? '—' }}</span>
+                } @else {
+                  <span class="solved-text">{{ user.problemsSolved ?? 0 }} solved</span>
+                }
+              </td>
+
+              <!-- Registered date -->
+              <td class="col-registered">
+                <span class="date-text">{{ formatDate(user.registeredAt) }}</span>
+              </td>
+
+              <!-- Last active -->
+              <td class="col-active">
+                <span class="date-text" [class.date-text--never]="!user.lastActiveAt">
+                  {{ timeAgo(user.lastActiveAt) }}
+                </span>
+              </td>
+
+              <!-- Arrow -->
+              <td class="col-action" aria-hidden="true">›</td>
+
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <p class="results-count">
+      Showing {{ filteredUsers().length }} of {{ totalCount() }} users
+    </p>
+
+  } @else {
+    <div class="empty-state">
+      <span class="empty-icon" aria-hidden="true">🔍</span>
+      <p class="empty-title">No users found</p>
+      <p class="empty-sub">
+        @if (hasActiveFilters) {
+          Try adjusting your search or filters.
+        } @else {
+          No users registered yet.
+        }
+      </p>
+      @if (hasActiveFilters) {
+        <button class="clear-btn clear-btn--center" (click)="clearFilters()">Clear filters</button>
+      }
+    </div>
+  }
+
+</section>
+
+<!-- ── Confirmation modal ──────────────────────────────────────────────────── -->
+@if (confirmUser()) {
+  <div class="modal-overlay" (click)="closeModal()" role="dialog"
+       aria-modal="true" [attr.aria-label]="'Confirm status change for ' + confirmUser()!.name">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-icon" [class.modal-icon--activate]="confirmAction() === 'activate'"
+                               [class.modal-icon--suspend]="confirmAction() === 'set-pending'">
+        {{ confirmAction() === 'activate' ? '✓' : '⏸' }}
+      </div>
+      <h2 class="modal-title">
+        {{ confirmAction() === 'activate' ? 'Activate instructor?' : 'Set to pending?' }}
+      </h2>
+      <p class="modal-body">
+        @if (confirmAction() === 'activate') {
+          <strong>{{ confirmUser()!.name }}</strong> will be able to log in and access the instructor dashboard.
+        } @else {
+          <strong>{{ confirmUser()!.name }}</strong> will lose access until reactivated.
+        }
+      </p>
+      <div class="modal-actions">
+        <button class="modal-btn modal-btn--cancel" (click)="closeModal()">Cancel</button>
+        <button
+          class="modal-btn"
+          [ngClass]="confirmAction() === 'activate' ? 'modal-btn--confirm-activate' : 'modal-btn--confirm-suspend'"
+          (click)="confirmChange()"
+        >
+          {{ confirmAction() === 'activate' ? 'Yes, activate' : 'Yes, set pending' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

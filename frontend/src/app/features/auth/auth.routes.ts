@@ -17,4 +17,9 @@ export const AUTH_ROUTES: Routes = [
     loadComponent: () => import('./forgot-password/forgot-password.component').then(m => m.ForgotPasswordComponent),
     canActivate: [guestGuard]
   },
+  {
+    // No guestGuard — instructor lands here right after registering
+    path: 'pending-approval',
+    loadComponent: () => import('./pending-approval/pending-approval.component').then(m => m.PendingApprovalComponent),
+  },
 ];

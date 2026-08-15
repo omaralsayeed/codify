@@ -257,134 +257,119 @@
             @if (activeTab === 'description') {
               <div id="description-panel" role="tabpanel" aria-labelledby="description-tab">
 
-                <!-- Problem Header -->
-                <header class="problem-header">
-                  <div class="problem-title-row">
-                    <h1 class="problem-title">1. Two Sum</h1>
-                    <button 
-                      class="solved-toggle"
-                      [class.solved-toggle--active]="isSolved"
-                      (click)="toggleSolved()"
-                      type="button"
-                      [attr.aria-label]="isSolved ? 'Mark as unsolved' : 'Mark as solved'">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
-                           fill="none" stroke="currentColor" stroke-width="2.5"
+                <!-- Loading state -->
+                @if (isProblemLoading) {
+                  <div class="problem-loading">
+                    <p>Loading problem...</p>
+                  </div>
+                }
+
+                <!-- Error state -->
+                @if (problemLoadError) {
+                  <div class="problem-error" role="alert">
+                    <p>{{ problemLoadError }}</p>
+                  </div>
+                }
+
+                <!-- Problem content (shown once loaded) -->
+                @if (!isProblemLoading && !problemLoadError) {
+
+                  <!-- Problem Header -->
+                  <header class="problem-header">
+                    <div class="problem-title-row">
+                      <h1 class="problem-title">{{ problemTitle }}</h1>
+                      <button 
+                        class="solved-toggle"
+                        [class.solved-toggle--active]="isSolved"
+                        (click)="toggleSolved()"
+                        type="button"
+                        [attr.aria-label]="isSolved ? 'Mark as unsolved' : 'Mark as solved'">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                             fill="none" stroke="currentColor" stroke-width="2.5"
+                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                          <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                      </button>
+                    </div>
+                  </header>
+
+                  <!-- Action Pills -->
+                  <div class="action-pills">
+                    <span class="badge" [class]="'badge--' + problemDifficulty">{{ problemDifficulty }}</span>
+                    <button class="pill" (click)="onTopicsClick()" type="button">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                           fill="none" stroke="currentColor" stroke-width="2"
                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <polyline points="20 6 9 17 4 12"></polyline>
+                        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                        <line x1="7" y1="7" x2="7.01" y2="7"></line>
                       </svg>
+                      Topics
+                    </button>
+                    <button class="pill" (click)="onCompaniesClick()" type="button">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                           fill="none" stroke="currentColor" stroke-width="2"
+                           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                        <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                      </svg>
+                      Companies
+                    </button>
+                    <button class="pill pill--hint" (click)="onHintClick()" type="button">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                           fill="none" stroke="currentColor" stroke-width="2"
+                           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                      </svg>
+                      Hint
                     </button>
                   </div>
-                </header>
 
-                <!-- Action Pills -->
-                <div class="action-pills">
-                  <span class="badge badge--easy">Easy</span>
-                  <button class="pill" (click)="onTopicsClick()" type="button">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
-                         fill="none" stroke="currentColor" stroke-width="2"
-                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
-                      <line x1="7" y1="7" x2="7.01" y2="7"></line>
-                    </svg>
-                    Topics
-                  </button>
-                  <button class="pill" (click)="onCompaniesClick()" type="button">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
-                         fill="none" stroke="currentColor" stroke-width="2"
-                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
-                      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
-                    </svg>
-                    Companies
-                  </button>
-                  <button class="pill pill--hint" (click)="onHintClick()" type="button">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
-                         fill="none" stroke="currentColor" stroke-width="2"
-                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <circle cx="12" cy="12" r="10"></circle>
-                      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-                      <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                    </svg>
-                    Hint
-                  </button>
-                </div>
+                  <!-- Problem Statement -->
+                  <section class="problem-section">
+                    <p class="problem-text" style="white-space: pre-line;">{{ problemDescription }}</p>
+                  </section>
 
-                <!-- Problem Statement -->
-                <section class="problem-section">
-                  <p class="problem-text">
-                    Given an array of integers <code>nums</code> and an integer <code>target</code>, 
-                    return <em>indices of the two numbers such that they add up to <code>target</code></em>.
-                  </p>
-                  <p class="problem-text">
-                    You may assume that each input would have <strong>exactly one solution</strong>, 
-                    and you may not use the same element twice.
-                  </p>
-                  <p class="problem-text">
-                    You can return the answer in any order.
-                  </p>
-                </section>
+                  <!-- Examples -->
+                  @if (problemExamples.length > 0) {
+                    <section class="problem-section">
+                      <h2 class="section-heading">Examples</h2>
+                      @for (example of problemExamples; track $index) {
+                        <div class="example-block">
+                          <div class="example-label">Example {{ $index + 1 }}</div>
+                          <div class="example-item">
+                            <span class="example-key">Input:</span>
+                            <code class="example-value">{{ example.input }}</code>
+                          </div>
+                          <div class="example-item">
+                            <span class="example-key">Output:</span>
+                            <code class="example-value">{{ example.output }}</code>
+                          </div>
+                          @if (example.explanation) {
+                            <div class="example-item">
+                              <span class="example-key">Explanation:</span>
+                              <span class="example-explanation">{{ example.explanation }}</span>
+                            </div>
+                          }
+                        </div>
+                      }
+                    </section>
+                  }
 
-                <!-- Examples -->
-                <section class="problem-section">
-                  <h2 class="section-heading">Examples</h2>
+                  <!-- Constraints -->
+                  @if (problemConstraints.length > 0) {
+                    <section class="problem-section">
+                      <h2 class="section-heading">Constraints</h2>
+                      <ul class="constraints-list">
+                        @for (constraint of problemConstraints; track $index) {
+                          <li><code>{{ constraint }}</code></li>
+                        }
+                      </ul>
+                    </section>
+                  }
 
-                  <!-- Example 1 -->
-                  <div class="example-block">
-                    <div class="example-label">Example 1</div>
-                    <div class="example-item">
-                      <span class="example-key">Input:</span>
-                      <code class="example-value">nums = [2,7,11,15], target = 9</code>
-                    </div>
-                    <div class="example-item">
-                      <span class="example-key">Output:</span>
-                      <code class="example-value">[0,1]</code>
-                    </div>
-                    <div class="example-item">
-                      <span class="example-key">Explanation:</span>
-                      <span class="example-explanation">
-                        Because nums[0] + nums[1] == 9, we return [0, 1].
-                      </span>
-                    </div>
-                  </div>
-
-                  <!-- Example 2 -->
-                  <div class="example-block">
-                    <div class="example-label">Example 2</div>
-                    <div class="example-item">
-                      <span class="example-key">Input:</span>
-                      <code class="example-value">nums = [3,2,4], target = 6</code>
-                    </div>
-                    <div class="example-item">
-                      <span class="example-key">Output:</span>
-                      <code class="example-value">[1,2]</code>
-                    </div>
-                  </div>
-
-                  <!-- Example 3 -->
-                  <div class="example-block">
-                    <div class="example-label">Example 3</div>
-                    <div class="example-item">
-                      <span class="example-key">Input:</span>
-                      <code class="example-value">nums = [3,3], target = 6</code>
-                    </div>
-                    <div class="example-item">
-                      <span class="example-key">Output:</span>
-                      <code class="example-value">[0,1]</code>
-                    </div>
-                  </div>
-                </section>
-
-                <!-- Constraints -->
-                <section class="problem-section">
-                  <h2 class="section-heading">Constraints</h2>
-                  <ul class="constraints-list">
-                    <li><code>2 <= nums.length <= 10<sup>4</sup></code></li>
-                    <li><code>-10<sup>9</sup> <= nums[i] <= 10<sup>9</sup></code></li>
-                    <li><code>-10<sup>9</sup> <= target <= 10<sup>9</sup></code></li>
-                    <li>Only one valid answer exists.</li>
-                  </ul>
-                </section>
-
+                }
               </div>
             }
 

@@ -1,6 +1,7 @@
 using Codify.Application.DTOs.Auth;
 using Codify.Application.Interfaces;
 using Codify.Domain.Entities;
+using Codify.Domain.Enums;
 using Codify.Domain.Exceptions;
 
 namespace Codify.Application.Services;
@@ -14,7 +15,7 @@ public class AuthService(IUserRepository userRepo, IJwtService jwtService) : IAu
             throw new ValidationException("Email is already registered.");
 
         var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
-        var user = User.Create(request.FullName, request.Email, passwordHash, request.Role);
+        var user = User.Create(request.FullName, request.Email, passwordHash, request.Role, request.Organization);
 
         await userRepo.AddAsync(user);
         await userRepo.SaveChangesAsync();
@@ -23,7 +24,8 @@ public class AuthService(IUserRepository userRepo, IJwtService jwtService) : IAu
         {
             UserId = user.Id,
             Email = user.Email,
-            Role = user.Role
+            Role = user.Role,
+            Status = user.Status
         };
     }
 
@@ -34,6 +36,10 @@ public class AuthService(IUserRepository userRepo, IJwtService jwtService) : IAu
 
         if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             throw new ValidationException("Invalid email or password.");
+
+        // Pending instructors cannot log in until an admin approves their account
+        if (user.Status == UserStatus.Pending)
+            throw new PendingApprovalException("Your account is pending admin approval. Please check your email.");
 
         user.RecordLogin();
         await userRepo.SaveChangesAsync();

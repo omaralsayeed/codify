@@ -68,12 +68,9 @@ export class HintService {
    * will yield anything new.
    */
   getHint(req: HintRequest): Observable<HintResponse> {
-    // TODO: replace mock with real call when backend is running
-    // return this.http
-    //   .post<ApiEnvelope<HintResponse>>(`${this.API}/ai/hints`, req, { headers: this.headers() })
-    //   .pipe(map(r => r.data), catchError(e => this.handleError(e)));
-
-    return this.mockHint(req.hintLevel); // ← remove when uncommenting above
+    return this.http
+      .post<ApiEnvelope<HintResponse>>(`${this.API}/ai/hints`, req, { headers: this.headers() })
+      .pipe(map(r => r.data), catchError(e => this.handleError(e)));
   }
 
   // ── Mock implementation ────────────────────────────────────────────────────

@@ -1,0 +1,189 @@
+<!-- ── Not found ──────────────────────────────────────────────────────────── -->
+@if (user() === 'not-found') {
+  <div class="not-found">
+    <span class="not-found-icon" aria-hidden="true">🔍</span>
+    <h2 class="not-found-title">User not found</h2>
+    <p class="not-found-sub">This user doesn't exist or has been removed.</p>
+    <a class="back-link" routerLink="../">← Back to users</a>
+  </div>
+}
+
+<!-- ── Detail view ────────────────────────────────────────────────────────── -->
+@if (user() !== 'not-found' && user() !== null) {
+  @let u = $any(user());
+
+  <div class="detail">
+
+    <!-- Back link -->
+    <a class="back-link" routerLink="../">← Back to users</a>
+
+    <!-- ── Profile header ─────────────────────────────────────────────────── -->
+    <div class="profile-header">
+      <div class="avatar-lg" [ngClass]="avatarBg(u.role)" aria-hidden="true">
+        {{ u.initials }}
+      </div>
+
+      <div class="header-body">
+        <div class="header-top">
+          <h1 class="user-name">{{ u.name }}</h1>
+          <span class="badge" [ngClass]="roleBadgeClass(u.role)">
+            {{ u.role | titlecase }}
+          </span>
+          <span class="badge" [ngClass]="statusBadgeClass(u.status)">
+            {{ u.status | titlecase }}
+          </span>
+        </div>
+        <span class="user-email">{{ u.email }}</span>
+        @if (u.organization) {
+          <span class="user-org">{{ u.organization }}</span>
+        }
+        <span class="user-dates">
+          Registered {{ formatDate(u.registeredAt) }} ·
+          Last active {{ timeAgo(u.lastActiveAt) }}
+        </span>
+      </div>
+
+      <!-- Status action button (non-admin users only) -->
+      @if (u.role !== 'admin') {
+        <div class="header-action">
+          @if (u.status === 'pending') {
+            <button class="action-btn action-btn--activate"
+                    (click)="requestStatusChange('activate')">
+              ✓ Activate
+            </button>
+          } @else {
+            <button class="action-btn action-btn--suspend"
+                    (click)="requestStatusChange('set-pending')">
+              ⏸ Set Pending
+            </button>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- ── Stat pills (students only) ─────────────────────────────────────── -->
+    @if (u.role === 'student') {
+      <div class="stats-row">
+        <div class="stat-pill">
+          <span class="stat-icon" aria-hidden="true">✅</span>
+          <div class="stat-body">
+            <span class="stat-value">{{ u.problemsSolved ?? 0 }}</span>
+            <span class="stat-label">Problems solved</span>
+          </div>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-icon" aria-hidden="true">📈</span>
+          <div class="stat-body">
+            <span class="stat-value">{{ u.avgScore ?? '—' }}</span>
+            <span class="stat-label">Avg score</span>
+          </div>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-icon" aria-hidden="true">🔥</span>
+          <div class="stat-body">
+            <span class="stat-value">{{ u.streak ?? 0 }}</span>
+            <span class="stat-label">Day streak</span>
+          </div>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-icon" aria-hidden="true">📨</span>
+          <div class="stat-body">
+            <span class="stat-value">{{ u.totalSubmissions ?? 0 }}</span>
+            <span class="stat-label">Submissions</span>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- ── Recent submissions (students only) ─────────────────────────────── -->
+    @if (u.role === 'student') {
+      <div class="section-card">
+        <h2 class="section-title">Recent Submissions</h2>
+        @if (u.recentSubmissions && u.recentSubmissions.length > 0) {
+          <ul class="submission-list" aria-label="Recent submissions">
+            @for (sub of u.recentSubmissions; track sub.submittedAt) {
+              <li class="submission-row">
+                <div class="sub-info">
+                  <span class="sub-title">{{ sub.problemTitle }}</span>
+                  <span class="sub-date">{{ formatDate(sub.submittedAt) }}</span>
+                </div>
+                <span class="status-badge" [ngClass]="statusClass(sub.status)">
+                  {{ sub.status }}
+                </span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="empty-text">No submissions yet.</p>
+        }
+      </div>
+    }
+
+    <!-- ── Instructor info card ────────────────────────────────────────────── -->
+    @if (u.role === 'instructor') {
+      <div class="section-card">
+        <h2 class="section-title">Instructor Info</h2>
+        <div class="info-grid">
+          <div class="info-row">
+            <span class="info-label">Organization</span>
+            <span class="info-value">{{ u.organization ?? '—' }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Account status</span>
+            <span class="badge" [ngClass]="statusBadgeClass(u.status)">
+              {{ u.status | titlecase }}
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Registered</span>
+            <span class="info-value">{{ formatDate(u.registeredAt) }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Last active</span>
+            <span class="info-value">{{ timeAgo(u.lastActiveAt) }}</span>
+          </div>
+        </div>
+
+        @if (u.status === 'pending') {
+          <div class="pending-notice">
+            <span aria-hidden="true">⏳</span>
+            This instructor is waiting for approval. They cannot log in until activated.
+          </div>
+        }
+      </div>
+    }
+
+  </div>
+}
+
+<!-- ── Confirmation modal ──────────────────────────────────────────────────── -->
+@if (confirmAction()) {
+  @let u = $any(user());
+  <div class="modal-overlay" (click)="closeModal()" role="dialog" aria-modal="true">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-icon"
+           [class.modal-icon--activate]="confirmAction() === 'activate'"
+           [class.modal-icon--suspend]="confirmAction() === 'set-pending'">
+        {{ confirmAction() === 'activate' ? '✓' : '⏸' }}
+      </div>
+      <h2 class="modal-title">
+        {{ confirmAction() === 'activate' ? 'Activate account?' : 'Set to pending?' }}
+      </h2>
+      <p class="modal-body">
+        @if (confirmAction() === 'activate') {
+          <strong>{{ u.name }}</strong> will be able to log in immediately.
+        } @else {
+          <strong>{{ u.name }}</strong> will lose access until reactivated by an admin.
+        }
+      </p>
+      <div class="modal-actions">
+        <button class="modal-btn modal-btn--cancel" (click)="closeModal()">Cancel</button>
+        <button class="modal-btn"
+                [ngClass]="confirmAction() === 'activate' ? 'modal-btn--confirm-activate' : 'modal-btn--confirm-suspend'"
+                (click)="confirmChange()">
+          {{ confirmAction() === 'activate' ? 'Yes, activate' : 'Yes, set pending' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

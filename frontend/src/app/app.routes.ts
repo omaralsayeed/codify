@@ -77,6 +77,13 @@ export const routes: Routes = [
       ),
   },
 
+  // Admin module — full-screen control panel, no global navbar
+  {
+    path: 'admin',
+    loadChildren: () =>
+      import('./features/admin/admin.routes').then((m) => m.ADMIN_ROUTES),
+  },
+
   {
     path: '**',
     redirectTo: '',

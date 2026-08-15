@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormGroup, FormControl, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -15,9 +15,11 @@ export class LoginComponent {
   private authService = inject(AuthService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  private cdr = inject(ChangeDetectorRef);
 
   showPassword = false;
   loginError = '';
+  isSubmitting = false;
 
   loginForm = new FormGroup({
     email: new FormControl('', [Validators.required, Validators.email]),
@@ -54,13 +56,32 @@ export class LoginComponent {
     }
 
     const { email, password } = this.loginForm.value;
+    this.loginError = '';
+    this.isSubmitting = true;
     
-    this.authService.login(email!, password!).subscribe(result => {
-      if (result.success) {
-        const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') || '/';
-        this.router.navigateByUrl(returnUrl);
-      } else {
-        this.loginError = result.error || 'Invalid email or password';
+    this.authService.login(email!, password!).subscribe({
+      next: result => {
+        this.isSubmitting = false;
+        if (result.success) {
+          // Admins go straight to the admin panel — not the regular app
+          if (result.user?.role === 'admin') {
+            this.router.navigateByUrl('/admin/overview');
+            return;
+          }
+          const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') || '/';
+          this.router.navigateByUrl(returnUrl);
+        } else if (result.pendingApproval) {
+          // Instructor account not yet approved — take them to the waiting page
+          this.router.navigate(['/auth/pending-approval']);
+        } else {
+          this.loginError = result.error || 'Invalid email or password';
+          this.cdr.detectChanges();
+        }
+      },
+      error: err => {
+        this.isSubmitting = false;
+        this.loginError = err?.error?.message || err?.message || 'Invalid email or password';
+        this.cdr.detectChanges();
       }
     });
   }

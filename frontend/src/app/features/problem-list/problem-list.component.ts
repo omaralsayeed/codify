@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink, RouterModule } from '@angular/router';
@@ -9,11 +9,12 @@ import { DifficultyBadgeComponent } from '../../shared/components/difficulty-bad
 @Component({
   selector: 'app-problem-list',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, FormsModule, RouterLink, RouterModule, DifficultyBadgeComponent],
   templateUrl: './problem-list.component.html',
   styleUrl: './problem-list.component.scss'
 })
-export class ProblemListComponent {
+export class ProblemListComponent implements OnInit {
   protected readonly topics: TopicOption[] = [
     { label: 'All topics', value: 'all' },
     { label: 'Dynamic Programming', value: 'dynamic-programming' },
@@ -35,11 +36,46 @@ export class ProblemListComponent {
 
   protected selectedTopic: TopicFilter = 'all';
   protected selectedDifficulty: DifficultyFilter = 'all';
+  protected allProblems: Problem[] = [];
+  protected isLoading = true;
+  protected errorMessage = '';
+  protected animated = false;
 
-  constructor(private readonly problemService: ProblemService) {}
+  // Drives the skeleton — 8 placeholder rows while data loads
+  protected readonly skeletonRows = Array(8).fill(0);
+
+  constructor(
+    private readonly problemService: ProblemService,
+    private readonly cdr: ChangeDetectorRef
+  ) {}
+
+  ngOnInit(): void {
+    this.loadProblems();
+  }
+
+  private loadProblems(): void {
+    this.isLoading = true;
+    this.errorMessage = '';
+    this.animated = false;
+    
+    this.problemService.getAll().subscribe({
+      next: (problems) => {
+        this.allProblems = problems;
+        this.isLoading = false;
+        this.animated = true;
+        this.cdr.markForCheck(); // tell Angular to re-render immediately
+      },
+      error: (error) => {
+        console.error('Failed to load problems:', error);
+        this.errorMessage = 'Failed to load problems. Please try again.';
+        this.isLoading = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
 
   protected get filteredProblems(): Problem[] {
-    return this.problemService.getAll().filter(problem => {
+    return this.allProblems.filter(problem => {
       const matchesTopic = this.selectedTopic === 'all' || problem.topic === this.selectedTopic;
       const matchesDifficulty = this.selectedDifficulty === 'all' || problem.difficulty === this.selectedDifficulty;
       return matchesTopic && matchesDifficulty;
