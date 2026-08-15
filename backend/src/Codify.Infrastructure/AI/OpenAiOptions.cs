@@ -11,4 +11,10 @@ public class OpenAiOptions
 
     /// <summary>Model used to generate embeddings for the Chroma Cloud RAG layer.</summary>
     public string EmbeddingModel { get; set; } = DefaultEmbeddingModel;
+
+    /// <summary>
+    /// Custom base URL for OpenAI API calls. If empty, uses the official OpenAI API.
+    /// Example: "http://apiaccess.iti.net.eg/api/v1/student/chat"
+    /// </summary>
+    public string BaseUrl { get; set; } = string.Empty;
 }

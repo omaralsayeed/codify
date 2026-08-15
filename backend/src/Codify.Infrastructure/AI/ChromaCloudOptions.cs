@@ -15,7 +15,7 @@ public class ChromaCloudOptions
     /// <summary>Base endpoint of the Chroma Cloud region, e.g. https://api.trychroma.com</summary>
     public string Endpoint { get; set; } = string.Empty;
 
-    /// <summary>Chroma Cloud API key. Sent as a Bearer token.</summary>
+    /// <summary>Chroma Cloud API key. Sent as a Bearer token. Must be configured via environment or appsettings.</summary>
     public string ApiKey { get; set; } = string.Empty;
 
     /// <summary>Chroma tenant (from the Cloud dashboard / identity).</summary>

@@ -153,10 +153,10 @@ public class JudgeEvaluationService(
             }
         }
 
-        // 8. Fire the Tagging Agent's on-progress hook to refresh the student's
-        //    concept-tag profile (weak/strong topics). It reuses the deterministic
-        //    performance recomputation internally.
-        await taggingService.UpdateUserTagsOnProgressAsync(submission.UserId, cancellationToken);
+        // 8. Fire the Tagging Agent's on-submission hook: tag the current problem
+        //    if untagged, scan all other untagged problems, and refresh the student's
+        //    concept-tag profile (weak/strong topics).
+        await taggingService.TagOnSubmissionAsync(submission.ProblemId, submission.UserId, cancellationToken);
 
         // 9. Final save for submission status + result
         await submissionRepo.SaveChangesAsync();

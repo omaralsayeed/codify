@@ -141,33 +141,6 @@ using (var scope = app.Services.CreateScope())
     await ProblemSeed.SeedAsync(db);
 }
 
-// Automatic Tagging Agent scan: tag all currently-untagged problems on startup.
-// Fire-and-forget so it never blocks boot; only runs when the feature is enabled
-// AND an OpenAI key is configured (otherwise every classification would fail).
-var autoTagOnStartup   = builder.Configuration.GetValue("Tagging:AutoTagUntaggedOnStartup", false);
-var openAiKeyPresent   = !string.IsNullOrWhiteSpace(builder.Configuration["OpenAI:ApiKey"]);
-if (autoTagOnStartup && openAiKeyPresent)
-{
-    _ = Task.Run(async () =>
-    {
-        using var scanScope = app.Services.CreateScope();
-        var scanLogger = scanScope.ServiceProvider
-            .GetRequiredService<ILoggerFactory>().CreateLogger("TaggingAutoScan");
-        try
-        {
-            var taggingService = scanScope.ServiceProvider.GetRequiredService<ITaggingService>();
-            var scan = await taggingService.TagAllUntaggedProblemsAsync();
-            scanLogger.LogInformation(
-                "Startup tagging scan tagged {Tagged}/{Found} untagged problems.",
-                scan.Tagged, scan.UntaggedFound);
-        }
-        catch (Exception ex)
-        {
-            scanLogger.LogError(ex, "Startup tagging scan failed.");
-        }
-    });
-}
-
 // Enable Swagger UI. For local debugging it's useful to expose Swagger even when the
 // environment or tooling might not mark the process as Development. This is safe
 // for local/dev only; ensure you do NOT deploy Swagger UI to production in real

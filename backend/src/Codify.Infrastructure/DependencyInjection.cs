@@ -89,9 +89,12 @@ public static class DependencyInjection
         // RAG layer: embeddings -> Chroma Cloud vector store -> knowledge base search
         services.AddHttpClient<IEmbeddingService, OpenAiEmbeddingService>((sp, client) =>
         {
-            client.BaseAddress = new Uri("https://api.openai.com/v1/");
-            client.Timeout = TimeSpan.FromSeconds(30);
             var openAi = sp.GetRequiredService<IOptions<OpenAiOptions>>().Value;
+            var baseUrl = string.IsNullOrWhiteSpace(openAi.BaseUrl)
+                ? "https://api.openai.com/v1/"
+                : openAi.BaseUrl.TrimEnd('/') + "/";
+            client.BaseAddress = new Uri(baseUrl);
+            client.Timeout = TimeSpan.FromSeconds(30);
             if (!string.IsNullOrWhiteSpace(openAi.ApiKey))
                 client.DefaultRequestHeaders.Authorization =
                     new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", openAi.ApiKey);

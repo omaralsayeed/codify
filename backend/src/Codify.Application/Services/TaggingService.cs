@@ -76,9 +76,41 @@ public class TaggingService(
 
     public async Task UpdateUserTagsOnProgressAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        // Reuse the existing deterministic weak/strong-topic recomputation. The Tagging
-        // Agent owns the "fire on progress" trigger; the math is not duplicated here.
+        // Reuse the existing deterministic weak/strong-topic recomputation.
         await performanceService.UpdateAfterSubmissionAsync(userId);
+    }
+
+    public async Task TagOnSubmissionAsync(Guid problemId, Guid userId, CancellationToken cancellationToken = default)
+    {
+        // 1. Tag the just-submitted problem if it is untagged.
+        try
+        {
+            await TagProblemAsync(problemId, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to tag submitted problem {ProblemId}.", problemId);
+        }
+
+        // 2. Scan and tag all other untagged problems.
+        try
+        {
+            await TagAllUntaggedProblemsAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to scan and tag untagged problems after submission.");
+        }
+
+        // 3. Refresh the student's weak/strong topic profile.
+        try
+        {
+            await UpdateUserTagsOnProgressAsync(userId, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to update user tags on progress after submission.");
+        }
     }
 
     // ── Private ───────────────────────────────────────────────────

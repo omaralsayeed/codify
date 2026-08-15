@@ -1,3 +1,4 @@
+using System.ClientModel;
 using System.Diagnostics;
 using Codify.Application.Interfaces;
 using Microsoft.Extensions.Logging;
@@ -156,7 +157,21 @@ public class OpenAiChatClient(
             ? OpenAiOptions.DefaultModel
             : _options.Model;
 
-        _chatClient = new OpenAIClient(_options.ApiKey).GetChatClient(model);
+        _chatClient = BuildClient(model);
         return _chatClient;
+    }
+
+    private ChatClient BuildClient(string model)
+    {
+        if (!string.IsNullOrWhiteSpace(_options.BaseUrl))
+        {
+            var clientOptions = new OpenAIClientOptions
+            {
+                Endpoint = new Uri(_options.BaseUrl.TrimEnd('/') + "/")
+            };
+            return new OpenAIClient(new ApiKeyCredential(_options.ApiKey), clientOptions).GetChatClient(model);
+        }
+
+        return new OpenAIClient(new ApiKeyCredential(_options.ApiKey)).GetChatClient(model);
     }
 }

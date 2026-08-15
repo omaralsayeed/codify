@@ -17,8 +17,14 @@ public interface ITaggingService
     Task<TagScanResponse> TagAllUntaggedProblemsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Fired on student progress (e.g. after a submission is evaluated) to refresh
-    /// the user's weak/strong concept-tag profile.
+    /// Fired on every problem submission (after evaluation). Tags the just-submitted
+    /// problem if untagged, scans and tags all other untagged problems, and refreshes
+    /// the student's weak/strong topic profile.
+    /// </summary>
+    Task TagOnSubmissionAsync(Guid problemId, Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Fired on student progress to refresh the user's weak/strong concept-tag profile.
     /// </summary>
     Task UpdateUserTagsOnProgressAsync(Guid userId, CancellationToken cancellationToken = default);
 }
