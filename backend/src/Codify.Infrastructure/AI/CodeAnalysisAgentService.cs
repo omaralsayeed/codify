@@ -97,7 +97,8 @@ public class CodeAnalysisAgentService(
                     : output.AiGeneratedIndicators.Trim();
                 items.Add(new CodeCheckerFeedbackItem(
                     FeedbackType.AiGenerated,
-                    $"Possible AI-generated code (confidence {output.AiGeneratedConfidence:P0}): {note}"));
+                    $"Possible AI-generated code (confidence {output.AiGeneratedConfidence:P0}): {note}",
+                    output.AiGeneratedConfidence));
             }
 
             // If the model returned nothing usable, fall back to the heuristic signal.

@@ -15,4 +15,9 @@ public interface IAnalyticsService
     /// total problems authored, students reached, accept rate, per-student summaries.
     /// </summary>
     Task<InstructorAnalyticsResponse> GetInstructorOverviewAsync(Guid instructorId);
+
+    /// <summary>
+    /// Returns all AI-generated code flags for instructor review.
+    /// </summary>
+    Task<List<IntegrityFlagResponse>> GetIntegrityFlagsAsync();
 }

@@ -8,6 +8,13 @@ public class FeedbackRecord
     public Guid SubmissionId { get; private set; }
     public FeedbackType FeedbackType { get; private set; }
     public string Message { get; private set; } = string.Empty;
+
+    /// <summary>
+    /// Confidence score (0.0 to 1.0) for AI-generated feedback.
+    /// Null for non-AI feedback or when confidence is not applicable.
+    /// </summary>
+    public double? Confidence { get; private set; }
+
     public DateTime CreatedAt { get; private set; }
 
     // Navigation
@@ -15,7 +22,7 @@ public class FeedbackRecord
 
     private FeedbackRecord() { }
 
-    public static FeedbackRecord Create(Guid submissionId, FeedbackType feedbackType, string message)
+    public static FeedbackRecord Create(Guid submissionId, FeedbackType feedbackType, string message, double? confidence = null)
     {
         return new FeedbackRecord
         {
@@ -23,6 +30,7 @@ public class FeedbackRecord
             SubmissionId = submissionId,
             FeedbackType = feedbackType,
             Message = message,
+            Confidence = confidence,
             CreatedAt = DateTime.UtcNow
         };
     }

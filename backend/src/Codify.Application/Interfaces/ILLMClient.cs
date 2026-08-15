@@ -15,4 +15,14 @@ public interface ILLMClient
         IReadOnlyList<LlmMessage> messages,
         IReadOnlyList<LlmToolDefinition> tools,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Same as CompleteWithToolsAsync but allows overriding the model for this call.
+    /// Used for escalation logic (e.g., switching from gpt-4o-mini to gpt-4o for complex cases).
+    /// </summary>
+    Task<LlmResponse> CompleteWithToolsAsync(
+        IReadOnlyList<LlmMessage> messages,
+        IReadOnlyList<LlmToolDefinition> tools,
+        string modelOverride,
+        CancellationToken cancellationToken = default);
 }

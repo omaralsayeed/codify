@@ -1,8 +1,10 @@
+using System.Diagnostics;
 using System.Text.Json;
 using Codify.Application.Agents;
 using Codify.Application.DTOs.AI;
 using Codify.Application.Interfaces;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Codify.Infrastructure.AI;
 
@@ -21,8 +23,10 @@ public class TutorAgentService(
     ILLMClient llmClient,
     ITutorAgentTools tools,
     IPromptLoader promptLoader,
+    IOptions<OpenAiOptions> options,
     ILogger<TutorAgentService> logger) : ITutorAgent
 {
+    private readonly OpenAiOptions _options = options.Value;
     private const string PromptFileName = "tutor-agent-system.txt";
     private const int MaxIterations = 5;
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
@@ -30,6 +34,11 @@ public class TutorAgentService(
     public async Task<HintResponse> GenerateHintAsync(
         TutorAgentInput input, CancellationToken cancellationToken = default)
     {
+        var stopwatch = Stopwatch.StartNew();
+        var model = ChooseModel(input);
+        logger.LogInformation("Tutor agent using model {Model} for problem {ProblemId} (attempt={Attempt}, hintLevel={HintLevel})",
+            model, input.ProblemId, input.AttemptCount, input.HintLevel);
+
         var systemTemplate = await promptLoader.LoadAsync(PromptFileName, cancellationToken);
         var userMessage = BuildUserMessage(input);
 
@@ -42,6 +51,10 @@ public class TutorAgentService(
         var toolDefs = TutorAgentToolSchemas.GetAll();
         var toolsUsed = new List<string>();
         var iterations = 0;
+        string? lastModelUsed = null;
+        int totalTokensAccumulated = 0;
+
+        HintResponse? result = null;
 
         while (iterations < MaxIterations)
         {
@@ -50,12 +63,14 @@ public class TutorAgentService(
 
             try
             {
-                response = await llmClient.CompleteWithToolsAsync(messages, toolDefs, cancellationToken);
+                response = await llmClient.CompleteWithToolsAsync(messages, toolDefs, model, cancellationToken);
+                lastModelUsed = response.ModelUsed ?? model;
+                totalTokensAccumulated += response.TotalTokens ?? 0;
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Tutor agent LLM call failed for problem {ProblemId}.", input.ProblemId);
-                return CreateFallback(input.HintLevel, toolsUsed);
+                break;
             }
 
             if (response.HasToolCalls)
@@ -77,13 +92,29 @@ public class TutorAgentService(
             }
             else
             {
-                return ParseFinalResponse(response.FinalText ?? string.Empty, input.HintLevel, toolsUsed);
+                result = ParseFinalResponse(response.FinalText ?? string.Empty, input.HintLevel, toolsUsed);
+                break;
             }
         }
 
-        logger.LogWarning("Tutor agent hit max iterations ({Max}) for problem {ProblemId}. Tools used: {Tools}",
-            MaxIterations, input.ProblemId, string.Join(", ", toolsUsed));
-        return CreateFallback(input.HintLevel, toolsUsed);
+        stopwatch.Stop();
+        var latencyMs = (int)stopwatch.ElapsedMilliseconds;
+
+        if (result is null)
+        {
+            logger.LogWarning("Tutor agent hit max iterations ({Max}) for problem {ProblemId}. Tools used: {Tools}",
+                MaxIterations, input.ProblemId, string.Join(", ", toolsUsed));
+            result = CreateFallback(input.HintLevel, toolsUsed);
+        }
+
+        result.ModelUsed = lastModelUsed;
+        result.TotalTokens = totalTokensAccumulated;
+        result.LatencyMs = latencyMs;
+
+        logger.LogInformation("Tutor agent completed in {LatencyMs}ms using {Model} ({Iterations} iterations, {Tokens} tokens)",
+            latencyMs, lastModelUsed, iterations, totalTokensAccumulated);
+
+        return result;
     }
 
     // ── Private ───────────────────────────────────────────────────
@@ -171,5 +202,26 @@ public class TutorAgentService(
 
             Decide which tools you need (if any), gather context, then return the final JSON hint.
             """;
+    }
+
+    /// <summary>
+    /// Decides which model to use based on the student's attempt count and hint level.
+    /// Routine cases use gpt-4o-mini (cheap, fast); complex cases escalate to gpt-4o.
+    /// </summary>
+    private string ChooseModel(TutorAgentInput input)
+    {
+        if (input.AttemptCount >= _options.EscalationAttemptThreshold
+            && input.HintLevel >= _options.EscalationHintLevelThreshold)
+        {
+            logger.LogInformation(
+                "Escalating to {EscalationModel}: attempt={Attempt} >= {AttemptThreshold} AND hintLevel={HintLevel} >= {HintLevelThreshold}",
+                _options.EscalationModel, input.AttemptCount, _options.EscalationAttemptThreshold,
+                input.HintLevel, _options.EscalationHintLevelThreshold);
+            return _options.EscalationModel;
+        }
+
+        return string.IsNullOrWhiteSpace(_options.Model)
+            ? OpenAiOptions.DefaultModel
+            : _options.Model;
     }
 }

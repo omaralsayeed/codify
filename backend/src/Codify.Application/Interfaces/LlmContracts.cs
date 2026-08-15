@@ -50,4 +50,6 @@ public class LlmResponse
     public bool HasToolCalls => ToolCalls.Count > 0;
     public List<LlmToolCall> ToolCalls { get; set; } = [];
     public string? FinalText { get; set; }
+    public string? ModelUsed { get; set; }
+    public int? TotalTokens { get; set; }
 }

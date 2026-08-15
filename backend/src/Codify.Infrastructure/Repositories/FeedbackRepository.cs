@@ -1,5 +1,6 @@
 using Codify.Application.Interfaces;
 using Codify.Domain.Entities;
+using Codify.Domain.Enums;
 using Codify.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,6 +21,16 @@ public class FeedbackRepository(CodifyDbContext db) : IFeedbackRepository
         await db.FeedbackRecords
             .Where(f => f.SubmissionId == submissionId)
             .OrderBy(f => f.CreatedAt)
+            .ToListAsync();
+
+    public async Task<List<FeedbackRecord>> GetAiGeneratedFlagsAsync() =>
+        await db.FeedbackRecords
+            .Include(f => f.Submission)
+                .ThenInclude(s => s.User)
+            .Include(f => f.Submission)
+                .ThenInclude(s => s.Problem)
+            .Where(f => f.FeedbackType == FeedbackType.AiGenerated)
+            .OrderByDescending(f => f.CreatedAt)
             .ToListAsync();
 
     public async Task SaveChangesAsync() =>

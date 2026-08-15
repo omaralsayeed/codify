@@ -76,6 +76,7 @@ public class SubmissionService(
             Id           = f.Id,
             FeedbackType = f.FeedbackType.ToString(),
             Message      = f.Message,
+            Confidence   = f.Confidence,
             CreatedAt    = f.CreatedAt
         }).ToList();
     }

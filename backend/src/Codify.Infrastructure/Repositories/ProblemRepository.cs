@@ -58,6 +58,13 @@ public class ProblemRepository(CodifyDbContext db) : IProblemRepository
             .Where(p => p.IsActive && !p.ProblemTags.Any())
             .ToListAsync();
 
+    public async Task<List<Problem>> GetAllActiveWithTagsAsync() =>
+        await db.Problems
+            .Include(p => p.ProblemTags)
+                .ThenInclude(pt => pt.ConceptTag)
+            .Where(p => p.IsActive && !p.IsDeleted)
+            .ToListAsync();
+
     public async Task AddAsync(Problem problem) =>
         await db.Problems.AddAsync(problem);
 
