@@ -4,5 +4,8 @@ public enum FeedbackType
 {
     CodeQuality,
     Optimization,
-    IntegrityFlag
+    IntegrityFlag,
+
+    /// <summary>Raised when the Code Analysis Agent judges the submission likely AI-generated.</summary>
+    AiGenerated
 }

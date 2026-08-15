@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Codify.Application.Agents;
 using Codify.Application.DTOs.AI;
 using Codify.Application.Interfaces;
@@ -37,6 +38,7 @@ public class AiHintService(
 
         var input = new TutorAgentInput
         {
+            UserId = userId,
             ProblemId = problem.Id,
             ProblemTitle = problem.Title,
             ProblemStatement = problem.Statement,
@@ -51,13 +53,19 @@ public class AiHintService(
 
         var response = await tutorAgent.GenerateHintAsync(input, cancellationToken);
 
-        // Persist the hint log
-        var hintLog = HintLog.Create(
+        // Persist the hint log with the agent's decision-making evidence
+        var toolsUsedJson = response.ToolsUsed.Count > 0
+            ? JsonSerializer.Serialize(response.ToolsUsed)
+            : null;
+
+        var hintLog = HintLog.CreateWithAgentMetadata(
             userId: userId,
             problemId: problem.Id,
             hintLevel: nextLevel,
             responseText: response.HintText,
-            requestText: request.StudentCode);
+            requestText: request.StudentCode,
+            toolsUsedJson: toolsUsedJson,
+            reasoningSummary: response.ReasoningSummary);
 
         await hintRepo.AddAsync(hintLog);
         await hintRepo.SaveChangesAsync();

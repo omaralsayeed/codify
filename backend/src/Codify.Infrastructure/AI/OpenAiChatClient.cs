@@ -1,3 +1,4 @@
+using System.ClientModel;
 using System.Diagnostics;
 using Codify.Application.Interfaces;
 using Microsoft.Extensions.Logging;
@@ -66,7 +67,81 @@ public class OpenAiChatClient(
         }
     }
 
+    public async Task<LlmResponse> CompleteWithToolsAsync(
+        IReadOnlyList<LlmMessage> messages,
+        IReadOnlyList<LlmToolDefinition> tools,
+        CancellationToken cancellationToken = default)
+    {
+        var client = GetOrCreateClient();
+
+        var stopwatch = Stopwatch.StartNew();
+        try
+        {
+            var chatMessages = messages.Select(ToChatMessage).ToList();
+
+            var chatOptions = new ChatCompletionOptions();
+            foreach (var tool in tools)
+            {
+                chatOptions.Tools.Add(ChatTool.CreateFunctionTool(
+                    tool.Name,
+                    tool.Description,
+                    BinaryData.FromString(tool.ParametersJsonSchema)));
+            }
+
+            var completion = await client.CompleteChatAsync(chatMessages, chatOptions, cancellationToken);
+            stopwatch.Stop();
+
+            var value = completion.Value;
+
+            // The model asked to run one or more tools — hand them back to the caller.
+            if (value.FinishReason == ChatFinishReason.ToolCalls || value.ToolCalls.Count > 0)
+            {
+                var toolCalls = value.ToolCalls
+                    .Where(tc => tc.Kind == ChatToolCallKind.Function)
+                    .Select(tc => new LlmToolCall
+                    {
+                        Id = tc.Id,
+                        Name = tc.FunctionName,
+                        ArgumentsJson = tc.FunctionArguments?.ToString() ?? "{}"
+                    })
+                    .ToList();
+
+                _logger.LogInformation(
+                    "LLM requested {Count} tool call(s): {Tools}. LatencyMs={LatencyMs}",
+                    toolCalls.Count, string.Join(",", toolCalls.Select(t => t.Name)), stopwatch.ElapsedMilliseconds);
+
+                return new LlmResponse { ToolCalls = toolCalls };
+            }
+
+            var text = value.Content.Count > 0 ? value.Content[0].Text ?? string.Empty : string.Empty;
+
+            _logger.LogInformation("LLM returned final text. LatencyMs={LatencyMs}", stopwatch.ElapsedMilliseconds);
+
+            return new LlmResponse { FinalText = text };
+        }
+        catch (Exception ex)
+        {
+            stopwatch.Stop();
+            _logger.LogError(ex,
+                "LLM tool-calling call failed. Model={Model} LatencyMs={LatencyMs}",
+                _options.Model, stopwatch.ElapsedMilliseconds);
+            throw;
+        }
+    }
+
     // ── Private ───────────────────────────────────────────────────
+
+    private static ChatMessage ToChatMessage(LlmMessage message) => message.Role switch
+    {
+        "system" => new SystemChatMessage(message.Content),
+        "assistant" when message.ToolCalls.Count > 0 => new AssistantChatMessage(
+            message.ToolCalls
+                .Select(tc => ChatToolCall.CreateFunctionToolCall(tc.Id, tc.Name, BinaryData.FromString(tc.ArgumentsJson)))
+                .ToArray()),
+        "assistant" => new AssistantChatMessage(message.Content),
+        "tool" => new ToolChatMessage(message.ToolCallId ?? string.Empty, message.Content),
+        _ => new UserChatMessage(message.Content)
+    };
 
     private ChatClient GetOrCreateClient()
     {
@@ -82,7 +157,21 @@ public class OpenAiChatClient(
             ? OpenAiOptions.DefaultModel
             : _options.Model;
 
-        _chatClient = new OpenAIClient(_options.ApiKey).GetChatClient(model);
+        _chatClient = BuildClient(model);
         return _chatClient;
+    }
+
+    private ChatClient BuildClient(string model)
+    {
+        if (!string.IsNullOrWhiteSpace(_options.BaseUrl))
+        {
+            var clientOptions = new OpenAIClientOptions
+            {
+                Endpoint = new Uri(_options.BaseUrl.TrimEnd('/') + "/")
+            };
+            return new OpenAIClient(new ApiKeyCredential(_options.ApiKey), clientOptions).GetChatClient(model);
+        }
+
+        return new OpenAIClient(new ApiKeyCredential(_options.ApiKey)).GetChatClient(model);
     }
 }

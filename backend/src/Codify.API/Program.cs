@@ -2,6 +2,7 @@ using System.Text;
 using System.Threading.RateLimiting;
 using Codify.API.Common;
 using Codify.API.Middleware;
+using Codify.Application.Interfaces;
 using Codify.Infrastructure;
 using Codify.Infrastructure.Persistence;
 using Codify.Infrastructure.Persistence.Seed;
@@ -96,6 +97,22 @@ builder.Services.AddRateLimiter(options =>
             factory: _ => new SlidingWindowRateLimiterOptions
             {
                 PermitLimit = 60,
+                Window = TimeSpan.FromHours(1),
+                SegmentsPerWindow = 6,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }));
+
+    // POST /api/ai/tagging/* — 5 per hour per user
+    // Each tagging call costs an LLM round-trip (and the scan costs one per problem).
+    options.AddPolicy("ai-tagging", httpContext =>
+        RateLimitPartition.GetSlidingWindowLimiter(
+            partitionKey: httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                          ?? httpContext.Connection.RemoteIpAddress?.ToString()
+                          ?? "anonymous",
+            factory: _ => new SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
                 Window = TimeSpan.FromHours(1),
                 SegmentsPerWindow = 6,
                 QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
