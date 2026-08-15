@@ -4,6 +4,7 @@ using Codify.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Codify.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(CodifyDbContext))]
-    partial class CodifyDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260815190903_AddHintLogModelAndTokenFields")]
+    partial class AddHintLogModelAndTokenFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -70,9 +73,6 @@ namespace Codify.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<double?>("Confidence")
-                        .HasColumnType("float");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -106,12 +106,8 @@ namespace Codify.Infrastructure.Persistence.Migrations
                     b.Property<int>("HintLevel")
                         .HasColumnType("int");
 
-                    b.Property<int?>("LatencyMs")
-                        .HasColumnType("int");
-
                     b.Property<string>("ModelUsed")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("ProblemId")
                         .HasColumnType("uniqueidentifier");

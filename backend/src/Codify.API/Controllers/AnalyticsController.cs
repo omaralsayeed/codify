@@ -46,4 +46,17 @@ public class AnalyticsController(IAnalyticsService analyticsService) : Controlle
         var result       = await analyticsService.GetInstructorOverviewAsync(instructorId);
         return Ok(ApiResponse.Ok(result));
     }
+
+    /// <summary>
+    /// GET /api/analytics/integrity-flags
+    /// Returns all AI-generated code flags for instructor review.
+    /// Instructor-only.
+    /// </summary>
+    [HttpGet("integrity-flags")]
+    [Authorize(Roles = "Instructor")]
+    public async Task<IActionResult> GetIntegrityFlags()
+    {
+        var result = await analyticsService.GetIntegrityFlagsAsync();
+        return Ok(ApiResponse.Ok(result));
+    }
 }

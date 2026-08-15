@@ -6,7 +6,9 @@ using Codify.Domain.Exceptions;
 
 namespace Codify.Application.Services;
 
-public class AnalyticsService(IUserRepository userRepo) : IAnalyticsService
+public class AnalyticsService(
+    IUserRepository userRepo,
+    IFeedbackRepository feedbackRepo) : IAnalyticsService
 {
     // ─────────────────────────────────────────────────────────────────────────
     // Student analytics
@@ -180,5 +182,27 @@ public class AnalyticsService(IUserRepository userRepo) : IAnalyticsService
             OverallAcceptRatePercent   = acceptRate,
             Students                   = students
         };
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Integrity flags (AI-generated code detection)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    public async Task<List<IntegrityFlagResponse>> GetIntegrityFlagsAsync()
+    {
+        var flags = await feedbackRepo.GetAiGeneratedFlagsAsync();
+
+        return flags.Select(f => new IntegrityFlagResponse
+        {
+            FeedbackId    = f.Id,
+            SubmissionId  = f.SubmissionId,
+            StudentName   = f.Submission.User?.FullName ?? string.Empty,
+            StudentEmail  = f.Submission.User?.Email ?? string.Empty,
+            ProblemTitle  = f.Submission.Problem?.Title ?? string.Empty,
+            ProblemId     = f.Submission.ProblemId,
+            Confidence    = f.Confidence ?? 0,
+            Indicators    = f.Message,
+            FlaggedAt     = f.CreatedAt
+        }).ToList();
     }
 }

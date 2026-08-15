@@ -210,7 +210,7 @@ public class JudgeEvaluationService(
             var feedbackItems = await codeCheckerAgent.AnalyzeAsync(agentInput, cancellationToken);
 
             var records = feedbackItems.Select(item =>
-                FeedbackRecord.Create(submission.Id, item.FeedbackType, item.Message));
+                FeedbackRecord.Create(submission.Id, item.FeedbackType, item.Message, item.Confidence));
 
             await feedbackRepo.AddRangeAsync(records);
             await feedbackRepo.SaveChangesAsync();

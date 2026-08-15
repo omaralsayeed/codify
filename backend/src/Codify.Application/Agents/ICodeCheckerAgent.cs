@@ -18,7 +18,8 @@ public record CodeCheckerAgentInput(
 /// </summary>
 public record CodeCheckerFeedbackItem(
     FeedbackType FeedbackType,
-    string       Message);
+    string       Message,
+    double?      Confidence = null);
 
 /// <summary>
 /// Contract for the code checker AI agent.

@@ -26,5 +26,19 @@ public class AiController(ITaggingService taggingService) : ControllerBase
         var result = await taggingService.TagProblemAsync(problemId, cancellationToken);
         return Ok(ApiResponse.Ok(result));
     }
+
+    /// <summary>
+    /// POST /api/ai/tagging/scan
+    /// Scans all untagged problems and applies concept tags to each.
+    /// Instructor-only. Returns a summary of tagged problems.
+    /// </summary>
+    [HttpPost("tagging/scan")]
+    [Authorize(Roles = "Instructor")]
+    [EnableRateLimiting("ai-tagging")]
+    public async Task<IActionResult> ScanAndTagUntagged(CancellationToken cancellationToken)
+    {
+        var result = await taggingService.TagAllUntaggedProblemsAsync(cancellationToken);
+        return Ok(ApiResponse.Ok(result));
+    }
 }
 

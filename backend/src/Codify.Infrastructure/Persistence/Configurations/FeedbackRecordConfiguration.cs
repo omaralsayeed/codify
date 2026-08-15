@@ -11,6 +11,7 @@ public class FeedbackRecordConfiguration : IEntityTypeConfiguration<FeedbackReco
         builder.HasKey(f => f.Id);
         builder.Property(f => f.FeedbackType).HasConversion<string>();
         builder.Property(f => f.Message).IsRequired().HasColumnType("nvarchar(max)");
+        builder.Property(f => f.Confidence);
 
         builder.HasOne(f => f.Submission)
             .WithMany(s => s.FeedbackRecords)

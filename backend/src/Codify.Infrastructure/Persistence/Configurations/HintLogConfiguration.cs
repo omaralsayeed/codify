@@ -13,6 +13,8 @@ public class HintLogConfiguration : IEntityTypeConfiguration<HintLog>
         builder.Property(h => h.RequestText).HasColumnType("nvarchar(max)");
         builder.Property(h => h.ToolsUsedJson).HasColumnType("nvarchar(max)");
         builder.Property(h => h.ReasoningSummary).HasMaxLength(1000);
+        builder.Property(h => h.ModelUsed).HasMaxLength(100);
+        builder.Property(h => h.LatencyMs);
 
         builder.HasOne(h => h.User)
             .WithMany(u => u.HintLogs)

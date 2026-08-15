@@ -76,9 +76,15 @@ public static class DependencyInjection
         // AI
         services.Configure<OpenAiOptions>(options =>
         {
-            options.ApiKey         = configuration[$"{OpenAiOptions.SectionName}:ApiKey"] ?? string.Empty;
-            options.Model          = configuration[$"{OpenAiOptions.SectionName}:Model"] ?? OpenAiOptions.DefaultModel;
-            options.EmbeddingModel = configuration[$"{OpenAiOptions.SectionName}:EmbeddingModel"] ?? OpenAiOptions.DefaultEmbeddingModel;
+            options.ApiKey                    = configuration[$"{OpenAiOptions.SectionName}:ApiKey"] ?? string.Empty;
+            options.Model                     = configuration[$"{OpenAiOptions.SectionName}:Model"] ?? OpenAiOptions.DefaultModel;
+            options.EscalationModel           = configuration[$"{OpenAiOptions.SectionName}:EscalationModel"] ?? OpenAiOptions.DefaultEscalationModel;
+            options.EmbeddingModel            = configuration[$"{OpenAiOptions.SectionName}:EmbeddingModel"] ?? OpenAiOptions.DefaultEmbeddingModel;
+            options.BaseUrl                   = configuration[$"{OpenAiOptions.SectionName}:BaseUrl"] ?? string.Empty;
+            if (int.TryParse(configuration[$"{OpenAiOptions.SectionName}:EscalationAttemptThreshold"], out var attemptThreshold))
+                options.EscalationAttemptThreshold = attemptThreshold;
+            if (int.TryParse(configuration[$"{OpenAiOptions.SectionName}:EscalationHintLevelThreshold"], out var hintThreshold))
+                options.EscalationHintLevelThreshold = hintThreshold;
         });
 
         // Chroma Cloud (vector database for RAG)
@@ -113,6 +119,7 @@ public static class DependencyInjection
         });
 
         services.AddScoped<IKnowledgeBaseSearchService, KnowledgeBaseSearchService>();
+        services.AddScoped<IKnowledgeBaseIngestionService, KnowledgeBaseIngestionService>();
 
         // Tutor Agent (agentic tool-calling)
         services.AddScoped<ITutorAgentTools, TutorAgentTools>();

@@ -160,6 +160,30 @@ using (var scope = app.Services.CreateScope())
     await ProblemSeed.SeedAsync(db);
 }
 
+// Auto-ingest concept tags into Chroma Cloud on startup (fire-and-forget).
+// Only runs when an OpenAI key is configured. Failures are logged but never
+// block application startup — the Tutor Agent degrades gracefully without RAG.
+var openAiKey = app.Configuration["OpenAI:ApiKey"];
+if (!string.IsNullOrWhiteSpace(openAiKey))
+{
+    _ = Task.Run(async () =>
+    {
+        try
+        {
+            using var scope = app.Services.CreateScope();
+            var ingestion = scope.ServiceProvider.GetRequiredService<IKnowledgeBaseIngestionService>();
+            var count = await ingestion.IngestAllConceptsAsync();
+            app.Logger.LogInformation(
+                "Startup RAG ingestion complete: {Count} concept documents indexed.", count);
+        }
+        catch (Exception ex)
+        {
+            app.Logger.LogWarning(ex,
+                "Startup RAG ingestion failed. The Tutor Agent will run without RAG context until reindex is triggered.");
+        }
+    });
+}
+
 // Enable Swagger UI. For local debugging it's useful to expose Swagger even when the
 // environment or tooling might not mark the process as Development. This is safe
 // for local/dev only; ensure you do NOT deploy Swagger UI to production in real

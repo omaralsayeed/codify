@@ -9,7 +9,9 @@ namespace Codify.API.Controllers;
 [ApiController]
 [Route("api/admin")]
 [Authorize(Roles = "Admin")]
-public class AdminController(IAdminService adminService) : ControllerBase
+public class AdminController(
+    IAdminService adminService,
+    IKnowledgeBaseIngestionService ingestionService) : ControllerBase
 {
     /// <summary>
     /// Returns all instructors whose accounts are pending approval.
@@ -30,5 +32,21 @@ public class AdminController(IAdminService adminService) : ControllerBase
         var adminId = User.GetUserId();
         var result = await adminService.ApproveInstructorAsync(id, adminId);
         return Ok(ApiResponse.Ok(result));
+    }
+
+    /// <summary>
+    /// Reindexes all concept tags and problems into the Chroma Cloud knowledge base.
+    /// This populates the RAG layer so the Tutor Agent can retrieve grounded context.
+    /// </summary>
+    [HttpPost("rag/reindex")]
+    public async Task<IActionResult> ReindexKnowledgeBase(CancellationToken ct)
+    {
+        var result = await ingestionService.ReindexAllAsync(ct);
+        return Ok(ApiResponse.Ok(new
+        {
+            conceptsIngested = result.ConceptsIngested,
+            problemsIngested = result.ProblemsIngested,
+            totalIngested = result.TotalIngested
+        }));
     }
 }

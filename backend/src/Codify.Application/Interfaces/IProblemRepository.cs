@@ -12,6 +12,9 @@ public interface IProblemRepository
     /// <summary>Returns active problems that currently have no concept tags (for the Tagging Agent scan).</summary>
     Task<List<Problem>> GetUntaggedProblemsAsync();
 
+    /// <summary>Returns all active problems with their tags (for RAG ingestion).</summary>
+    Task<List<Problem>> GetAllActiveWithTagsAsync();
+
     Task AddAsync(Problem problem);
     Task SaveChangesAsync();
 }

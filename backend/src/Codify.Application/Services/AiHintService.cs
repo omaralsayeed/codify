@@ -65,7 +65,10 @@ public class AiHintService(
             responseText: response.HintText,
             requestText: request.StudentCode,
             toolsUsedJson: toolsUsedJson,
-            reasoningSummary: response.ReasoningSummary);
+            reasoningSummary: response.ReasoningSummary,
+            modelUsed: response.ModelUsed,
+            tokenCount: response.TotalTokens,
+            latencyMs: response.LatencyMs);
 
         await hintRepo.AddAsync(hintLog);
         await hintRepo.SaveChangesAsync();
@@ -96,7 +99,14 @@ public class AiHintService(
             {
                 HintLevel = h.HintLevel,
                 HintText = h.ResponseText,
-                CreatedAt = h.CreatedAt
+                CreatedAt = h.CreatedAt,
+                ToolsUsed = string.IsNullOrWhiteSpace(h.ToolsUsedJson)
+                    ? []
+                    : (JsonSerializer.Deserialize<List<string>>(h.ToolsUsedJson) ?? []),
+                ReasoningSummary = h.ReasoningSummary,
+                ModelUsed = h.ModelUsed,
+                TokenCount = h.TokenCount,
+                LatencyMs = h.LatencyMs
             }).ToList()
         };
     }
