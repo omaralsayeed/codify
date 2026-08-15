@@ -109,12 +109,9 @@ export class SubmissionService {
 
     const body: RunCodeRequest = { problemId, code, language: lang };
 
-    // TODO: replace mock with real call when backend is running
-    // return this.http
-    //   .post<ApiEnvelope<RunCodeResponse>>(`${this.API}/execution/run`, body, { headers: this.headers() })
-    //   .pipe(map(r => r.data), catchError(e => this.handleError(e)));
-
-    return this.mockRun(code); // ← remove this line when uncommenting above
+    return this.http
+      .post<ApiEnvelope<RunCodeResponse>>(`${this.API}/execution/run`, body, { headers: this.headers() })
+      .pipe(map(r => r.data), catchError(e => this.handleError(e)));
   }
 
   // ── Submit ─────────────────────────────────────────────────────────────────
@@ -136,16 +133,13 @@ export class SubmissionService {
 
     const body: CreateSubmissionRequest = { problemId, code, language: lang };
 
-    // TODO: replace mock with real call when backend is running
-    // return this.http
-    //   .post<ApiEnvelope<SubmissionDetailResponse>>(`${this.API}/submissions`, body, { headers: this.headers() })
-    //   .pipe(
-    //     map(r => r.data),
-    //     switchMap(pending => this.pollUntilDone(pending.submissionId.toString())),
-    //     catchError(e => this.handleError(e)),
-    //   );
-
-    return this.mockSubmit(code, editorLang); // ← remove when uncommenting above
+    return this.http
+      .post<ApiEnvelope<SubmissionDetailResponse>>(`${this.API}/submissions`, body, { headers: this.headers() })
+      .pipe(
+        map(r => r.data),
+        switchMap(pending => this.pollUntilDone(pending.submissionId.toString())),
+        catchError(e => this.handleError(e)),
+      );
   }
 
   /**
@@ -153,12 +147,9 @@ export class SubmissionService {
    * Used for polling. Returns the current snapshot of a submission.
    */
   getSubmission(id: string): Observable<SubmissionDetailResponse> {
-    // TODO: replace mock with real call when backend is running
-    // return this.http
-    //   .get<ApiEnvelope<SubmissionDetailResponse>>(`${this.API}/submissions/${id}`, { headers: this.headers() })
-    //   .pipe(map(r => r.data), catchError(e => this.handleError(e)));
-
-    return of(this.buildMockAccepted()); // ← remove when uncommenting above
+    return this.http
+      .get<ApiEnvelope<SubmissionDetailResponse>>(`${this.API}/submissions/${id}`, { headers: this.headers() })
+      .pipe(map(r => r.data), catchError(e => this.handleError(e)));
   }
 
   /**
@@ -193,7 +184,12 @@ export class SubmissionService {
    *   .pipe(map(r => r.data), catchError(e => this.handleError(e)));
    */
   getSubmissionFeedback(submissionId: string): Observable<SubmissionFeedback> {
-    return this.mockFeedback(submissionId);
+    return this.http
+      .get<ApiEnvelope<SubmissionFeedback>>(
+        `${this.API}/submissions/${submissionId}/feedback`,
+        { headers: this.headers() },
+      )
+      .pipe(map(r => r.data), catchError(e => this.handleError(e)));
   }
 
   // ── Mock implementations ───────────────────────────────────────────────────

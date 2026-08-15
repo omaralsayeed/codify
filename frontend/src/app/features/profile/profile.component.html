@@ -80,11 +80,17 @@
 
         <!-- Avatar + name block -->
         <div class="avatar-wrap">
-          <div class="avatar-circle"
-               [style.background]="avatarColor(profile.user.avatarInitials)"
-               aria-hidden="true">
-            {{ profile.user.avatarInitials }}
-          </div>
+          @if (savedAvatar) {
+            <img class="avatar-photo"
+                 [src]="savedAvatar"
+                 [alt]="profile.user.name + ' avatar'" />
+          } @else {
+            <div class="avatar-circle"
+                 [style.background]="avatarColor(profile.user.avatarInitials)"
+                 aria-hidden="true">
+              {{ profile.user.avatarInitials }}
+            </div>
+          }
         </div>
 
         <div class="sidebar-identity">

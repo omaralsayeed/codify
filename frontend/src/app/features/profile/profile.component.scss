@@ -432,6 +432,16 @@ $sp-wide:   32px;
   // (avatarGlow 3s + avatarIn 300ms spring easing)
 }
 
+.avatar-photo {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  object-fit: cover;
+  outline: 2.5px solid $blue;
+  outline-offset: 3px;
+  display: block;
+}
+
 // ── Identity ──────────────────────────────────────────────────────────────────
 
 .sidebar-identity {

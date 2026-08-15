@@ -16,7 +16,7 @@ export class StudentDashboardPreviewComponent {
   private problemSvc  = inject(ProblemService);
 
   progress = this.progressSvc.getStudentProgress();
-  problems = this.problemSvc.getRecommended();
+  problems = this.problemSvc.getRecommendedSync();
 
   barColor(pct: number): string {
     if (pct >= 75) return 'bar--teal';

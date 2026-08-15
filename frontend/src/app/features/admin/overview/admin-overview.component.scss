@@ -1,0 +1,365 @@
+@use '../../../styles/variables' as *;
+
+.overview {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+// ── Page header ───────────────────────────────────────────────────────────────
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.page-title {
+  font-family: $ff-display;
+  font-size: 22px;
+  color: $navy;
+  margin: 0;
+}
+
+.page-sub {
+  font-size: 13px;
+  color: $muted;
+  margin: 4px 0 0;
+}
+
+.mock-badge {
+  font-family: $ff-mono;
+  font-size: 10px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: rgba($orange, 0.12);
+  color: $orange;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+// ── Stat cards ────────────────────────────────────────────────────────────────
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+
+  @media (max-width: $tablet) { grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: $mobile) { grid-template-columns: 1fr 1fr; gap: 8px; }
+}
+
+.stat-card {
+  background: $white;
+  border: 1px solid $border;
+  border-radius: $r;
+  padding: 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  box-shadow: $shadow;
+
+  &.card--blue   { border-top: 3px solid $blue; }
+  &.card--teal   { border-top: 3px solid $teal; }
+  &.card--gold   { border-top: 3px solid $gold; }
+  &.card--orange { border-top: 3px solid $orange; }
+  &.card--red    { border-top: 3px solid $red; }
+}
+
+.stat-icon {
+  font-size: 22px;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+.stat-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat-value {
+  font-family: $ff-display;
+  font-size: 28px;
+  color: $navy;
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: $charcoal;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.stat-sub {
+  font-size: 11px;
+  color: $muted;
+}
+
+// ── Secondary info row ────────────────────────────────────────────────────────
+.info-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  background: $white;
+  border: 1px solid $border;
+  border-radius: $r;
+  padding: 16px 24px;
+  box-shadow: $shadow;
+
+  @media (max-width: $mobile) { grid-template-columns: 1fr 1fr; gap: 16px; }
+}
+
+.info-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  text-align: center;
+
+  &:not(:last-child) {
+    border-right: 1px solid $border;
+
+    @media (max-width: $mobile) { border-right: none; }
+  }
+}
+
+.info-value {
+  font-family: $ff-display;
+  font-size: 22px;
+  color: $navy;
+  line-height: 1;
+}
+
+.info-label {
+  font-size: 11px;
+  color: $muted;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+// ── Two-column layout ─────────────────────────────────────────────────────────
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 16px;
+
+  @media (max-width: $tablet) { grid-template-columns: 1fr; }
+}
+
+// ── Section card ──────────────────────────────────────────────────────────────
+.section-card {
+  background: $white;
+  border: 1px solid $border;
+  border-radius: $r;
+  padding: 20px 24px;
+  box-shadow: $shadow;
+}
+
+.section-title {
+  font-family: $ff-display;
+  font-size: 17px;
+  color: $navy;
+  margin: 0 0 4px;
+}
+
+.section-sub {
+  font-size: 12px;
+  color: $muted;
+  margin: 0 0 20px;
+}
+
+// ── Trend chart ───────────────────────────────────────────────────────────────
+.chart-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.peak-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: $muted;
+  white-space: nowrap;
+  padding-top: 2px;
+}
+
+.trend-wrap {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.trend-yaxis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding-bottom: 20px;
+  font-size: 10px;
+  color: $muted;
+  min-width: 24px;
+  flex-shrink: 0;
+}
+
+.trend-chart-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.trend-svg {
+  width: 100%;
+  height: 80px;
+  display: block;
+  overflow: visible;
+}
+
+.trend-grid {
+  stroke: $border;
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.trend-line {
+  stroke: $red;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.trend-dot {
+  fill: $white;
+  stroke: $red;
+  stroke-width: 1.5;
+}
+
+.trend-xaxis {
+  display: flex;
+  justify-content: space-between;
+}
+
+.xaxis-label {
+  font-size: 10px;
+  color: $muted;
+  text-align: center;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+
+  &.xaxis-label--hidden { visibility: hidden; }
+}
+
+// ── Donut chart ───────────────────────────────────────────────────────────────
+.donut-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.donut-svg {
+  width: 112px;
+  height: 112px;
+  transform: rotate(-90deg); // start segments at top
+}
+
+.donut-seg {
+  transition: stroke-dasharray 0.6s ease;
+}
+
+.donut-center-value {
+  font-family: $ff-display;
+  font-size: 20px;
+  fill: $navy;
+  transform: rotate(90deg);
+  transform-origin: 56px 56px;
+}
+
+.donut-center-label {
+  font-size: 10px;
+  fill: $muted;
+  transform: rotate(90deg);
+  transform-origin: 56px 56px;
+}
+
+.donut-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.legend-text {
+  color: $charcoal;
+  flex: 1;
+}
+
+.legend-pct {
+  color: $muted;
+  font-weight: 600;
+  font-family: $ff-mono;
+  font-size: 11px;
+}
+
+// ── Quick actions ─────────────────────────────────────────────────────────────
+.actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: $r;
+  font-size: 13px;
+  font-family: $ff-body;
+  font-weight: 500;
+  text-decoration: none;
+  transition: opacity 0.15s, transform 0.12s;
+  position: relative;
+
+  &:hover { opacity: 0.88; transform: translateY(-1px); }
+  &:active { transform: translateY(0); }
+
+  &.action-btn--orange { background: rgba($orange, 0.1); color: $orange;   border: 1px solid rgba($orange, 0.25); }
+  &.action-btn--blue   { background: rgba($blue,   0.1); color: $blue;     border: 1px solid rgba($blue, 0.25); }
+  &.action-btn--teal   { background: rgba($teal,   0.1); color: $teal;     border: 1px solid rgba($teal, 0.25); }
+  &.action-btn--navy   { background: rgba($navy,   0.07); color: $navy;    border: 1px solid rgba($navy, 0.15); }
+}
+
+.action-badge {
+  background: $orange;
+  color: $white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 20px;
+  font-family: $ff-mono;
+}

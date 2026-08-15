@@ -61,6 +61,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
   isLoading = false;
   error: string | null = null;
 
+  /** Profile photo saved during registration (base64 from localStorage) */
+  savedAvatar: string | null = null;
+
   // ── Reduced motion ────────────────────────────────────────────────────────
   reducedMotion = false;
 
@@ -92,6 +95,13 @@ export class ProfileComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.reducedMotion =
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // Load saved profile photo — prefer the Cloudinary URL from the user signal,
+    // fall back to the legacy localStorage base64 for existing sessions
+    const currentUser = this.authService.currentUser();
+    this.savedAvatar =
+      currentUser?.avatarUrl ??
+      localStorage.getItem('codify_avatar');
 
     const username = this.route.snapshot.paramMap.get('username') ?? '';
     this.load(username);

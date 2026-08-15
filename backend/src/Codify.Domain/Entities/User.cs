@@ -9,8 +9,14 @@ public class User
     public string Email { get; private set; } = string.Empty;
     public string PasswordHash { get; private set; } = string.Empty;
     public UserRole Role { get; private set; }
+    public UserStatus Status { get; private set; }
+    public string? Organization { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime? LastLoginAt { get; private set; }
+
+    // Approval audit
+    public Guid? ReviewedBy { get; private set; }
+    public DateTime? ReviewedAt { get; private set; }
 
     // ER diagram additions
     public string? Username { get; private set; }
@@ -29,8 +35,11 @@ public class User
 
     private User() { }
 
-    public static User Create(string fullName, string email, string passwordHash, UserRole role)
+    public static User Create(string fullName, string email, string passwordHash, UserRole role, string? organization = null)
     {
+        // Instructors start as pending; students are immediately active
+        var status = role == UserRole.Instructor ? UserStatus.Pending : UserStatus.Active;
+
         return new User
         {
             Id = Guid.NewGuid(),
@@ -38,6 +47,8 @@ public class User
             Email = email,
             PasswordHash = passwordHash,
             Role = role,
+            Status = status,
+            Organization = organization,
             Rating = 0,
             SolvedProblems = 0,
             CreatedAt = DateTime.UtcNow,
@@ -47,6 +58,17 @@ public class User
     }
 
     public void RecordLogin() => LastLoginAt = DateTime.UtcNow;
+
+    /// <summary>
+    /// Approves a pending instructor account. Call this from the admin approval flow.
+    /// </summary>
+    public void Approve(Guid approvedByAdminId)
+    {
+        Status = UserStatus.Active;
+        ReviewedBy = approvedByAdminId;
+        ReviewedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
 
     public void UpdateProfile(string? bio, string? avatarUrl)
     {

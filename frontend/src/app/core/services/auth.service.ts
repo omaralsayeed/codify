@@ -1,30 +1,41 @@
-import { Injectable, signal, computed } from '@angular/core';
-import { Observable, of } from 'rxjs';
+import { Injectable, signal, computed, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable, of, TimeoutError } from 'rxjs';
+import { map, catchError, switchMap, timeout } from 'rxjs/operators';
 import { User } from '../models/user.model';
 import { AuthResult, RegisterData } from '../models/auth.model';
+import { mapRole, roleToNumber } from '../utils/enum-mappers';
+
+// Backend API response interfaces
+interface LoginApiResponse {
+  token: string;
+  expiresAt: string;
+  user: {
+    userId: string;
+    fullName: string;
+    role: number;
+  };
+}
+
+interface RegisterApiResponse {
+  userId: string;
+  email: string;
+  role: number;
+  status?: string; // 'active' | 'pending' — present once backend adds it
+}
+
+interface ApiEnvelope<T> {
+  data: T;
+}
+
+interface ApiError {
+  message: string;
+}
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  // Mock user list with two test users
-  private mockUsers: User[] = [
-    {
-      id: '1',
-      name: 'Test Student',
-      email: 'student@codify.com',
-      password: '123456',
-      role: 'student',
-      avatarInitials: 'TS',
-      streak: 0
-    },
-    {
-      id: '2',
-      name: 'Test Instructor',
-      email: 'instructor@codify.com',
-      password: '123456',
-      role: 'instructor',
-      avatarInitials: 'TI'
-    }
-  ];
+  private readonly http = inject(HttpClient);
+  private readonly baseUrl = 'http://localhost:5237/api';
 
   // Signal-based state management
   private _currentUser = signal<User | null>(null);
@@ -37,85 +48,111 @@ export class AuthService {
   }
 
   login(email: string, password: string): Observable<AuthResult> {
-    // Validate credentials against mock user list
-    const user = this.mockUsers.find(
-      u => u.email === email && u.password === password
-    );
+    return this.http
+      .post<ApiEnvelope<LoginApiResponse>>(`${this.baseUrl}/auth/login`, { email, password })
+      .pipe(
+        timeout(10000),
+        map(response => response.data),
+        map(loginData => {
+          // Re-hydrate the Cloudinary URL that was stored during registration.
+          // The backend login response doesn't return avatarUrl, so we look it
+          // up in localStorage keyed by userId to survive logout/login cycles.
+          const storedAvatarUrl =
+            localStorage.getItem(`codify_avatar_${loginData.user.userId}`) ?? undefined;
 
-    if (user) {
-      // Generate mock token
-      const token = 'mock-token-' + Date.now();
-      
-      // Create user object without password for storage
-      const userToStore = { ...user };
-      delete userToStore.password;
-      
-      // Store in localStorage
-      try {
-        localStorage.setItem('codify_user', JSON.stringify(userToStore));
-        localStorage.setItem('codify_token', token);
-      } catch (error) {
-        console.error('Failed to persist session:', error);
-      }
-      
-      // Update currentUser signal
-      this._currentUser.set(userToStore);
-      
-      return of({ success: true, user: userToStore });
-    }
-
-    return of({ success: false, error: 'Invalid email or password' });
+          const user: User = {
+            id: loginData.user.userId,
+            name: loginData.user.fullName,
+            email: email,
+            role: mapRole(loginData.user.role),
+            avatarInitials: this.generateAvatarInitials(loginData.user.fullName),
+            avatarUrl: storedAvatarUrl,
+            streak: 0
+          };
+          try {
+            localStorage.setItem('codify_token', loginData.token);
+            localStorage.setItem('codify_user', JSON.stringify(user));
+          } catch (error) {
+            console.error('Failed to persist session:', error);
+          }
+          this._currentUser.set(user);
+          return { success: true, user };
+        }),
+        catchError(error => {
+          if (error instanceof TimeoutError) {
+            return of({ success: false, error: 'Server is not responding. Please check your connection.' });
+          }
+          // Handle pending instructor account — signal to component to redirect
+          if (error?.error?.errorCode === 'ACCOUNT_PENDING') {
+            return of({ success: false, pendingApproval: true } as AuthResult);
+          }
+          const message = error.error?.message || 'Invalid email or password';
+          return of({ success: false, error: message });
+        })
+      );
   }
 
   register(userData: RegisterData): Observable<AuthResult> {
-    // Generate unique user ID
-    const id = Date.now().toString();
-    
-    // Generate avatarInitials from full name
-    const avatarInitials = this.generateAvatarInitials(userData.fullName);
-    
-    // Create User object
-    const newUser: User = {
-      id,
-      name: userData.fullName,
+    const body = {
+      fullName: userData.fullName,
       email: userData.email,
       password: userData.password,
-      role: userData.role,
-      avatarInitials,
-      streak: userData.role === 'student' ? 0 : undefined
+      role: roleToNumber(userData.role),
+      organization: userData.organization ?? null
     };
-    
-    // Add user to mock user list
-    this.mockUsers.push(newUser);
-    
-    // Generate mock token
-    const token = 'mock-token-' + Date.now();
-    
-    // Create user object without password for storage
-    const userToStore = { ...newUser };
-    delete userToStore.password;
-    
-    // Store in localStorage
-    try {
-      localStorage.setItem('codify_user', JSON.stringify(userToStore));
-      localStorage.setItem('codify_token', token);
-    } catch (error) {
-      console.error('Failed to persist session:', error);
-    }
-    
-    // Update currentUser signal
-    this._currentUser.set(userToStore);
-    
-    return of({ success: true, user: userToStore });
+
+    return this.http
+      .post<ApiEnvelope<RegisterApiResponse>>(`${this.baseUrl}/auth/register`, body)
+      .pipe(
+        timeout(10000),
+        switchMap(response => {
+          const data = response.data;
+          // Instructor registered — backend sets status='Pending' (PascalCase from C# enum)
+          if (data.role === 1 && data.status === 'Pending') {
+            return of({ success: true, pendingApproval: true } as AuthResult);
+          }
+          // Student registered — auto-login immediately
+          return this.login(userData.email, userData.password);
+        }),
+        catchError(error => {
+          if (error instanceof TimeoutError) {
+            return of({ success: false, error: 'Server is not responding. Please try again.' } as AuthResult);
+          }
+          const msg =
+            error?.error?.message ||
+            error?.error?.title ||
+            error?.message ||
+            'Registration failed. Please try again.';
+          return of({ success: false, error: msg } as AuthResult);
+        })
+      );
   }
 
   logout(): void {
-    // Remove from localStorage
     localStorage.removeItem('codify_user');
     localStorage.removeItem('codify_token');
-    
-    // Set currentUser signal to null
+    // Note: codify_avatar_<userId> is intentionally kept so the image
+    // is restored on next login without backend involvement.
     this._currentUser.set(null);
+  }
+
+  /**
+   * Called after a successful Cloudinary upload during registration.
+   * Stores the URL keyed by userId so it survives logout/login cycles
+   * on the same browser, then patches the live user signal immediately.
+   */
+  setAvatarUrl(url: string): void {
+    const current = this._currentUser();
+    if (!current) return;
+    const updated: User = { ...current, avatarUrl: url };
+    this._currentUser.set(updated);
+    try {
+      // Keyed by userId — multiple users on the same browser each get their own entry
+      localStorage.setItem(`codify_avatar_${current.id}`, url);
+      localStorage.setItem('codify_user', JSON.stringify(updated));
+    } catch {
+      // localStorage full — image still visible in memory for this session
+    }
   }
 
   private restoreSession(): void {
@@ -163,7 +200,7 @@ export class AuthService {
       typeof user.id === 'string' &&
       typeof user.name === 'string' &&
       typeof user.email === 'string' &&
-      (user.role === 'student' || user.role === 'instructor') &&
+      (user.role === 'student' || user.role === 'instructor' || user.role === 'admin') &&
       typeof user.avatarInitials === 'string'
     );
   }

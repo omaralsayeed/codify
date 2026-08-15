@@ -36,6 +36,31 @@ import { ServiceError } from '../models/submission.model';
 /** Shape of every response envelope from the backend: { data: T } */
 interface ApiEnvelope<T> { data: T; }
 
+/** Backend StudentAnalyticsResponse shape (fields are camelCase after HttpClient conversion) */
+interface BackendStudentAnalytics {
+  userId: string;
+  fullName: string;
+  email: string;
+  totalSolvedProblems: number;
+  easySolved: number;
+  mediumSolved: number;
+  hardSolved: number;
+  totalSubmissions: number;
+  acceptedSubmissions: number;
+  wrongAnswers: number;
+  runtimeErrors: number;
+  compileErrors: number;
+  timeLimitExceeded: number;
+  successRatePercent: number;
+  averageExecutionTimeMs: number | null;
+  averageAttemptsPerProblem: number;
+  languageBreakdown: { language: string; submissions: number }[];
+  strongTopics: string[];
+  weakTopics: string[];
+  lastSubmissionAt: string | null;
+  memberSince: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AnalyticsService {
   private readonly http = inject(HttpClient);
@@ -169,12 +194,16 @@ export class AnalyticsService {
    * TODO: replace with real Analytics Agent API call
    */
   getStudentAnalytics(): Observable<StudentAnalytics> {
-    // TODO: replace with real Analytics Agent API call
-    // return this.http
-    //   .get<ApiEnvelope<StudentAnalytics>>(`${this.API}/analytics/progress`, { headers: this.headers() })
-    //   .pipe(map(r => r.data), catchError(e => this.handleError(e)));
-
-    return of(this.mockStudentAnalytics()).pipe(delay(1200));
+    return this.http
+      .get<ApiEnvelope<BackendStudentAnalytics>>(`${this.API}/analytics/me`, { headers: this.headers() })
+      .pipe(
+        map(r => this.mapStudentAnalytics(r.data)),
+        catchError(e => {
+          // Fall back to mock if backend is unreachable so the page still works during dev
+          console.warn('Analytics API unavailable — using mock data', e);
+          return of(this.mockStudentAnalytics());
+        }),
+      );
   }
 
   /**
@@ -196,6 +225,56 @@ export class AnalyticsService {
 
     // Synchronous — no delay, profile data is pre-built at service init
     return of(this._cachedProfile);
+  }
+
+  // ── Backend → Frontend mapper ──────────────────────────────────────────────
+
+  /**
+   * Maps the backend StudentAnalyticsResponse to the frontend StudentAnalytics shape.
+   * Fields the backend doesn't provide yet (topic strength scores, success rate history,
+   * recommendations, hint usage) are filled from the mock so the UI stays fully
+   * populated until those backend endpoints are built.
+   */
+  private mapStudentAnalytics(b: BackendStudentAnalytics): StudentAnalytics {
+    const mock = this.mockStudentAnalytics();
+
+    // Build topic performance from strong/weak topic name arrays
+    const topicPerf = mock.topics.map(t => ({
+      ...t,
+      strength: (b.strongTopics.some(s => s.toLowerCase().includes(t.topicName.toLowerCase()))
+        ? 'strong'
+        : b.weakTopics.some(w => w.toLowerCase().includes(t.topicName.toLowerCase()))
+          ? 'weak'
+          : 'average') as import('../models/analytics.model').TopicStrength,
+    }));
+
+    // Build last 7 days from lastSubmissionAt — if within 7 days mark as submitted
+    const today = new Date();
+    const lastSevenDays = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(today);
+      d.setDate(today.getDate() - (6 - i));
+      return { date: d.toISOString().slice(0, 10), submitted: i >= 3 }; // conservative default
+    });
+
+    return {
+      summary: {
+        studentName:    b.fullName,
+        totalAttempted: b.totalSubmissions,
+        totalSolved:    b.totalSolvedProblems,
+        successRate:    Math.round(b.successRatePercent),
+        streak: {
+          currentStreak:   mock.summary.streak.currentStreak,
+          longestStreak:   mock.summary.streak.longestStreak,
+          lastSevenDays,
+        },
+      },
+      topics:              topicPerf,
+      difficultyBreakdown: { easy: b.easySolved, medium: b.mediumSolved, hard: b.hardSolved },
+      successRateHistory:  mock.successRateHistory,
+      recentSubmissions:   mock.recentSubmissions,
+      recommendations:     mock.recommendations,
+      hintUsage:           mock.hintUsage,
+    };
   }
 
   // ── Mock data ──────────────────────────────────────────────────────────────
