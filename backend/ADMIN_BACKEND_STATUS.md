@@ -16,8 +16,8 @@
 | 3 | GET | `/api/admin/users/:id` | 1 | ✅ Done |
 | 4 | PATCH | `/api/admin/users/:id/status` | 1 | ✅ Done |
 | 5 | GET | `/api/admin/problems` | 2 | ❌ Not built |
-| 6 | POST | `/api/problems` | 2 | ⚠️ Exists but wrong role |
-| 7 | PATCH | `/api/problems/:id` | 2 | ⚠️ Exists as PUT, wrong role |
+| 6 | POST | `/api/problems` | 2 | ✅ Done |
+| 7 | PATCH | `/api/problems/:id` | 2 | ✅ Done |
 | 8 | PATCH | `/api/problems/:id/status` | 3 | ❌ Not built |
 | 9 | DELETE | `/api/problems/:id` | 3 | ⚠️ Exists but wrong role |
 
@@ -184,25 +184,21 @@
 ### Sprint 2 — Problem Management Endpoints (Phase 2)
 **Goal:** Unblock the Problems list and Create/Edit form. Deliver 3 endpoints + fix 3 existing ones.
 
-#### Task 2.1 — Fix existing problem endpoints — role + verb
-- File: `src/Codify.API/Controllers/ProblemsController.cs`
-  - `POST /api/problems` → change `[Authorize(Roles = "Instructor")]` to `[Authorize(Roles = "Admin")]`
-  - `PUT /api/problems/:id` → change to `PATCH`, change role to `Admin`
-  - `DELETE /api/problems/:id` → change role to `Admin`
-- Effort: ~5 min
+#### Task 2.1 — Fix existing problem endpoints — role + verb ✅ DONE
+- `POST /api/problems` → `[Authorize(Roles = "Admin")]`
+- `PUT /api/problems/:id` → `[HttpPatch]` + `[Authorize(Roles = "Admin")]`
+- `DELETE /api/problems/:id` → `[Authorize(Roles = "Admin")]`
 
-#### Task 2.2 — Extend `UpdateProblemRequest` + `Problem.Update()`
-- File: `src/Codify.Application/DTOs/Problems/UpdateProblemRequest.cs`
-  - Add `bool? IsActive`, `int? TimeLimitMs`, `int? MemoryLimitMb`, `List<SampleTestCaseInput>? SampleTestCases`
-- File: `src/Codify.Domain/Entities/Problem.cs`
-  - Extend `Update()` or add `SetActive(bool)` method to handle `IsActive` toggle
-  - Add `UpdateLimits(int timeLimitMs, int memoryLimitMb)` 
-- Effort: ~20 min
+#### Task 2.2 — Extend `UpdateProblemRequest` + `Problem.Update()` ✅ DONE
+- `UpdateProblemRequest` extended with `bool? IsActive`, `int? TimeLimitMs`, `int? MemoryLimitMb`, `List<SampleTestCaseInput>? SampleTestCases`
+- `SampleTestCaseInput` inner class added (Input + ExpectedOutput)
+- `Problem.SetActive(bool)` added — toggles `IsActive` + `IsPublic`
+- `Problem.UpdateLimits(int, int)` added — updates `TimeLimitMs` + `MemoryLimitMb`
+- `ProblemService.UpdateAsync()` updated to apply all new fields
 
-#### Task 2.3 — New DTOs: Admin problem responses
-- Create `src/Codify.Application/DTOs/Admin/AdminProblemRow.cs`
-- Create `src/Codify.Application/DTOs/Admin/AdminProblemFilterRequest.cs`
-- Effort: ~15 min
+#### Task 2.3 — New DTOs: Admin problem responses ✅ DONE
+- Created `src/Codify.Application/DTOs/Admin/AdminProblemRow.cs`
+- Created `src/Codify.Application/DTOs/Admin/AdminProblemFilterRequest.cs`
 
 #### Task 2.4 — Repository layer: admin problems query
 - File: `src/Codify.Application/Interfaces/IProblemRepository.cs`

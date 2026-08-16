@@ -72,6 +72,7 @@ public class ProblemService(
         var problem = await problemRepo.GetByIdWithDetailsAsync(id)
             ?? throw new NotFoundException($"Problem {id} not found.");
 
+        // Core content fields — only apply what was sent
         var newTitle = request.Title ?? problem.Title;
         var newStatement = request.Statement ?? problem.Statement;
         var newDifficulty = request.Difficulty ?? problem.Difficulty;
@@ -82,12 +83,46 @@ public class ProblemService(
 
         problem.Update(newTitle, newStatement, newDifficulty, newConstraints, newLanguageJson);
 
+        // Active state toggle
+        if (request.IsActive.HasValue)
+            problem.SetActive(request.IsActive.Value);
+
+        // Resource limits
+        var newTimeLimitMs   = request.TimeLimitMs   ?? problem.TimeLimitMs;
+        var newMemoryLimitMb = request.MemoryLimitMb ?? problem.MemoryLimitMb;
+        if (request.TimeLimitMs.HasValue || request.MemoryLimitMb.HasValue)
+            problem.UpdateLimits(newTimeLimitMs, newMemoryLimitMb);
+
+        // Tags — clear and replace when provided
         if (request.TagIds is not null)
         {
             problem.ProblemTags.Clear();
             var tags = await tagRepo.GetByIdsAsync(request.TagIds);
             foreach (var tag in tags)
                 problem.ProblemTags.Add(ProblemTag.Create(problem.Id, tag.Id));
+        }
+
+        // Sample test cases — clear and replace when provided
+        if (request.SampleTestCases is not null)
+        {
+            // Remove existing sample test cases (keep hidden ones intact)
+            var existingSamples = problem.TestCases
+                .Where(tc => tc.IsSample)
+                .ToList();
+            foreach (var tc in existingSamples)
+                tc.SoftDelete();
+
+            int orderIndex = problem.TestCases.Count(tc => !tc.IsSample);
+            foreach (var sample in request.SampleTestCases)
+            {
+                problem.TestCases.Add(TestCase.Create(
+                    problem.Id,
+                    sample.Input,
+                    sample.ExpectedOutput,
+                    isSample: true,
+                    TestCaseVisibility.Visible,
+                    orderIndex++));
+            }
         }
 
         await problemRepo.SaveChangesAsync();

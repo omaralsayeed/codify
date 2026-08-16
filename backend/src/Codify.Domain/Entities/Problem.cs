@@ -76,6 +76,25 @@ public class Problem
         UpdatedAt = DateTime.UtcNow;
     }
 
+    /// <summary>
+    /// Toggles the problem's active/inactive state.
+    /// Inactive problems are hidden from students but kept in the database.
+    /// </summary>
+    public void SetActive(bool isActive)
+    {
+        IsActive = isActive;
+        IsPublic = isActive;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>Updates execution resource limits.</summary>
+    public void UpdateLimits(int timeLimitMs, int memoryLimitMb)
+    {
+        TimeLimitMs = timeLimitMs;
+        MemoryLimitMb = memoryLimitMb;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     public void IncrementSubmissionCounters(bool accepted)
     {
         TotalSubmissionsCount++;
