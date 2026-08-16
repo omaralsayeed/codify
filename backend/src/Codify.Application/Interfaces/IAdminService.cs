@@ -31,4 +31,12 @@ public interface IAdminService
     /// Returns the updated user detail.
     /// </summary>
     Task<AdminUserDetailResponse> UpdateUserStatusAsync(Guid userId, string status, Guid adminId);
+
+    // ── Admin panel: problem management ──────────────────────────────────────
+
+    /// <summary>
+    /// Paginated, filterable list of ALL problems including inactive ones.
+    /// Soft-deleted problems are never returned.
+    /// </summary>
+    Task<(IReadOnlyList<AdminProblemRow> Problems, int Total)> GetAdminProblemsAsync(AdminProblemFilterRequest filter);
 }

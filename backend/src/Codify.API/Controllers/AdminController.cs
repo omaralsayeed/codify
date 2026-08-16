@@ -93,6 +93,26 @@ public class AdminController(
         return Ok(ApiResponse.Ok(result));
     }
 
+    // ── Admin panel: problem management ──────────────────────────────────────
+
+    /// <summary>
+    /// Paginated, filterable list of ALL problems including inactive ones.
+    /// Unlike GET /api/problems which only returns active problems.
+    /// GET /api/admin/problems
+    /// </summary>
+    [HttpGet("problems")]
+    public async Task<IActionResult> GetProblems([FromQuery] AdminProblemFilterRequest filter)
+    {
+        var (problems, total) = await adminService.GetAdminProblemsAsync(filter);
+        return Ok(ApiResponse.Ok(new
+        {
+            problems,
+            total,
+            page     = filter.Page,
+            pageSize = filter.PageSize
+        }));
+    }
+
     // ── RAG management ────────────────────────────────────────────────────────
 
     /// <summary>

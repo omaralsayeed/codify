@@ -15,7 +15,7 @@
 | 2 | GET | `/api/admin/users` | 1 | ✅ Done |
 | 3 | GET | `/api/admin/users/:id` | 1 | ✅ Done |
 | 4 | PATCH | `/api/admin/users/:id/status` | 1 | ✅ Done |
-| 5 | GET | `/api/admin/problems` | 2 | ❌ Not built |
+| 5 | GET | `/api/admin/problems` | 2 | ✅ Done |
 | 6 | POST | `/api/problems` | 2 | ✅ Done |
 | 7 | PATCH | `/api/problems/:id` | 2 | ✅ Done |
 | 8 | PATCH | `/api/problems/:id/status` | 3 | ❌ Not built |
@@ -200,27 +200,26 @@
 - Created `src/Codify.Application/DTOs/Admin/AdminProblemRow.cs`
 - Created `src/Codify.Application/DTOs/Admin/AdminProblemFilterRequest.cs`
 
-#### Task 2.4 — Repository layer: admin problems query
-- File: `src/Codify.Application/Interfaces/IProblemRepository.cs`
-  - Add `GetAdminProblemsAsync(AdminProblemFilterRequest filter)`
-- File: `src/Codify.Infrastructure/Repositories/ProblemRepository.cs`
-  - Implement: no `IsActive` filter by default, supports `isActive` param, supports sortBy/sortDir
-  - Never returns `IsDeleted = true` records (those are truly gone from UI)
+#### Task 2.4 — Repository layer: admin problems query ✅ DONE
+- `IProblemRepository` extended with `GetAdminProblemsAsync(AdminProblemFilterRequest filter)`
+- `ProblemRepository` implements it: never filters by `IsActive` unless explicitly passed, excludes soft-deleted, supports search/difficulty/tag/isActive filters, full sortBy/sortDir on title/difficulty/solvedCount/createdAt, paged
 - Effort: ~30 min
 
-#### Task 2.5 — Service layer: admin problem methods in `IAdminService`
-- File: `src/Codify.Application/Interfaces/IAdminService.cs`
-  - Add `GetAdminProblemsAsync(AdminProblemFilterRequest filter)`
-- File: `src/Codify.Application/Services/AdminService.cs`
-  - Implement — maps `Problem` → `AdminProblemRow`
-- Effort: ~25 min
+#### Task 2.5 — Service layer: admin problem methods in `IAdminService` ✅ DONE
+- `IAdminService` extended with `GetAdminProblemsAsync(AdminProblemFilterRequest filter)`
+- `AdminService` implements it — calls repo, maps `Problem` → `AdminProblemRow` via `MapToProblemRow`
+- Maps `AcceptedSubmissionsCount` → `SolvedCount`, `TotalSubmissionsCount` → `TotalSubmissions`, casts `Difficulty` enum to int
 
-#### Task 2.6 — Controller layer: add `GET /api/admin/problems`
-- File: `src/Codify.API/Controllers/AdminController.cs`
-  - Add `GET /api/admin/problems`
-- Effort: ~15 min
+#### Task 2.6 — Controller layer: add `GET /api/admin/problems` ✅ DONE
+- `AdminController` extended with `GET /api/admin/problems`
+- Returns `{ data: { problems, total, page, pageSize } }` matching spec envelope
 
-**Sprint 2 Deliverables:** Problems list page live. Create + Edit forms live.
+**Sprint 2 review bugs found and fixed:**
+
+- **Bug 1 (request shape):** `CreateProblemRequest` now uses `Tags` (string names) and `SampleTestCases` with `Input`/`ExpectedOutput` — matching spec exactly. Added `IsActive` field.
+- **Bug 2 (validation + 409):** `CreateAsync` validates tags ≥ 1, sampleTestCases ≥ 1, non-empty inputs. Added `ExistsWithTitleAsync` to `IProblemRepository` + `ProblemRepository`. Created `ConflictException` (→ HTTP 409) and registered it in `ExceptionMiddleware`. `UpdateAsync` also checks for duplicate title when title is changed.
+- **Bug 3 (avgScore):** Fixed to average only `Status == Accepted` submissions.
+- **Bug 4 (soft-deleted test cases in response):** `MapToDetail` now filters `!tc.IsDeleted`. `UpdateAsync` also checks `!tc.IsDeleted` when counting orderIndex for new samples.
 
 ---
 

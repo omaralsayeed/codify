@@ -123,6 +123,13 @@ public class AdminService(
         return MapToUserDetail(user, totalSubmissions);
     }
 
+    public async Task<(IReadOnlyList<AdminProblemRow> Problems, int Total)> GetAdminProblemsAsync(
+        AdminProblemFilterRequest filter)
+    {
+        var (items, total) = await problemRepo.GetAdminProblemsAsync(filter);
+        return (items.Select(MapToProblemRow).ToList(), total);
+    }
+
     // ── Mapping helpers ───────────────────────────────────────────────────────
 
     private static AdminUserRow MapToUserRow(User u) => new()
@@ -146,12 +153,12 @@ public class AdminService(
             .Take(5)
             .ToList();
 
-        // Average score across all scored submissions
+        // Average score across accepted submissions only (spec requirement)
         decimal? avgScore = null;
         if (u.Role == UserRole.Student && u.Submissions.Any())
         {
             var scored = u.Submissions
-                .Where(s => s.Score.HasValue)
+                .Where(s => s.Status == SubmissionStatus.Accepted && s.Score.HasValue)
                 .Select(s => s.Score!.Value)
                 .ToList();
             if (scored.Count > 0)
@@ -195,6 +202,18 @@ public class AdminService(
             }).ToList()
         };
     }
+
+    private static AdminProblemRow MapToProblemRow(Problem p) => new()
+    {
+        Id               = p.Id,
+        Title            = p.Title,
+        Difficulty       = (int)p.Difficulty,
+        Tags             = p.ProblemTags.Select(pt => pt.ConceptTag.Name).ToList(),
+        SolvedCount      = p.AcceptedSubmissionsCount,
+        TotalSubmissions = p.TotalSubmissionsCount,
+        IsActive         = p.IsActive,
+        CreatedAt        = p.CreatedAt
+    };
 
     /// <summary>
     /// Derives initials from a full name: first character of each of the first two words.
