@@ -85,7 +85,7 @@ public class ProblemService(
                 tc.Input,
                 tc.ExpectedOutput,
                 isSample: true,
-                TestCaseVisibility.Visible,
+                TestCaseVisibility.Public,
                 orderIndex++));
         }
 
@@ -155,7 +155,7 @@ public class ProblemService(
                     sample.Input,
                     sample.ExpectedOutput,
                     isSample: true,
-                    TestCaseVisibility.Visible,
+                    TestCaseVisibility.Public,
                     orderIndex++));
             }
         }
