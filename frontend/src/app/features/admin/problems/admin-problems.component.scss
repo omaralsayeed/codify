@@ -392,3 +392,105 @@
   white-space: nowrap;
   border: 0;
 }
+
+// ── Loading skeletons ─────────────────────────────────────────────────────────
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.skeleton {
+  display: block;
+  height: 14px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, $ivory2 25%, darken($ivory2, 5%) 50%, $ivory2 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+
+  &--wide  { width: 160px; }
+  &--med   { width: 90px; }
+  &--short { width: 60px; }
+}
+
+// ── Error banner ──────────────────────────────────────────────────────────────
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  background: $red-lt;
+  color: $red;
+  border: 1px solid rgba($red, 0.25);
+  border-radius: $r;
+  font-size: 14px;
+}
+
+// ── Actions cell (edit + delete) ──────────────────────────────────────────────
+.actions-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+}
+
+.delete-btn {
+  font-size: 14px;
+  color: $muted;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: color 0.12s, background 0.12s;
+
+  &:hover { color: $red; background: $red-lt; }
+}
+
+// ── Modal delete icon ─────────────────────────────────────────────────────────
+.modal-icon--delete {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  background: $red-lt;
+}
+
+.modal-btn--confirm-delete {
+  background: $red;
+  color: $white;
+  border-color: $red;
+  &:hover { opacity: 0.88; }
+}
+
+// ── Modal error + spinner ─────────────────────────────────────────────────────
+.modal-error {
+  font-size: 13px;
+  color: $red;
+  background: $red-lt;
+  border: 1px solid rgba($red, 0.2);
+  border-radius: $r;
+  padding: 8px 12px;
+  margin: 0;
+  width: 100%;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.spinner {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

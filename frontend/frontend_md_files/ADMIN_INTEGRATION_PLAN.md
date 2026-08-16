@@ -420,7 +420,7 @@ onSubmit(): void {
 | 2 | Wire overview stats | ✅ Done |
 | 3 | Wire users list + status toggle | ✅ Done |
 | 4 | Wire user detail + status toggle | ✅ Done |
-| 5 | Wire problems list + toggle + delete | ❌ |
+| 5 | Wire problems list + toggle + delete | ✅ Done |
 | 6 | Wire problem form create + edit | ❌ |
 
 ---
