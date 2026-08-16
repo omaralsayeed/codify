@@ -32,7 +32,7 @@
 | `UserRole` enum | `Domain/Enums/UserRole.cs` | Student=0, Instructor=1, Admin=2 — matches spec exactly |
 | `UserStatus` enum | `Domain/Enums/UserStatus.cs` | Active, Pending — matches spec exactly |
 | `User` entity | `Domain/Entities/User.cs` | Has `FullName`, `Email`, `Role`, `Status`, `Organization`, `CreatedAt`, `LastLoginAt`, `SolvedProblems`, `IsDeleted` — all fields we need |
-| `User.Approve()` | `Domain/Entities/User.cs` | Already sets status to Active, records reviewer + timestamp |
+| `User.Approve()` | `Domain/Entities/User.cs` | Now a wrapper around `SetStatus(Active)` — existing approval flow unchanged |
 | `Problem` entity | `Domain/Entities/Problem.cs` | Has `IsActive`, `IsDeleted`, `CreatedAt`, `AcceptedSubmissionsCount`, `TotalSubmissionsCount`, `TimeLimitMs`, `MemoryLimitMb` — all fields we need |
 | `Problem.SoftDelete()` | `Domain/Entities/Problem.cs` | Sets `IsDeleted=true`, `IsActive=false` |
 | `Problem.Deactivate()` | `Domain/Entities/Problem.cs` | Sets `IsActive=false`, `IsPublic=false` |
@@ -89,7 +89,7 @@
 
 | Method | Entity | Why |
 |---|---|---|
-| `User.SetStatus(UserStatus status)` | `User.cs` | `Approve()` only activates. Admin needs to also set users back to Pending. |
+| `User.SetStatus(UserStatus status)` | `User.cs` | ✅ DONE — added `SetStatus(UserStatus, Guid)`, `Approve()` refactored as wrapper |
 
 ---
 
@@ -119,9 +119,9 @@
 **Root cause:** `ProblemRepository.GetAllAsync()` applies `WHERE IsActive = 1` for non-instructors. Admin needs everything.
 **Solution:** Add `GetAdminProblemsAsync(AdminProblemFilterRequest)` — a separate query that never filters by `IsActive` (but can optionally filter by it when the frontend passes `isActive=true/false`).
 
-### Problem 7 — No `User.SetStatus()` method — can only Approve, not set-to-Pending
-**Root cause:** `User.Approve()` exists but there's no reverse. Admin needs to set any user (student or instructor) to Pending.
-**Solution:** Add `User.SetStatus(UserStatus status, Guid adminId)` method to the `User` entity. Keep `Approve()` as a convenience wrapper that calls `SetStatus(Active)` with the audit fields.
+### Problem 7 — No `User.SetStatus()` method — can only Approve, not set-to-Pending ✅ SOLVED
+**Root cause:** `User.Approve()` existed but there was no reverse operation.
+**Solution:** Added `User.SetStatus(UserStatus status, Guid adminId)` to `User.cs`. Refactored `Approve()` as a one-line wrapper: `=> SetStatus(UserStatus.Active, approvedByAdminId)`. Existing approval flow is completely unchanged.
 
 ### Problem 8 — Stats endpoint needs cross-table aggregation but no service method exists
 **Root cause:** Platform stats (total users, submissions today, etc.) require queries across `Users`, `Submissions`, `Problems` tables. Nothing like this exists.
@@ -136,9 +136,10 @@
 ### Sprint 1 — User Management Endpoints (Phase 1)
 **Goal:** Unblock the Overview and Users pages. Deliver 4 endpoints.
 
-#### Task 1.1 — Domain layer: add `User.SetStatus()`
+#### Task 1.1 — Domain layer: add `User.SetStatus()` ✅ DONE
 - File: `src/Codify.Domain/Entities/User.cs`
-- Add `SetStatus(UserStatus status, Guid adminId)` method
+- Added `SetStatus(UserStatus status, Guid adminId)` — sets Status, records ReviewedBy + ReviewedAt + UpdatedAt
+- Refactored `Approve()` to be a one-line convenience wrapper around `SetStatus(Active)`
 - Effort: ~10 min
 
 #### Task 1.2 — New DTOs: Admin user responses
