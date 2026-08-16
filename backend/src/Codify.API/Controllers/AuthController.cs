@@ -41,4 +41,20 @@ public class AuthController(IAuthService authService) : ControllerBase
         var result = await authService.GetCurrentUserAsync(userId);
         return Ok(ApiResponse.Ok(result));
     }
+
+    /// <summary>
+    /// Updates the avatar URL for the currently authenticated user.
+    /// The URL must point to a Cloudinary resource.
+    /// </summary>
+    [HttpPut("avatar")]
+    [Authorize]
+    public async Task<IActionResult> UpdateAvatar([FromBody] UpdateAvatarDto dto)
+    {
+        if (!dto.AvatarUrl.StartsWith("https://res.cloudinary.com/", StringComparison.OrdinalIgnoreCase))
+            return BadRequest(ApiResponse.Fail("INVALID_AVATAR_URL", "avatarUrl must be a valid Cloudinary URL."));
+
+        var userId = User.GetUserId();
+        await authService.UpdateAvatarUrlAsync(userId, dto.AvatarUrl);
+        return Ok(ApiResponse.Ok(null));
+    }
 }

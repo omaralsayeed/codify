@@ -199,18 +199,4 @@ public class OpenAiChatClient(
 
         return new OpenAIClient(new ApiKeyCredential(_options.ApiKey)).GetChatClient(model);
     }
-
-    private ChatClient BuildClient(string model)
-    {
-        if (!string.IsNullOrWhiteSpace(_options.BaseUrl))
-        {
-            var clientOptions = new OpenAIClientOptions
-            {
-                Endpoint = new Uri(_options.BaseUrl.TrimEnd('/') + "/")
-            };
-            return new OpenAIClient(new ApiKeyCredential(_options.ApiKey), clientOptions).GetChatClient(model);
-        }
-
-        return new OpenAIClient(new ApiKeyCredential(_options.ApiKey)).GetChatClient(model);
-    }
 }

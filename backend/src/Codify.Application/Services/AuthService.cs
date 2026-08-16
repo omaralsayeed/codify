@@ -52,7 +52,8 @@ public class AuthService(IUserRepository userRepo, IJwtService jwtService) : IAu
             {
                 UserId = user.Id,
                 FullName = user.FullName,
-                Role = user.Role
+                Role = user.Role,
+                AvatarUrl = user.AvatarUrl
             }
         };
     }
@@ -70,5 +71,15 @@ public class AuthService(IUserRepository userRepo, IJwtService jwtService) : IAu
             Role = user.Role,
             CreatedAt = user.CreatedAt
         };
+    }
+
+    public async Task UpdateAvatarUrlAsync(Guid userId, string avatarUrl)
+    {
+        var user = await userRepo.GetByIdAsync(userId)
+            ?? throw new NotFoundException("User not found.");
+
+        // Preserve existing bio — only the avatar URL is being changed
+        user.UpdateProfile(user.Bio, avatarUrl);
+        await userRepo.SaveChangesAsync();
     }
 }
