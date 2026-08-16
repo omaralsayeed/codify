@@ -2,14 +2,36 @@
 
   <!-- ── Page header ──────────────────────────────────────────────────────── -->
   <div class="page-header">
-    <a class="back-link" routerLink="../../problems">← Back to problems</a>
+    <a class="back-link" routerLink="../problems">← Back to problems</a>
     <h1 class="page-title">{{ pageTitle() }}</h1>
-    @if (isEditMode()) {
+    @if (isEditMode() && !isLoadingProblem()) {
       <p class="page-sub">Editing: <strong>{{ form().title }}</strong></p>
-    } @else {
+    } @else if (!isEditMode()) {
       <p class="page-sub">Fill in the details below to add a new problem to the platform.</p>
     }
   </div>
+
+  <!-- ── Load error (edit mode only) ─────────────────────────────────────── -->
+  @if (loadError()) {
+    <div class="error-banner" role="alert">
+      <span aria-hidden="true">⚠</span> {{ loadError() }}
+    </div>
+  }
+
+  <!-- ── Loading skeleton (edit mode fetching) ────────────────────────────── -->
+  @if (isLoadingProblem()) {
+    <div class="form-skeleton">
+      <div class="skeleton-col">
+        <div class="skeleton skeleton--title"></div>
+        <div class="skeleton skeleton--block"></div>
+        <div class="skeleton skeleton--block"></div>
+      </div>
+      <div class="skeleton-col">
+        <div class="skeleton skeleton--block-tall"></div>
+        <div class="skeleton skeleton--block"></div>
+      </div>
+    </div>
+  }
 
   <!-- ── Success banner ───────────────────────────────────────────────────── -->
   @if (submitSuccess()) {
@@ -19,6 +41,8 @@
     </div>
   }
 
+  <!-- ── Form ─────────────────────────────────────────────────────────────── -->
+  @if (!isLoadingProblem() && !loadError()) {
   <form class="form" (ngSubmit)="onSubmit()" novalidate>
     <div class="form-body">
 
@@ -259,6 +283,9 @@
 
     <!-- ── Form footer ───────────────────────────────────────────────────── -->
     <div class="form-footer">
+      @if (formError()) {
+        <p class="form-error-msg" role="alert">⚠ {{ formError() }}</p>
+      }
       <button type="button" class="btn-cancel" (click)="onCancel()">
         Cancel
       </button>
@@ -278,4 +305,5 @@
     </div>
 
   </form>
+  } <!-- end @if !isLoadingProblem -->
 </div>
