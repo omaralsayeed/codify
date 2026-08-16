@@ -14,6 +14,7 @@ namespace Codify.API.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/hints")]
+[Route("api/ai/hints")]
 [Authorize(Roles = "Student")]
 public class HintsController(IAiHintService hintService) : ControllerBase
 {

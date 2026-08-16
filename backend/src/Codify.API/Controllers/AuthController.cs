@@ -43,6 +43,18 @@ public class AuthController(IAuthService authService) : ControllerBase
     }
 
     /// <summary>
+    /// Updates profile details (Full name, Bio, Organization) for the authenticated user.
+    /// </summary>
+    [HttpPut("profile")]
+    [Authorize]
+    public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDto dto)
+    {
+        var userId = User.GetUserId();
+        var result = await authService.UpdateProfileAsync(userId, dto);
+        return Ok(ApiResponse.Ok(result));
+    }
+
+    /// <summary>
     /// Updates the avatar URL for the currently authenticated user.
     /// The URL must point to a Cloudinary resource.
     /// </summary>

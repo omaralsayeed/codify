@@ -16,26 +16,9 @@ export interface SelectItem {
   badgeClass?: string;
 }
 
-const DEBOUNCE_MS = 200;
-const MAX_SUGGESTIONS = 8;
+const DEBOUNCE_MS = 150;
+const MAX_SUGGESTIONS = 10;
 
-/**
- * SearchSelectComponent
- *
- * Reusable search-and-select widget. Accepts a `searchFn` that maps a query
- * string to a list of SelectItems — this indirection means the caller can swap
- * in a real HTTP search later without changing this component.
- *
- * Usage:
- *   <app-search-select
- *     label="Problems"
- *     placeholder="Search problems…"
- *     [searchFn]="searchProblems"
- *     [selected]="selectedProblems()"
- *     (selectItem)="addProblem($event)"
- *     (deselectItem)="removeProblem($event)"
- *   />
- */
 @Component({
   selector: 'app-search-select',
   standalone: true,
@@ -45,31 +28,21 @@ const MAX_SUGGESTIONS = 8;
   styleUrl: './search-select.component.scss',
 })
 export class SearchSelectComponent implements OnDestroy {
-  /** Label shown above the search input */
   @Input() label = '';
-  /** Placeholder text for the search input */
-  @Input() placeholder = 'Search…';
-  /**
-   * Search function — receives the current query string, returns matching items.
-   * Cap results to MAX_SUGGESTIONS internally — the caller doesn't need to.
-   * Returning an empty array hides the suggestions panel.
-   */
+  @Input() placeholder = 'Search or click to select…';
   @Input() searchFn: (query: string) => SelectItem[] = () => [];
-  /** Currently selected items (passed in from parent, source of truth lives there) */
   @Input() selected: SelectItem[] = [];
 
   @Output() selectItem   = new EventEmitter<SelectItem>();
   @Output() deselectItem = new EventEmitter<SelectItem>();
 
-  // ── Internal state ────────────────────────────────────────────────────────
-
   readonly query = signal('');
+  readonly isOpen = signal(false);
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private blurTimer: ReturnType<typeof setTimeout> | null = null;
 
-  /** Suggestions from searchFn, capped at MAX_SUGGESTIONS, excluding already-selected */
   readonly suggestions = computed<SelectItem[]>(() => {
     const q = this.query().trim();
-    if (!q) return [];
     const selectedIds = new Set(this.selected.map(s => s.id));
     return this.searchFn(q)
       .filter(item => !selectedIds.has(item.id))
@@ -78,10 +51,20 @@ export class SearchSelectComponent implements OnDestroy {
 
   readonly hasQuery = computed(() => this.query().trim().length > 0);
 
-  // ── Handlers ──────────────────────────────────────────────────────────────
+  onFocus(): void {
+    if (this.blurTimer) clearTimeout(this.blurTimer);
+    this.isOpen.set(true);
+  }
+
+  onBlur(): void {
+    this.blurTimer = setTimeout(() => {
+      this.isOpen.set(false);
+    }, 250);
+  }
 
   onQueryInput(value: string): void {
     if (this.debounceTimer) clearTimeout(this.debounceTimer);
+    this.isOpen.set(true);
     this.debounceTimer = setTimeout(() => {
       this.query.set(value);
     }, DEBOUNCE_MS);
@@ -89,8 +72,8 @@ export class SearchSelectComponent implements OnDestroy {
 
   pick(item: SelectItem): void {
     this.selectItem.emit(item);
-    // Clear search after picking
     this.query.set('');
+    this.isOpen.set(false);
   }
 
   remove(item: SelectItem): void {
@@ -99,5 +82,6 @@ export class SearchSelectComponent implements OnDestroy {
 
   ngOnDestroy(): void {
     if (this.debounceTimer) clearTimeout(this.debounceTimer);
+    if (this.blurTimer) clearTimeout(this.blurTimer);
   }
 }

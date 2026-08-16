@@ -1,6 +1,6 @@
 import {
   Component, inject, ChangeDetectionStrategy,
-  signal, computed,
+  signal, computed, OnInit,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -19,25 +19,32 @@ type SortDir   = 'asc' | 'desc';
   templateUrl: './instructor-students.component.html',
   styleUrl: './instructor-students.component.scss',
 })
-export class InstructorStudentsComponent {
+export class InstructorStudentsComponent implements OnInit {
   private readonly instructorSvc = inject(InstructorService);
 
-  protected readonly allStudents: InstructorStudentSummary[] = this.instructorSvc.getStudents();
+  protected readonly allStudents = signal<InstructorStudentSummary[]>(this.instructorSvc.getStudents());
 
   // ── Search & sort state ────────────────────────────────────────────────────
   readonly searchQuery  = signal('');
   readonly sortField    = signal<SortField>('avgScore');
   readonly sortDir      = signal<SortDir>('desc');
 
+  ngOnInit(): void {
+    this.instructorSvc.getOverview$().subscribe(() => {
+      this.allStudents.set(this.instructorSvc.getStudents());
+    });
+  }
+
   // ── Derived list ──────────────────────────────────────────────────────────
   readonly students = computed(() => {
     const q     = this.searchQuery().toLowerCase().trim();
     const field = this.sortField();
     const dir   = this.sortDir();
+    const list  = this.allStudents();
 
     const filtered = q
-      ? this.allStudents.filter(s => s.name.toLowerCase().includes(q))
-      : [...this.allStudents];
+      ? list.filter(s => s.name.toLowerCase().includes(q))
+      : [...list];
 
     return filtered.sort((a, b) => {
       let cmp = 0;

@@ -36,6 +36,7 @@ public static class DependencyInjection
         services.AddScoped<IPerformanceRepository, PerformanceRepository>();
         services.AddScoped<ITestCaseRepository, TestCaseRepository>();
         services.AddScoped<ITestCaseResultRepository, TestCaseResultRepository>();
+        services.AddScoped<IContestRepository, ContestRepository>();
 
         // Auth
         services.AddScoped<IJwtService, JwtService>();
@@ -53,6 +54,7 @@ public static class DependencyInjection
         services.AddScoped<IAiHintService, AiHintService>();
         services.AddScoped<IPerformanceService, PerformanceService>();
         services.AddScoped<IAnalyticsService, AnalyticsService>();
+        services.AddScoped<IContestService, ContestService>();
         services.AddScoped<IJudgeEvaluationService, JudgeEvaluationService>();
 
         // Judge0 (code evaluation)

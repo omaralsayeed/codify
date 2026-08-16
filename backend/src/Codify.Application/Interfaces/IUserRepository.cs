@@ -20,6 +20,15 @@ public interface IUserRepository
     /// </summary>
     Task<User?> GetInstructorWithProblemsAndSubmissionsAsync(Guid instructorId);
 
+    /// <summary>Returns all active students with their submissions and performance profiles.</summary>
+    Task<IReadOnlyList<User>> GetAllStudentsWithSubmissionsAsync();
+
+    /// <summary>Finds a user by ID, username, email, or fullname slug with all submissions and problems.</summary>
+    Task<User?> GetUserWithProfileDataAsync(string identifier);
+
+    /// <summary>Returns all users across all roles.</summary>
+    Task<IReadOnlyList<User>> GetAllUsersAsync();
+
     /// <summary>Returns all instructors with Status = Pending, ordered by registration date.</summary>
     Task<IReadOnlyList<User>> GetPendingInstructorsAsync();
 

@@ -143,6 +143,18 @@ export class ProblemService {
     return this.getAll({ search: query });
   }
 
+  create(payload: any): Observable<any> {
+    return this.http
+      .post<ApiEnvelope<any>>(`${this.baseUrl}/problems`, payload, { headers: this.headers() })
+      .pipe(map(r => r.data));
+  }
+
+  update(id: string, payload: any): Observable<any> {
+    return this.http
+      .put<ApiEnvelope<any>>(`${this.baseUrl}/problems/${id}`, payload, { headers: this.headers() })
+      .pipe(map(r => r.data));
+  }
+
   /**
    * Map backend problem list item to frontend Problem model
    */

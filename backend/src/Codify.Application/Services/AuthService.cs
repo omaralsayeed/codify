@@ -63,14 +63,18 @@ public class AuthService(IUserRepository userRepo, IJwtService jwtService) : IAu
         var user = await userRepo.GetByIdAsync(userId)
             ?? throw new NotFoundException("User not found.");
 
-        return new UserProfileResponse
-        {
-            UserId = user.Id,
-            FullName = user.FullName,
-            Email = user.Email,
-            Role = user.Role,
-            CreatedAt = user.CreatedAt
-        };
+        return MapToUserProfile(user);
+    }
+
+    public async Task<UserProfileResponse> UpdateProfileAsync(Guid userId, UpdateProfileDto dto)
+    {
+        var user = await userRepo.GetByIdAsync(userId)
+            ?? throw new NotFoundException("User not found.");
+
+        user.UpdateProfile(dto.FullName, dto.Bio, dto.Organization, dto.AvatarUrl);
+        await userRepo.SaveChangesAsync();
+
+        return MapToUserProfile(user);
     }
 
     public async Task UpdateAvatarUrlAsync(Guid userId, string avatarUrl)
@@ -78,8 +82,22 @@ public class AuthService(IUserRepository userRepo, IJwtService jwtService) : IAu
         var user = await userRepo.GetByIdAsync(userId)
             ?? throw new NotFoundException("User not found.");
 
-        // Preserve existing bio — only the avatar URL is being changed
-        user.UpdateProfile(user.Bio, avatarUrl);
+        user.UpdateProfile(user.FullName, user.Bio, user.Organization, avatarUrl);
         await userRepo.SaveChangesAsync();
     }
+
+    private static UserProfileResponse MapToUserProfile(User user) => new()
+    {
+        UserId = user.Id,
+        FullName = user.FullName,
+        Email = user.Email,
+        Role = user.Role,
+        Status = user.Status,
+        Organization = user.Organization,
+        Bio = user.Bio,
+        AvatarUrl = user.AvatarUrl,
+        SolvedProblems = user.SolvedProblems,
+        Rating = user.Rating,
+        CreatedAt = user.CreatedAt
+    };
 }

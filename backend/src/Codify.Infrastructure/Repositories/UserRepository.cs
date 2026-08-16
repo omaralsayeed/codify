@@ -42,6 +42,56 @@ public class UserRepository(CodifyDbContext db) : IUserRepository
             .AsSplitQuery()
             .FirstOrDefaultAsync(u => u.Id == instructorId);
 
+    public async Task<IReadOnlyList<User>> GetAllStudentsWithSubmissionsAsync() =>
+        await db.Users
+            .Where(u => u.Role == Domain.Enums.UserRole.Student && !u.IsDeleted)
+            .Include(u => u.Submissions)
+            .Include(u => u.PerformanceProfile)
+            .AsSplitQuery()
+            .OrderBy(u => u.FullName)
+            .ToListAsync();
+
+    public async Task<User?> GetUserWithProfileDataAsync(string identifier)
+    {
+        if (string.IsNullOrWhiteSpace(identifier)) return null;
+
+        var clean = identifier.Trim().ToLower();
+
+        if (Guid.TryParse(identifier, out var id))
+        {
+            return await db.Users
+                .Include(u => u.Submissions)
+                    .ThenInclude(s => s.Problem)
+                        .ThenInclude(p => p.ProblemTags)
+                            .ThenInclude(pt => pt.ConceptTag)
+                .Include(u => u.PerformanceProfile)
+                .AsSplitQuery()
+                .FirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted);
+        }
+
+        return await db.Users
+            .Include(u => u.Submissions)
+                .ThenInclude(s => s.Problem)
+                    .ThenInclude(p => p.ProblemTags)
+                        .ThenInclude(pt => pt.ConceptTag)
+            .Include(u => u.PerformanceProfile)
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(u => !u.IsDeleted && (
+                u.Username == identifier ||
+                u.Email.ToLower() == clean ||
+                u.FullName.ToLower() == clean ||
+                u.FullName.ToLower().Replace(" ", "_") == clean
+            ));
+    }
+
+    public async Task<IReadOnlyList<User>> GetAllUsersAsync() =>
+        await db.Users
+            .Where(u => !u.IsDeleted)
+            .Include(u => u.Submissions)
+            .AsSplitQuery()
+            .OrderBy(u => u.CreatedAt)
+            .ToListAsync();
+
     public async Task<IReadOnlyList<User>> GetPendingInstructorsAsync() =>
         await db.Users
             .Where(u => u.Role == Domain.Enums.UserRole.Instructor

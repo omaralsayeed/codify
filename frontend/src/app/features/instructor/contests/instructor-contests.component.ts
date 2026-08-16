@@ -1,4 +1,4 @@
-import { Component, inject, ChangeDetectionStrategy, signal, computed } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ContestService } from '../../../core/services/contest.service';
@@ -14,10 +14,10 @@ type FilterStatus = ContestStatus | 'all';
   templateUrl: './instructor-contests.component.html',
   styleUrl: './instructor-contests.component.scss',
 })
-export class InstructorContestsComponent {
+export class InstructorContestsComponent implements OnInit {
   private readonly contestSvc = inject(ContestService);
 
-  protected readonly allContests: Contest[] = this.contestSvc.getContests();
+  protected readonly allContests = signal<Contest[]>(this.contestSvc.getContests());
 
   readonly activeFilter = signal<FilterStatus>('all');
 
@@ -29,11 +29,18 @@ export class InstructorContestsComponent {
     { label: 'Draft',    value: 'draft'    },
   ];
 
+  ngOnInit(): void {
+    this.contestSvc.getContests$().subscribe(contests => {
+      this.allContests.set(contests || []);
+    });
+  }
+
   readonly contests = computed<Contest[]>(() => {
     const f = this.activeFilter();
+    const list = this.allContests();
     return f === 'all'
-      ? this.allContests
-      : this.allContests.filter(c => c.status === f);
+      ? list
+      : list.filter(c => c.status === f);
   });
 
   // ── Per-contest computed stats ────────────────────────────────────────────

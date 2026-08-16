@@ -1,22 +1,7 @@
-/**
- * AnalyticsService
- *
- * Powers the Student Dashboard with data from the Analytics Agent.
- *
- * All methods are currently mocked with realistic data and a delay(1200)
- * to simulate network latency. When the real Analytics Agent API is ready,
- * only this service changes — nothing in the components.
- *
- * Base URL (future): http://localhost:5237/api
- * Auth: reads JWT from localStorage key 'codify_token'.
- *
- * TODO: replace mock implementations with real API calls once the
- *       Analytics Agent endpoints are available.
- */
-
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpErrorResponse } from '@angular/common/http';
-import { Observable, of, throwError, delay, catchError, map } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 import {
   StudentDashboardData,
   DashboardSummary,
@@ -25,18 +10,14 @@ import {
   ScorePoint,
   RecommendedProblem,
   StudentAnalytics,
-  MOCK_ANALYTICS,
   PublicProfileData,
-  ActivityDay,
-  LanguageStat,
-  DifficultyTotals,
 } from '../models/analytics.model';
 import { ServiceError } from '../models/submission.model';
 
 /** Shape of every response envelope from the backend: { data: T } */
 interface ApiEnvelope<T> { data: T; }
 
-/** Backend StudentAnalyticsResponse shape (fields are camelCase after HttpClient conversion) */
+/** Backend StudentAnalyticsResponse shape */
 interface BackendStudentAnalytics {
   userId: string;
   fullName: string;
@@ -59,6 +40,7 @@ interface BackendStudentAnalytics {
   weakTopics: string[];
   lastSubmissionAt: string | null;
   memberSince: string;
+  totalHintsUsed?: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -66,15 +48,13 @@ export class AnalyticsService {
   private readonly http = inject(HttpClient);
   private readonly API  = 'http://localhost:5237/api';
 
-  // ── Auth helper ────────────────────────────────────────────────────────────
-
   private headers(): HttpHeaders {
-    // TODO: replace with HttpInterceptor once real JWT auth is wired
     const token = localStorage.getItem('codify_token') ?? '';
-    return new HttpHeaders({ Authorization: `Bearer ${token}` });
+    return new HttpHeaders({
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    });
   }
-
-  // ── Error handler ──────────────────────────────────────────────────────────
 
   private handleError(err: unknown): Observable<never> {
     if (err instanceof HttpErrorResponse) {
@@ -95,413 +75,156 @@ export class AnalyticsService {
   // ── Public API ─────────────────────────────────────────────────────────────
 
   /**
-   * GET /api/analytics/dashboard
-   *
-   * Returns the full student dashboard payload in one call.
-   * TODO: replace with real Analytics Agent API call
+   * GET /api/analytics/me (or /api/analytics/profile)
+   * Returns live student dashboard payload with real DB calculations.
    */
   getDashboard(): Observable<StudentDashboardData> {
-    // TODO: replace with real Analytics Agent API call
-    // return this.http
-    //   .get<ApiEnvelope<StudentDashboardData>>(`${this.API}/analytics/dashboard`, { headers: this.headers() })
-    //   .pipe(map(r => r.data), catchError(e => this.handleError(e)));
+    return this.http
+      .get<ApiEnvelope<PublicProfileData>>(`${this.API}/analytics/profile`, { headers: this.headers() })
+      .pipe(
+        map(r => {
+          const p = r.data;
+          const topicStats: TopicStat[] = (p.topicStats || []).map(t => ({
+            topic: t.topicName,
+            percentage: t.strengthScore,
+            trend: t.strengthScore >= 70 ? 'up' : t.strengthScore >= 40 ? 'flat' : 'down',
+          }));
 
-    return of(this.mockDashboard()).pipe(delay(1200));
+          const grid = p.activityGrid || [];
+          const recentDays = grid.slice(-28);
+          const weeklyActivity: WeeklyActivity[] = recentDays.map(d => ({
+            date: d.date,
+            solved: d.count,
+            attempted: d.count,
+          }));
+
+          const scoreHistory: ScorePoint[] = (p.recentAccepted || []).map(s => ({
+            date: s.submittedAt.slice(0, 10),
+            score: p.successRate,
+          }));
+
+          return {
+            summary: {
+              problemsSolved: p.totalSolved,
+              avgScore: Math.round(p.successRate),
+              streak: p.streak?.currentStreak || 0,
+              totalAttempts: p.totalAttempted,
+              acceptanceRate: Math.round(p.successRate),
+              hintsUsedToday: 0,
+              hintsLimit: 5,
+            },
+            topicStats,
+            weeklyActivity,
+            scoreHistory,
+            recommendations: [],
+          };
+        }),
+        catchError(() =>
+          of({
+            summary: {
+              problemsSolved: 0,
+              avgScore: 0,
+              streak: 0,
+              totalAttempts: 0,
+              acceptanceRate: 0,
+              hintsUsedToday: 0,
+              hintsLimit: 5,
+            },
+            topicStats: [],
+            weeklyActivity: [],
+            scoreHistory: [],
+            recommendations: [],
+          })
+        )
+      );
   }
 
-  /**
-   * GET /api/analytics/summary
-   *
-   * Returns only the headline summary stats.
-   * TODO: replace with real Analytics Agent API call
-   */
   getSummary(): Observable<DashboardSummary> {
-    // TODO: replace with real Analytics Agent API call
-    // return this.http
-    //   .get<ApiEnvelope<DashboardSummary>>(`${this.API}/analytics/summary`, { headers: this.headers() })
-    //   .pipe(map(r => r.data), catchError(e => this.handleError(e)));
-
-    return of(this.mockDashboard().summary).pipe(delay(1200));
+    return this.getDashboard().pipe(map(d => d.summary));
   }
 
-  /**
-   * GET /api/analytics/topics
-   *
-   * Returns topic mastery stats with trend indicators.
-   * TODO: replace with real Analytics Agent API call
-   */
   getTopicStats(): Observable<TopicStat[]> {
-    // TODO: replace with real Analytics Agent API call
-    // return this.http
-    //   .get<ApiEnvelope<TopicStat[]>>(`${this.API}/analytics/topics`, { headers: this.headers() })
-    //   .pipe(map(r => r.data), catchError(e => this.handleError(e)));
-
-    return of(this.mockDashboard().topicStats).pipe(delay(1200));
+    return this.getDashboard().pipe(map(d => d.topicStats));
   }
 
-  /**
-   * GET /api/analytics/activity
-   *
-   * Returns weekly activity (problems solved per day) for the last 4 weeks.
-   * TODO: replace with real Analytics Agent API call
-   */
   getWeeklyActivity(): Observable<WeeklyActivity[]> {
-    // TODO: replace with real Analytics Agent API call
-    // return this.http
-    //   .get<ApiEnvelope<WeeklyActivity[]>>(`${this.API}/analytics/activity`, { headers: this.headers() })
-    //   .pipe(map(r => r.data), catchError(e => this.handleError(e)));
-
-    return of(this.mockDashboard().weeklyActivity).pipe(delay(1200));
+    return this.getDashboard().pipe(map(d => d.weeklyActivity));
   }
 
-  /**
-   * GET /api/analytics/scores
-   *
-   * Returns score history for the rolling 30-day trend chart.
-   * TODO: replace with real Analytics Agent API call
-   */
   getScoreHistory(): Observable<ScorePoint[]> {
-    // TODO: replace with real Analytics Agent API call
-    // return this.http
-    //   .get<ApiEnvelope<ScorePoint[]>>(`${this.API}/analytics/scores`, { headers: this.headers() })
-    //   .pipe(map(r => r.data), catchError(e => this.handleError(e)));
-
-    return of(this.mockDashboard().scoreHistory).pipe(delay(1200));
+    return this.getDashboard().pipe(map(d => d.scoreHistory));
   }
 
-  /**
-   * GET /api/analytics/recommendations
-   *
-   * Returns personalized problem recommendations from the Analytics Agent,
-   * ordered by priority (weakest topics first).
-   * TODO: replace with real Analytics Agent API call
-   */
   getRecommendations(): Observable<RecommendedProblem[]> {
-    // TODO: replace with real Analytics Agent API call
-    // return this.http
-    //   .get<ApiEnvelope<RecommendedProblem[]>>(`${this.API}/analytics/recommendations`, { headers: this.headers() })
-    //   .pipe(map(r => r.data), catchError(e => this.handleError(e)));
-
-    return of(this.mockDashboard().recommendations).pipe(delay(1200));
+    return this.getDashboard().pipe(map(d => d.recommendations));
   }
 
   /**
-   * GET /api/analytics/progress
-   *
-   * Returns the full StudentAnalytics payload for the progress page.
-   * Includes summary, topic performance, difficulty breakdown, success rate
-   * history, recent submissions, recommendations, and hint usage.
-   * TODO: replace with real Analytics Agent API call
+   * GET /api/analytics/profile
+   * Returns live StudentAnalytics payload for the progress page from database.
    */
   getStudentAnalytics(): Observable<StudentAnalytics> {
     return this.http
-      .get<ApiEnvelope<BackendStudentAnalytics>>(`${this.API}/analytics/me`, { headers: this.headers() })
+      .get<ApiEnvelope<PublicProfileData>>(`${this.API}/analytics/profile`, { headers: this.headers() })
       .pipe(
-        map(r => this.mapStudentAnalytics(r.data)),
-        catchError(e => {
-          // Fall back to mock if backend is unreachable so the page still works during dev
-          console.warn('Analytics API unavailable — using mock data', e);
-          return of(this.mockStudentAnalytics());
+        map(r => {
+          const p = r.data;
+          const grid = p.activityGrid || [];
+          const lastSeven = grid.slice(-7).map(d => ({
+            date: d.date,
+            submitted: d.count > 0,
+          }));
+
+          return {
+            summary: {
+              studentName: p.user?.name || 'Student',
+              totalAttempted: p.totalAttempted,
+              totalSolved: p.totalSolved,
+              successRate: Math.round(p.successRate),
+              streak: {
+                currentStreak: p.streak?.currentStreak || 0,
+                longestStreak: p.streak?.longestStreak || 0,
+                lastSevenDays: lastSeven,
+              },
+            },
+            topics: p.topicStats || [],
+            difficultyBreakdown: p.difficultyBreakdown || { easy: 0, medium: 0, hard: 0 },
+            successRateHistory: [],
+            recentSubmissions: (p.recentAccepted || []).map(s => ({
+              submissionId: s.submissionId,
+              problemId: s.problemId,
+              problemTitle: s.problemTitle,
+              difficulty: s.difficulty as any,
+              status: s.status as any,
+              language: s.language,
+              submittedAt: s.submittedAt,
+            })),
+            recommendations: [],
+            hintUsage: {
+              totalHintsUsed: 0,
+              averageHintsPerProblem: 0,
+              solvedWithZeroHints: p.totalSolved,
+              solvedUsingAllHints: 0,
+            },
+          };
         }),
+        catchError(err => this.handleError(err))
       );
   }
 
   /**
-   * GET /api/profile/:username
-   *
-   * Returns the public profile data for any user by username slug.
-   * No auth required — this is a public endpoint.
-   * TODO: replace with real Analytics Agent API call
+   * GET /api/analytics/profile/:username
+   * Returns public profile data directly from database.
    */
-  // ── Public profile mock — precomputed once at construction ─────────────────
-  // Precomputing avoids 730 Math.random() calls on every navigation
-  private readonly _cachedProfile: PublicProfileData = this.buildMockPublicProfile();
-
   getPublicProfile(username: string): Observable<PublicProfileData> {
-    // TODO: replace with real Analytics Agent API call
-    // return this.http
-    //   .get<ApiEnvelope<PublicProfileData>>(`${this.API}/profile/${username}`)
-    //   .pipe(map(r => r.data), catchError(e => this.handleError(e)));
-
-    // Synchronous — no delay, profile data is pre-built at service init
-    return of(this._cachedProfile);
-  }
-
-  // ── Backend → Frontend mapper ──────────────────────────────────────────────
-
-  /**
-   * Maps the backend StudentAnalyticsResponse to the frontend StudentAnalytics shape.
-   * Fields the backend doesn't provide yet (topic strength scores, success rate history,
-   * recommendations, hint usage) are filled from the mock so the UI stays fully
-   * populated until those backend endpoints are built.
-   */
-  private mapStudentAnalytics(b: BackendStudentAnalytics): StudentAnalytics {
-    const mock = this.mockStudentAnalytics();
-
-    // Build topic performance from strong/weak topic name arrays
-    const topicPerf = mock.topics.map(t => ({
-      ...t,
-      strength: (b.strongTopics.some(s => s.toLowerCase().includes(t.topicName.toLowerCase()))
-        ? 'strong'
-        : b.weakTopics.some(w => w.toLowerCase().includes(t.topicName.toLowerCase()))
-          ? 'weak'
-          : 'average') as import('../models/analytics.model').TopicStrength,
-    }));
-
-    // Build last 7 days from lastSubmissionAt — if within 7 days mark as submitted
-    const today = new Date();
-    const lastSevenDays = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(today);
-      d.setDate(today.getDate() - (6 - i));
-      return { date: d.toISOString().slice(0, 10), submitted: i >= 3 }; // conservative default
-    });
-
-    return {
-      summary: {
-        studentName:    b.fullName,
-        totalAttempted: b.totalSubmissions,
-        totalSolved:    b.totalSolvedProblems,
-        successRate:    Math.round(b.successRatePercent),
-        streak: {
-          currentStreak:   mock.summary.streak.currentStreak,
-          longestStreak:   mock.summary.streak.longestStreak,
-          lastSevenDays,
-        },
-      },
-      topics:              topicPerf,
-      difficultyBreakdown: { easy: b.easySolved, medium: b.mediumSolved, hard: b.hardSolved },
-      successRateHistory:  mock.successRateHistory,
-      recentSubmissions:   mock.recentSubmissions,
-      recommendations:     mock.recommendations,
-      hintUsage:           mock.hintUsage,
-    };
-  }
-
-  // ── Mock data ──────────────────────────────────────────────────────────────
-
-  /**
-   * Builds a fresh StudentAnalytics object every call so dates are always
-   * relative to the real current date — ensures isToday() works correctly
-   * and streak dots display the right day labels.
-   */
-  private mockStudentAnalytics(): StudentAnalytics {
-    const today = new Date();
-
-    // Build last 7 days with submitted = true for all except 5 days ago
-    const lastSevenDays = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(today);
-      d.setDate(today.getDate() - (6 - i));
-      const dayStr = d.toISOString().slice(0, 10);
-      // Miss one day (index 2 = 4 days ago) to show the hollow dot
-      return { date: dayStr, submitted: i !== 2 };
-    });
-
-    return {
-      ...MOCK_ANALYTICS,
-      summary: {
-        ...MOCK_ANALYTICS.summary,
-        streak: {
-          ...MOCK_ANALYTICS.summary.streak,
-          lastSevenDays,
-        },
-      },
-    };
-  }
-
-  private mockDashboard(): StudentDashboardData {
-    return {
-      summary:          this.mockSummary(),
-      topicStats:       this.mockTopicStats(),
-      weeklyActivity:   this.mockWeeklyActivity(),
-      scoreHistory:     this.mockScoreHistory(),
-      recommendations:  this.mockRecommendations(),
-    };
-  }
-
-  private mockSummary(): DashboardSummary {
-    return {
-      problemsSolved:  47,
-      avgScore:        68,
-      streak:          12,
-      totalAttempts:   83,
-      acceptanceRate:  57,
-      hintsUsedToday:  3,
-      hintsLimit:      5,
-    };
-  }
-
-  private mockTopicStats(): TopicStat[] {
-    return [
-      { topic: 'Arrays',             percentage: 85, trend: 'up'   },
-      { topic: 'Recursion',          percentage: 72, trend: 'up'   },
-      { topic: 'Dyn. Programming',   percentage: 54, trend: 'flat' },
-      { topic: 'Graphs',             percentage: 38, trend: 'down' },
-      { topic: 'Greedy',             percentage: 61, trend: 'up'   },
-      { topic: 'Sorting',            percentage: 79, trend: 'up'   },
-      { topic: 'Binary Search',      percentage: 66, trend: 'flat' },
-      { topic: 'Trees',              percentage: 43, trend: 'down' },
-    ];
-  }
-
-  private mockWeeklyActivity(): WeeklyActivity[] {
-    // Last 28 days
-    const today = new Date();
-    return Array.from({ length: 28 }, (_, i) => {
-      const d = new Date(today);
-      d.setDate(today.getDate() - (27 - i));
-      const solved   = Math.round(Math.random() * 4);
-      const extra    = Math.round(Math.random() * 2);
-      return {
-        date:      d.toISOString().slice(0, 10),
-        solved,
-        attempted: solved + extra,
-      };
-    });
-  }
-
-  private mockScoreHistory(): ScorePoint[] {
-    // Last 30 days — generally trending upward with noise
-    const today = new Date();
-    let score = 45;
-    return Array.from({ length: 30 }, (_, i) => {
-      const d = new Date(today);
-      d.setDate(today.getDate() - (29 - i));
-      score = Math.min(100, Math.max(20, score + (Math.random() * 10 - 3)));
-      return {
-        date:  d.toISOString().slice(0, 10),
-        score: Math.round(score),
-      };
-    });
-  }
-
-  private mockRecommendations(): RecommendedProblem[] {
-    return [
-      {
-        id:                 '2',
-        title:              'Number of Islands',
-        difficulty:         'hard',
-        topic:              'graphs',
-        topicLabel:         'Graphs · BFS',
-        reason:             'Weak area: Graphs (38%)',
-        estimatedMinutes:   35,
-      },
-      {
-        id:                 '9',
-        title:              'Lowest Common Ancestor',
-        difficulty:         'hard',
-        topic:              'trees',
-        topicLabel:         'Trees · DFS',
-        reason:             'Weak area: Trees (43%)',
-        estimatedMinutes:   30,
-      },
-      {
-        id:                 '1',
-        title:              'Coin Change II',
-        difficulty:         'medium',
-        topic:              'dynamic-programming',
-        topicLabel:         'Dynamic Programming',
-        reason:             'Needs improvement: Dyn. Programming (54%)',
-        estimatedMinutes:   25,
-      },
-      {
-        id:                 '7',
-        title:              'Course Schedule',
-        difficulty:         'medium',
-        topic:              'graphs',
-        topicLabel:         'Graphs · Topological Sort',
-        reason:             'Weak area: Graphs (38%)',
-        estimatedMinutes:   20,
-      },
-      {
-        id:                 '8',
-        title:              'Maximum Subarray',
-        difficulty:         'medium',
-        topic:              'greedy',
-        topicLabel:         'Greedy · Kadane',
-        reason:             'Steady progress — push further: Greedy (61%)',
-        estimatedMinutes:   15,
-      },
-    ];
-  }
-
-  // ── Public profile mock ─────────────────────────────────────────────────────
-
-  private buildMockPublicProfile(): PublicProfileData {
-    const today = new Date();
-
-    // Build 365-day activity grid with realistic sparse submissions
-    const activityGrid: ActivityDay[] = Array.from({ length: 365 }, (_, i) => {
-      const d = new Date(today);
-      d.setDate(today.getDate() - (364 - i));
-      // ~40% of days have activity; recent days are denser
-      const recency = i / 365; // 0 = oldest, 1 = today
-      const prob    = 0.25 + recency * 0.35;
-      const count   = Math.random() < prob ? Math.ceil(Math.random() * 4) : 0;
-      return { date: d.toISOString().slice(0, 10), count };
-    });
-
-    const totalActiveDays       = activityGrid.filter(d => d.count > 0).length;
-    const totalSubmissions      = activityGrid.reduce((s, d) => s + d.count, 0);
-
-    // Compute streak from the grid end
-    let currentStreak = 0;
-    for (let i = activityGrid.length - 1; i >= 0; i--) {
-      if (activityGrid[i].count > 0) currentStreak++;
-      else break;
-    }
-    let longestStreak = 0;
-    let run = 0;
-    for (const d of activityGrid) {
-      if (d.count > 0) { run++; longestStreak = Math.max(longestStreak, run); }
-      else run = 0;
-    }
-
-    const recentAccepted: PublicProfileData['recentAccepted'] = [
-      { submissionId: 's1', problemId: 'p1', problemTitle: 'Two Sum',                 difficulty: 'Easy',   status: 'Accepted', language: 'Python',     submittedAt: this.daysAgo(1) },
-      { submissionId: 's3', problemId: 'p3', problemTitle: 'Climbing Stairs',          difficulty: 'Easy',   status: 'Accepted', language: 'C#',         submittedAt: this.daysAgo(2) },
-      { submissionId: 's5', problemId: 'p5', problemTitle: 'Valid Parentheses',        difficulty: 'Easy',   status: 'Accepted', language: 'JavaScript', submittedAt: this.daysAgo(3) },
-      { submissionId: 's6', problemId: 'p6', problemTitle: 'Maximum Subarray',         difficulty: 'Medium', status: 'Accepted', language: 'Python',     submittedAt: this.daysAgo(7) },
-      { submissionId: 's7', problemId: 'p7', problemTitle: 'Binary Search',            difficulty: 'Easy',   status: 'Accepted', language: 'Python',     submittedAt: this.daysAgo(10) },
-      { submissionId: 's8', problemId: 'p8', problemTitle: 'Merge Intervals',          difficulty: 'Medium', status: 'Accepted', language: 'C#',         submittedAt: this.daysAgo(14) },
-      { submissionId: 's9', problemId: 'p9', problemTitle: 'Reverse Linked List',      difficulty: 'Easy',   status: 'Accepted', language: 'Python',     submittedAt: this.daysAgo(18) },
-      { submissionId: 's10',problemId: 'p3', problemTitle: 'Climbing Stairs',          difficulty: 'Easy',   status: 'Accepted', language: 'Python',     submittedAt: this.daysAgo(25) },
-    ];
-
-    return {
-      user: {
-        username:       'test_student',
-        name:           'Test Student',
-        avatarInitials: 'TS',
-        role:           'student',
-        joinedAt:       new Date(2023, 0, 15).toISOString(),
-        headline:       'SWE | 3 yrs exp · Open to opportunities',
-        bio:            'Passionate about algorithms and clean code. Building real-world projects while sharpening problem-solving skills one problem at a time.',
-        social: {
-          linkedin: 'https://linkedin.com/in/test-student',
-          github:   'https://github.com/test-student',
-          twitter:  'https://twitter.com/test_student',
-        },
-      },
-      totalSolved:    31,
-      totalAttempted: 47,
-      successRate:    66,
-      streak: { currentStreak, longestStreak, totalActiveDays, totalSubmissionsLastYear: totalSubmissions },
-      difficultyBreakdown: { easy: 18, medium: 10, hard: 3 },
-      difficultyTotals:    { easy: 955, medium: 1813, hard: 843 },
-      languageStats: [
-        { language: 'Python',     solved: 22 },
-        { language: 'C#',         solved:  7 },
-        { language: 'JavaScript', solved:  2 },
-      ],
-      topicStats:     MOCK_ANALYTICS.topics,
-      activityGrid,
-      recentAccepted,
-    };
-  }
-
-  private daysAgo(n: number): string {
-    const d = new Date();
-    d.setDate(d.getDate() - n);
-    return d.toISOString();
+    const slug = encodeURIComponent(username.trim());
+    return this.http
+      .get<ApiEnvelope<PublicProfileData>>(`${this.API}/analytics/profile/${slug}`, {
+        headers: this.headers(),
+      })
+      .pipe(
+        map(r => r.data),
+        catchError(err => this.handleError(err))
+      );
   }
 }

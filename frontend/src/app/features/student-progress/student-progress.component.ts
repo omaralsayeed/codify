@@ -14,6 +14,8 @@ import { Subject, takeUntil } from 'rxjs';
 
 import { AnalyticsService }  from '../../core/services/analytics.service';
 import { AuthService }       from '../../core/services/auth.service';
+import { ContestService }   from '../../core/services/contest.service';
+import { StudentContestsOverview } from '../../core/models/contest.model';
 import {
   StudentAnalytics,
   DailyActivity,
@@ -43,6 +45,7 @@ const STRENGTH_ORDER: Record<TopicStrength, number> = {
 export class StudentProgressComponent implements OnInit, AfterViewInit, OnDestroy {
   // ── DI ─────────────────────────────────────────────────────────────────────
   private readonly analyticsService = inject(AnalyticsService);
+  private readonly contestService   = inject(ContestService);
   readonly authService              = inject(AuthService);
   private readonly cdr              = inject(ChangeDetectorRef);
   private readonly router           = inject(Router);
@@ -54,6 +57,7 @@ export class StudentProgressComponent implements OnInit, AfterViewInit, OnDestro
 
   // ── Page state ──────────────────────────────────────────────────────────────
   analytics: StudentAnalytics | null = null;
+  contestOverview: StudentContestsOverview | null = null;
   isLoading = true;
   error: string | null = null;
 
@@ -188,6 +192,11 @@ export class StudentProgressComponent implements OnInit, AfterViewInit, OnDestro
               this.cdr.detectChanges();
             }, 400 + i * 100);
             this.recTimerIds[i] = id;
+          });
+
+          this.contestService.getMyContests$().subscribe(co => {
+            this.contestOverview = co;
+            this.cdr.detectChanges();
           });
         },
         error: () => {

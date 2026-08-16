@@ -1,38 +1,7 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-
-// ── Mock data types ───────────────────────────────────────────────────────────
-
-interface AdminStats {
-  totalUsers: number;
-  totalStudents: number;
-  totalInstructors: number;
-  activeInstructors: number;
-  pendingInstructors: number;
-  totalProblems: number;
-  totalSubmissions: number;
-  newUsersToday: number;
-  newUsersThisWeek: number;
-  submissionsToday: number;
-}
-
-// ── Mock data (replace with HTTP call when backend is ready) ──────────────────
-
-const MOCK_STATS: AdminStats = {
-  totalUsers:          124,
-  totalStudents:       118,
-  totalInstructors:      6,
-  activeInstructors:     3,
-  pendingInstructors:    3,
-  totalProblems:        32,
-  totalSubmissions:   4820,
-  newUsersToday:         5,
-  newUsersThisWeek:     18,
-  submissionsToday:     87,
-};
-
-// ── Component ─────────────────────────────────────────────────────────────────
+import { AdminService, AdminStats } from '../../../core/services/admin.service';
 
 @Component({
   selector: 'app-admin-overview',
@@ -42,47 +11,72 @@ const MOCK_STATS: AdminStats = {
   templateUrl: './admin-overview.component.html',
   styleUrl: './admin-overview.component.scss',
 })
-export class AdminOverviewComponent {
+export class AdminOverviewComponent implements OnInit {
+  private readonly adminSvc = inject(AdminService);
 
-  readonly stats = MOCK_STATS;
+  readonly stats = signal<AdminStats>({
+    totalUsers: 0,
+    activeStudents: 0,
+    pendingInstructors: 0,
+    activeInstructors: 0,
+    totalProblems: 0,
+    totalSubmissions: 0,
+    passRatePercent: 0,
+    totalContests: 0,
+    aiFlagsCount: 0,
+  });
+
+  ngOnInit(): void {
+    this.adminSvc.getStats().subscribe(data => {
+      if (data) {
+        this.stats.set(data);
+      }
+    });
+  }
 
   // ── Top stat cards ──────────────────────────────────────────────────────────
-  readonly statCards = [
-    {
-      label:     'Total Users',
-      value:     this.stats.totalUsers,
-      sub:       `↑ ${this.stats.newUsersThisWeek} this week`,
-      icon:      '👥',
-      colorClass: 'card--blue',
-    },
-    {
-      label:     'Total Problems',
-      value:     this.stats.totalProblems,
-      sub:       'active on platform',
-      icon:      '🗂',
-      colorClass: 'card--teal',
-    },
-    {
-      label:     'Pending Instructors',
-      value:     this.stats.pendingInstructors,
-      sub:       `${this.stats.activeInstructors} active`,
-      icon:      '⏳',
-      colorClass: this.stats.pendingInstructors > 0 ? 'card--orange' : 'card--teal',
-    },
-    {
-      label:     'Submissions Today',
-      value:     this.stats.submissionsToday,
-      sub:       `${this.stats.totalSubmissions.toLocaleString()} all time`,
-      icon:      '⚡',
-      colorClass: 'card--gold',
-    },
-  ];
+  readonly statCards = computed(() => {
+    const s = this.stats();
+    return [
+      {
+        label:     'Total Users',
+        value:     s.totalUsers,
+        sub:       `${s.activeStudents} active students`,
+        icon:      '👥',
+        colorClass: 'card--blue',
+      },
+      {
+        label:     'Total Problems',
+        value:     s.totalProblems,
+        sub:       'active in database',
+        icon:      '🗂',
+        colorClass: 'card--teal',
+      },
+      {
+        label:     'Pending Instructors',
+        value:     s.pendingInstructors,
+        sub:       `${s.activeInstructors} active`,
+        icon:      '⏳',
+        colorClass: s.pendingInstructors > 0 ? 'card--orange' : 'card--teal',
+      },
+      {
+        label:     'Submissions Solved',
+        value:     s.totalSubmissions,
+        sub:       `${s.passRatePercent}% pass rate`,
+        icon:      '⚡',
+        colorClass: 'card--gold',
+      },
+    ];
+  });
 
   // ── Secondary info row ──────────────────────────────────────────────────────
-  readonly infoItems = [
-    { label: 'Students',           value: this.stats.totalStudents },
-    { label: 'Active Instructors', value: this.stats.activeInstructors },
-    { label: 'New Today',          value: this.stats.newUsersToday },
-    { label: 'Total Submissions',  value: this.stats.totalSubmissions.toLocaleString() },
-  ];
+  readonly infoItems = computed(() => {
+    const s = this.stats();
+    return [
+      { label: 'Active Students',    value: s.activeStudents },
+      { label: 'Active Instructors', value: s.activeInstructors },
+      { label: 'Active Contests',    value: s.totalContests },
+      { label: 'Total Submissions',  value: s.totalSubmissions.toLocaleString() },
+    ];
+  });
 }

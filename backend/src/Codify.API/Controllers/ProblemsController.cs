@@ -28,7 +28,7 @@ public class ProblemsController(IProblemService problemService, ISubmissionServi
     }
 
     [HttpPost]
-    [Authorize(Roles = "Instructor")]
+    [Authorize(Roles = "Instructor,Admin")]
     public async Task<IActionResult> Create([FromBody] CreateProblemRequest request)
     {
         var authorId = User.GetUserId();
@@ -37,7 +37,7 @@ public class ProblemsController(IProblemService problemService, ISubmissionServi
     }
 
     [HttpPut("{id:guid}")]
-    [Authorize(Roles = "Instructor")]
+    [Authorize(Roles = "Instructor,Admin")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateProblemRequest request)
     {
         var result = await problemService.UpdateAsync(id, request);
@@ -45,7 +45,7 @@ public class ProblemsController(IProblemService problemService, ISubmissionServi
     }
 
     [HttpDelete("{id:guid}")]
-    [Authorize(Roles = "Instructor")]
+    [Authorize(Roles = "Instructor,Admin")]
     public async Task<IActionResult> Delete(Guid id)
     {
         await problemService.DeleteAsync(id);

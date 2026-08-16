@@ -1,12 +1,52 @@
-import { Injectable } from '@angular/core';
-import { Contest, ContestResult, ContestStatus, CreateContestPayload } from '../models/contest.model';
+import { Injectable, inject } from '@angular/core';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Observable, of } from 'rxjs';
+import { map, catchError, tap } from 'rxjs/operators';
+import {
+  Contest,
+  ContestResult,
+  ContestStatus,
+  CreateContestPayload,
+  StudentContestsOverview,
+} from '../models/contest.model';
+
+interface ApiEnvelope<T> {
+  data: T;
+  success: boolean;
+}
+
+function normalizeStatus(status: any): ContestStatus {
+  if (status === 0 || status === '0' || status === 'Draft' || status === 'draft') return 'draft';
+  if (status === 1 || status === '1' || status === 'Upcoming' || status === 'upcoming') return 'upcoming';
+  if (status === 2 || status === '2' || status === 'Live' || status === 'live') return 'live';
+  if (status === 3 || status === '3' || status === 'Ended' || status === 'ended') return 'ended';
+  return 'draft';
+}
+
+function normalizeContest(c: any): Contest {
+  return {
+    ...c,
+    status: normalizeStatus(c.status),
+    problemIds: c.problemIds || (c.problems ? c.problems.map((p: any) => p.id) : []),
+    assignedStudentIds: c.assignedStudentIds || [],
+  };
+}
 
 @Injectable({ providedIn: 'root' })
 export class ContestService {
+  private readonly http = inject(HttpClient);
+  private readonly baseUrl = 'http://localhost:5237/api/contests';
 
-  // Mutable copy so createContest() can push into it
-  private readonly contests: Contest[] = [...MOCK_CONTESTS];
-  private readonly results:  ContestResult[] = [...MOCK_RESULTS];
+  private contests: Contest[] = [];
+  private results: ContestResult[] = [];
+
+  private headers(): HttpHeaders {
+    const token = localStorage.getItem('codify_token') ?? '';
+    return new HttpHeaders({
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    });
+  }
 
   // ── Queries ──────────────────────────────────────────────────────────────
 
@@ -14,8 +54,63 @@ export class ContestService {
     return this.contests;
   }
 
+  getContests$(): Observable<Contest[]> {
+    return this.http
+      .get<ApiEnvelope<Contest[]>>(this.baseUrl, { headers: this.headers() })
+      .pipe(
+        map(r => (r.data || []).map(normalizeContest)),
+        tap(contests => {
+          this.contests = contests;
+        }),
+        catchError(() => of(this.contests))
+      );
+  }
+
+  getMyContests$(): Observable<StudentContestsOverview> {
+    return this.http
+      .get<ApiEnvelope<StudentContestsOverview>>(`${this.baseUrl}/my-contests`, {
+        headers: this.headers(),
+      })
+      .pipe(
+        map(r => {
+          const data = r.data;
+          const live = (data?.liveContests || []).map(normalizeContest);
+          const upcoming = (data?.upcomingContests || []).map(normalizeContest);
+          const past = (data?.pastContests || []).map(p => ({
+            ...p,
+            problems: p.problems || [],
+          }));
+          return {
+            hasActiveContestNotification: data?.hasActiveContestNotification || live.length > 0,
+            activeContestsCount: data?.activeContestsCount || live.length,
+            liveContests: live,
+            upcomingContests: upcoming,
+            pastContests: past,
+          };
+        }),
+        catchError(() =>
+          of({
+            hasActiveContestNotification: false,
+            activeContestsCount: 0,
+            liveContests: [],
+            upcomingContests: [],
+            pastContests: [],
+          })
+        )
+      );
+  }
+
   getContestById(id: string): Contest | undefined {
     return this.contests.find(c => c.id === id);
+  }
+
+  getContestById$(id: string): Observable<Contest | undefined> {
+    return this.http
+      .get<ApiEnvelope<Contest>>(`${this.baseUrl}/${id}`, { headers: this.headers() })
+      .pipe(
+        map(r => (r.data ? normalizeContest(r.data) : undefined)),
+        catchError(() => of(this.getContestById(id)))
+      );
   }
 
   /** Returns results for a contest sorted by rank (ascending). */
@@ -25,6 +120,23 @@ export class ContestService {
       .sort((a, b) => a.rank - b.rank);
   }
 
+  getContestResults$(contestId: string): Observable<ContestResult[]> {
+    return this.http
+      .get<ApiEnvelope<ContestResult[]>>(`${this.baseUrl}/${contestId}/results`, {
+        headers: this.headers(),
+      })
+      .pipe(
+        map(r => (r.data || []).sort((a, b) => a.rank - b.rank)),
+        tap(res => {
+          if (res && res.length > 0) {
+            const others = this.results.filter(r => r.contestId !== contestId);
+            this.results = [...res, ...others];
+          }
+        }),
+        catchError(() => of(this.getContestResults(contestId)))
+      );
+  }
+
   /** Returns all results for a student across every contest, oldest first. */
   getStudentContestHistory(studentId: string): ContestResult[] {
     return this.results
@@ -32,12 +144,34 @@ export class ContestService {
       .sort((a, b) => new Date(a.finishedAt).getTime() - new Date(b.finishedAt).getTime());
   }
 
+  getStudentContestHistory$(studentId: string): Observable<ContestResult[]> {
+    return this.http
+      .get<ApiEnvelope<ContestResult[]>>(`${this.baseUrl}/students/${studentId}/history`, {
+        headers: this.headers(),
+      })
+      .pipe(
+        map(r =>
+          (r.data || []).sort(
+            (a, b) => new Date(a.finishedAt).getTime() - new Date(b.finishedAt).getTime()
+          )
+        ),
+        catchError(() => of(this.getStudentContestHistory(studentId)))
+      );
+  }
+
   // ── Mutations ─────────────────────────────────────────────────────────────
 
-  /**
-   * Creates a new contest and pushes it into the mock array.
-   * Validates: at least 1 problem, at least 1 student, end after start.
-   */
+  createContest$(payload: CreateContestPayload): Observable<Contest> {
+    return this.http
+      .post<ApiEnvelope<Contest>>(this.baseUrl, payload, { headers: this.headers() })
+      .pipe(
+        map(r => normalizeContest(r.data)),
+        tap(created => {
+          this.contests.unshift(created);
+        })
+      );
+  }
+
   createContest(payload: CreateContestPayload): Contest {
     if (payload.problemIds.length === 0) {
       throw new Error('A contest must include at least one problem.');
@@ -49,7 +183,6 @@ export class ContestService {
       throw new Error('End date must be after start date.');
     }
 
-    const now   = new Date().toISOString();
     const start = new Date(payload.startAt);
     const end   = new Date(payload.endAt);
     const nowDate = new Date();
@@ -75,118 +208,3 @@ export class ContestService {
     return created;
   }
 }
-
-// ── Mock data ─────────────────────────────────────────────────────────────────
-// Student IDs mirror instructor.service.ts mock: s1=Karim, s2=Layla, s3=Omar, s4=Sara
-// Problem IDs mirror problem.service.ts mock: 1-9
-
-const MOCK_CONTESTS: Contest[] = [
-  {
-    id: 'c1',
-    title: 'Arrays & Hashing Sprint',
-    description: 'Quick contest covering array manipulation and hash map problems.',
-    createdByInstructorId: 'instructor-1',
-    problemIds: ['5', '6', '8'],
-    assignedStudentIds: ['s1', 's2', 's3', 's4'],
-    startAt: '2026-07-10T09:00:00Z',
-    endAt:   '2026-07-10T11:00:00Z',
-    status:  'ended',
-  },
-  {
-    id: 'c2',
-    title: 'Graph Theory Challenge',
-    description: 'BFS, DFS, and topological sort problems for advanced students.',
-    createdByInstructorId: 'instructor-1',
-    problemIds: ['2', '7', '9'],
-    assignedStudentIds: ['s1', 's2', 's3'],
-    startAt: '2026-07-17T14:00:00Z',
-    endAt:   '2026-07-17T16:30:00Z',
-    status:  'ended',
-  },
-  {
-    id: 'c3',
-    title: 'Dynamic Programming Intro',
-    description: 'Introductory DP problems — memoization and tabulation.',
-    createdByInstructorId: 'instructor-1',
-    problemIds: ['1', '3'],
-    assignedStudentIds: ['s2', 's4'],
-    startAt: '2026-07-24T10:00:00Z',
-    endAt:   '2026-07-24T12:00:00Z',
-    status:  'upcoming',
-  },
-  {
-    id: 'c4',
-    title: 'Mixed Concepts Round',
-    description: 'Covers recursion, greedy, and sorting under time pressure.',
-    createdByInstructorId: 'instructor-1',
-    problemIds: ['3', '4', '8'],
-    assignedStudentIds: ['s1', 's3', 's4'],
-    startAt: '2026-07-28T09:00:00Z',
-    endAt:   '2026-07-28T11:30:00Z',
-    status:  'upcoming',
-  },
-  {
-    id: 'c5',
-    title: 'Trees & Recursion Deep Dive',
-    description: 'Tree traversals and recursive algorithms.',
-    createdByInstructorId: 'instructor-1',
-    problemIds: ['3', '9'],
-    assignedStudentIds: ['s1', 's2'],
-    startAt: '2026-07-23T08:00:00Z',
-    endAt:   '2026-07-23T18:00:00Z',
-    status:  'live',
-  },
-  {
-    id: 'c6',
-    title: 'Sorting Algorithms Warmup',
-    description: 'Light contest to warm up on sorting and interval problems.',
-    createdByInstructorId: 'instructor-1',
-    problemIds: ['4', '6'],
-    assignedStudentIds: ['s2', 's3', 's4'],
-    startAt: '2026-07-30T09:00:00Z',
-    endAt:   '2026-07-30T10:30:00Z',
-    status:  'draft',
-  },
-];
-
-// Results only exist for ended contests (c1, c2)
-const MOCK_RESULTS: ContestResult[] = [
-  // ── c1: Arrays & Hashing Sprint (4 students, 3 problems) ─────────────────
-  {
-    contestId: 'c1', studentId: 's1', studentName: 'Karim Ahmed',
-    rank: 1, score: 95, problemsSolved: 3, totalProblems: 3,
-    accuracy: 96, finishedAt: '2026-07-10T10:22:00Z',
-  },
-  {
-    contestId: 'c1', studentId: 's2', studentName: 'Layla Mostafa',
-    rank: 2, score: 88, problemsSolved: 3, totalProblems: 3,
-    accuracy: 91, finishedAt: '2026-07-10T10:35:00Z',
-  },
-  {
-    contestId: 'c1', studentId: 's4', studentName: 'Sara Mahmoud',
-    rank: 3, score: 74, problemsSolved: 2, totalProblems: 3,
-    accuracy: 78, finishedAt: '2026-07-10T10:51:00Z',
-  },
-  {
-    contestId: 'c1', studentId: 's3', studentName: 'Omar Sherif',
-    rank: 4, score: 60, problemsSolved: 2, totalProblems: 3,
-    accuracy: 65, finishedAt: '2026-07-10T10:58:00Z',
-  },
-
-  // ── c2: Graph Theory Challenge (3 students, 3 problems) ──────────────────
-  {
-    contestId: 'c2', studentId: 's2', studentName: 'Layla Mostafa',
-    rank: 1, score: 91, problemsSolved: 3, totalProblems: 3,
-    accuracy: 94, finishedAt: '2026-07-17T15:40:00Z',
-  },
-  {
-    contestId: 'c2', studentId: 's1', studentName: 'Karim Ahmed',
-    rank: 2, score: 85, problemsSolved: 3, totalProblems: 3,
-    accuracy: 88, finishedAt: '2026-07-17T15:52:00Z',
-  },
-  {
-    contestId: 'c2', studentId: 's3', studentName: 'Omar Sherif',
-    rank: 3, score: 52, problemsSolved: 1, totalProblems: 3,
-    accuracy: 58, finishedAt: '2026-07-17T16:18:00Z',
-  },
-];

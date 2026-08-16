@@ -48,21 +48,25 @@ export class InstructorContestDetailComponent implements OnInit {
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id') ?? '';
-    const found = this.contestSvc.getContestById(id);
-    if (!found) { this.contest.set('not-found'); return; }
+    
+    this.contestSvc.getContestById$(id).subscribe(found => {
+      if (!found) {
+        this.contest.set('not-found');
+        return;
+      }
+      this.contest.set(found);
 
-    this.contest.set(found);
-
-    const res = this.contestSvc.getContestResults(id);
-    this.results.set(res);
-
-    if (res.length > 0) {
-      this.avgScore       = Math.round(res.reduce((s, r) => s + r.score, 0) / res.length);
-      this.avgAccuracy    = Math.round(res.reduce((s, r) => s + r.accuracy, 0) / res.length);
-      this.completionRate = Math.round((res.length / found.assignedStudentIds.length) * 100);
-      this.scoreBuckets   = this.buildScoreBuckets(res);
-      this.problemAccuracy = this.buildProblemAccuracy(found, res);
-    }
+      this.contestSvc.getContestResults$(id).subscribe(res => {
+        this.results.set(res);
+        if (res.length > 0) {
+          this.avgScore       = Math.round(res.reduce((s, r) => s + r.score, 0) / res.length);
+          this.avgAccuracy    = Math.round(res.reduce((s, r) => s + r.accuracy, 0) / res.length);
+          this.completionRate = Math.round((res.length / Math.max(found.assignedStudentIds.length, 1)) * 100);
+          this.scoreBuckets   = this.buildScoreBuckets(res);
+          this.problemAccuracy = this.buildProblemAccuracy(found, res);
+        }
+      });
+    });
   }
 
   // ── Chart builders ────────────────────────────────────────────────────────
@@ -89,17 +93,27 @@ export class InstructorContestDetailComponent implements OnInit {
   }
 
   private buildProblemAccuracy(contest: Contest, res: ContestResult[]): ProblemAccuracy[] {
-    const problems = this.problemSvc.getAllSync();
-    const total    = res.length;
+    const total = res.length;
+    const problems = contest.problems || [];
+
+    if (problems.length > 0) {
+      return problems.map(p => {
+        const solved = res.filter(r => (r.problemsSolved / Math.max(r.totalProblems, 1)) >= (1 / problems.length)).length;
+        const accuracy = total > 0 ? Math.round((solved / total) * 100) : 0;
+        return {
+          title: p.title,
+          solved,
+          total,
+          accuracy,
+        };
+      });
+    }
 
     return contest.problemIds.map(pid => {
-      const problem = problems.find(p => p.id === pid);
-      // Count results where student solved at least this many problems
-      // Approximate: use problemsSolved / totalProblems ratio per student per problem slot
-      const solved  = res.filter(r => (r.problemsSolved / r.totalProblems) >= (1 / contest.problemIds.length)).length;
+      const solved = res.filter(r => (r.problemsSolved / Math.max(r.totalProblems, 1)) >= (1 / contest.problemIds.length)).length;
       const accuracy = total > 0 ? Math.round((solved / total) * 100) : 0;
       return {
-        title:    problem?.title ?? `Problem ${pid}`,
+        title: `Problem ${pid.slice(0, 8)}`,
         solved,
         total,
         accuracy,

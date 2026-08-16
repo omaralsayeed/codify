@@ -1,0 +1,220 @@
+<div class="contests-page">
+  <div class="contests-container">
+    <!-- Header -->
+    <header class="page-header">
+      <div class="header-content">
+        <div class="header-badge">
+          <span class="pulse-dot"></span>
+          Competitive Arena
+        </div>
+        <h1 class="page-title">My Contests & Challenges</h1>
+        <p class="page-subtitle">
+          Participate in live programming contests assigned by your instructors, track your ranking, and review historical performance.
+        </p>
+      </div>
+    </header>
+
+    @if (isLoading()) {
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <p>Loading your assigned contests...</p>
+      </div>
+    } @else {
+      <!-- 1. LIVE CONTESTS SECTION -->
+      <section class="section-block">
+        <div class="section-header">
+          <div class="section-title-wrap">
+            <span class="live-indicator"></span>
+            <h2 class="section-title">Live Now</h2>
+          </div>
+          <span class="section-count">{{ overview()?.liveContests?.length || 0 }} Active</span>
+        </div>
+
+        @if (overview()?.liveContests?.length === 0) {
+          <div class="empty-state-card">
+            <div class="empty-icon">⏳</div>
+            <h3>No Live Contests Right Now</h3>
+            <p>You don't have any active contests in progress. Check upcoming challenges below.</p>
+          </div>
+        } @else {
+          <div class="contests-grid">
+            @for (contest of overview()?.liveContests; track contest.id) {
+              <div class="contest-card contest-card--live">
+                <div class="card-top">
+                  <div class="card-status-pill card-status-pill--live">
+                    <span class="dot-blink"></span> LIVE
+                  </div>
+                  <div class="time-remaining">{{ getTimeRemaining(contest.endAt) }}</div>
+                </div>
+
+                <h3 class="contest-title">{{ contest.title }}</h3>
+                <p class="contest-desc">{{ contest.description }}</p>
+
+                <div class="contest-meta">
+                  <div class="meta-item">
+                    <span class="meta-label">Assigned By:</span>
+                    <span class="meta-value">{{ contest.instructorName || 'Instructor' }}</span>
+                  </div>
+                  <div class="meta-item">
+                    <span class="meta-label">Problems:</span>
+                    <span class="meta-value">{{ contest.problems?.length || contest.problemIds.length }} Problems</span>
+                  </div>
+                  <div class="meta-item">
+                    <span class="meta-label">Window:</span>
+                    <span class="meta-value">{{ formatDate(contest.startAt) }} – {{ formatDate(contest.endAt) }}</span>
+                  </div>
+                </div>
+
+                <!-- Problem list preview -->
+                @if (contest.problems && contest.problems.length > 0) {
+                  <div class="problem-chips-wrap">
+                    <span class="chips-label">Contest Problems:</span>
+                    <div class="chips-list">
+                      @for (prob of contest.problems; track prob.id) {
+                        <a [routerLink]="['/problems', prob.id]" class="problem-chip">
+                          <span class="prob-num">P{{ prob.order }}</span>
+                          <span class="prob-name">{{ prob.title }}</span>
+                          <span class="prob-pts">{{ prob.points }} pts</span>
+                        </a>
+                      }
+                    </div>
+                  </div>
+                }
+
+                <div class="card-footer">
+                  @if (contest.problems && contest.problems.length > 0) {
+                    <a [routerLink]="['/problems', contest.problems[0].id]" class="btn-enter-contest">
+                      <span>Enter Arena & Solve</span>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                        <polyline points="12 5 19 12 12 19"></polyline>
+                      </svg>
+                    </a>
+                  } @else if (contest.problemIds.length > 0) {
+                    <a [routerLink]="['/problems', contest.problemIds[0]]" class="btn-enter-contest">
+                      <span>Enter Arena & Solve</span>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                        <polyline points="12 5 19 12 12 19"></polyline>
+                      </svg>
+                    </a>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </section>
+
+      <!-- 2. UPCOMING CONTESTS SECTION -->
+      @if (overview()?.upcomingContests && overview()!.upcomingContests.length > 0) {
+        <section class="section-block">
+          <div class="section-header">
+            <div class="section-title-wrap">
+              <span class="upcoming-indicator"></span>
+              <h2 class="section-title">Upcoming Contests</h2>
+            </div>
+            <span class="section-count">{{ overview()?.upcomingContests?.length }} Scheduled</span>
+          </div>
+
+          <div class="contests-grid">
+            @for (contest of overview()?.upcomingContests; track contest.id) {
+              <div class="contest-card contest-card--upcoming">
+                <div class="card-top">
+                  <div class="card-status-pill card-status-pill--upcoming">UPCOMING</div>
+                  <div class="time-label">Starts {{ formatDate(contest.startAt) }}</div>
+                </div>
+
+                <h3 class="contest-title">{{ contest.title }}</h3>
+                <p class="contest-desc">{{ contest.description }}</p>
+
+                <div class="contest-meta">
+                  <div class="meta-item">
+                    <span class="meta-label">Assigned By:</span>
+                    <span class="meta-value">{{ contest.instructorName || 'Instructor' }}</span>
+                  </div>
+                  <div class="meta-item">
+                    <span class="meta-label">Total Problems:</span>
+                    <span class="meta-value">{{ contest.problems?.length || contest.problemIds.length }} Problems</span>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+      }
+
+      <!-- 3. HISTORICAL & SOLVED CONTESTS -->
+      <section class="section-block">
+        <div class="section-header">
+          <div class="section-title-wrap">
+            <h2 class="section-title">Contest History & Solved Challenges</h2>
+          </div>
+          <span class="section-count">{{ overview()?.pastContests?.length || 0 }} Completed</span>
+        </div>
+
+        @if (overview()?.pastContests?.length === 0) {
+          <div class="empty-state-card">
+            <div class="empty-icon">🏆</div>
+            <h3>No Past Contests Yet</h3>
+            <p>Once you participate in contests and solve problems, your scores, ranks, and historical solution links will appear here.</p>
+          </div>
+        } @else {
+          <div class="history-list">
+            @for (past of overview()?.pastContests; track past.contestId) {
+              <div class="history-item-card">
+                <div class="history-left">
+                  <div class="history-rank-badge">
+                    <span class="rank-num">#{{ past.rank }}</span>
+                    <span class="rank-label">Rank</span>
+                  </div>
+
+                  <div class="history-info">
+                    <h4 class="history-title">{{ past.title }}</h4>
+                    <p class="history-desc">{{ past.description }}</p>
+                    <div class="history-meta">
+                      <span>By {{ past.instructorName }}</span>
+                      <span class="dot-sep">•</span>
+                      <span>{{ formatDate(past.startAt) }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="history-middle">
+                  <div class="metric-pill">
+                    <span class="metric-label">Score</span>
+                    <span class="metric-val highlight-gold">{{ past.score }} pts</span>
+                  </div>
+                  <div class="metric-pill">
+                    <span class="metric-label">Solved</span>
+                    <span class="metric-val">{{ past.problemsSolved }} / {{ past.totalProblems }}</span>
+                  </div>
+                  <div class="metric-pill">
+                    <span class="metric-label">Accuracy</span>
+                    <span class="metric-val">{{ past.accuracy }}%</span>
+                  </div>
+                </div>
+
+                <div class="history-right">
+                  @if (past.problems && past.problems.length > 0) {
+                    <div class="history-problems-toggle">
+                      <span class="prob-subheading">Solved Problems:</span>
+                      <div class="prob-links">
+                        @for (p of past.problems; track p.id) {
+                          <a [routerLink]="['/problems', p.id]" class="history-problem-link" [title]="'Review ' + p.title">
+                            <span>P{{ p.order }}: {{ p.title }}</span>
+                            <span class="link-arrow">↗</span>
+                          </a>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </section>
+    }
+  </div>
+</div>

@@ -35,6 +35,50 @@ public class AdminController(
     }
 
     /// <summary>
+    /// GET /api/admin/stats
+    /// Returns live platform aggregate statistics.
+    /// </summary>
+    [HttpGet("stats")]
+    public async Task<IActionResult> GetStats()
+    {
+        var stats = await adminService.GetStatsAsync();
+        return Ok(ApiResponse.Ok(stats));
+    }
+
+    /// <summary>
+    /// GET /api/admin/users
+    /// Returns all registered users in the database across all roles.
+    /// </summary>
+    [HttpGet("users")]
+    public async Task<IActionResult> GetAllUsers()
+    {
+        var users = await adminService.GetAllUsersAsync();
+        return Ok(ApiResponse.Ok(users));
+    }
+
+    /// <summary>
+    /// GET /api/admin/users/{id}
+    /// Returns full user detail and submission history.
+    /// </summary>
+    [HttpGet("users/{id:guid}")]
+    public async Task<IActionResult> GetUserDetail(Guid id)
+    {
+        var user = await adminService.GetUserDetailAsync(id);
+        return Ok(ApiResponse.Ok(user));
+    }
+
+    /// <summary>
+    /// PATCH /api/admin/users/{id}/status
+    /// Updates a user's status.
+    /// </summary>
+    [HttpPatch("users/{id:guid}/status")]
+    public async Task<IActionResult> UpdateUserStatus(Guid id, [FromBody] Codify.Application.DTOs.Admin.UpdateUserStatusRequest request)
+    {
+        var success = await adminService.UpdateUserStatusAsync(id, request.Status);
+        return Ok(ApiResponse.Ok(new { success }));
+    }
+
+    /// <summary>
     /// Reindexes all concept tags and problems into the Chroma Cloud knowledge base.
     /// This populates the RAG layer so the Tutor Agent can retrieve grounded context.
     /// </summary>

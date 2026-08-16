@@ -70,10 +70,14 @@ public class User
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void UpdateProfile(string? bio, string? avatarUrl)
+    public void UpdateProfile(string? fullName, string? bio, string? organization, string? avatarUrl = null)
     {
+        if (!string.IsNullOrWhiteSpace(fullName))
+            FullName = fullName.Trim();
         Bio = bio;
-        AvatarUrl = avatarUrl;
+        Organization = organization;
+        if (avatarUrl is not null)
+            AvatarUrl = avatarUrl;
         UpdatedAt = DateTime.UtcNow;
     }
 
