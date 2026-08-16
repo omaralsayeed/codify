@@ -142,15 +142,13 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
-    // Microsoft.OpenApi 2.x (Swashbuckle 10): types are in Microsoft.OpenApi,
-    // NOT Microsoft.OpenApi.Models — the sub-namespace no longer exists.
     options.SwaggerDoc("v1", new Microsoft.OpenApi.OpenApiInfo
     {
         Title   = "Codify API",
         Version = "v1"
     });
 
-    // Adds the "Authorize" button to Swagger UI for JWT Bearer tokens
+    // JWT Bearer "Authorize" button in Swagger UI
     options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.OpenApiSecurityScheme
     {
         Name         = "Authorization",
@@ -161,13 +159,8 @@ builder.Services.AddSwaggerGen(options =>
         Description  = "Enter your JWT token. It will be sent as: Authorization: Bearer <token>"
     });
 
-    options.AddSecurityRequirement(_ => new Microsoft.OpenApi.OpenApiSecurityRequirement
-    {
-        {
-            new Microsoft.OpenApi.OpenApiSecuritySchemeReference("Bearer"),
-            new List<string>()
-        }
-    });
+    // Apply the security scheme to every endpoint so Swagger sends the Authorization header
+    options.OperationFilter<Codify.API.Common.BearerSecurityOperationFilter>();
 });
 
 // CORS for Angular dev server
