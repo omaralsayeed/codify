@@ -140,7 +140,35 @@ builder.Services.AddControllers()
         opts.JsonSerializerOptions.PropertyNamingPolicy =
             System.Text.Json.JsonNamingPolicy.CamelCase);
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    // Microsoft.OpenApi 2.x (Swashbuckle 10): types are in Microsoft.OpenApi,
+    // NOT Microsoft.OpenApi.Models — the sub-namespace no longer exists.
+    options.SwaggerDoc("v1", new Microsoft.OpenApi.OpenApiInfo
+    {
+        Title   = "Codify API",
+        Version = "v1"
+    });
+
+    // Adds the "Authorize" button to Swagger UI for JWT Bearer tokens
+    options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.OpenApiSecurityScheme
+    {
+        Name         = "Authorization",
+        Type         = Microsoft.OpenApi.SecuritySchemeType.Http,
+        Scheme       = "bearer",
+        BearerFormat = "JWT",
+        In           = Microsoft.OpenApi.ParameterLocation.Header,
+        Description  = "Enter your JWT token. It will be sent as: Authorization: Bearer <token>"
+    });
+
+    options.AddSecurityRequirement(_ => new Microsoft.OpenApi.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.OpenApiSecuritySchemeReference("Bearer"),
+            new List<string>()
+        }
+    });
+});
 
 // CORS for Angular dev server
 builder.Services.AddCors(options =>
