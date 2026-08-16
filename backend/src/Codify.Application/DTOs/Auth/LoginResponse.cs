@@ -14,4 +14,5 @@ public class LoginUserInfo
     public Guid UserId { get; set; }
     public string FullName { get; set; } = string.Empty;
     public UserRole Role { get; set; }
+    public string? AvatarUrl { get; set; }
 }

@@ -14,6 +14,7 @@ interface LoginApiResponse {
     userId: string;
     fullName: string;
     role: number;
+    avatarUrl?: string; // returned by backend once column is added
   };
 }
 
@@ -54,11 +55,12 @@ export class AuthService {
         timeout(10000),
         map(response => response.data),
         map(loginData => {
-          // Re-hydrate the Cloudinary URL that was stored during registration.
-          // The backend login response doesn't return avatarUrl, so we look it
-          // up in localStorage keyed by userId to survive logout/login cycles.
+          // Prefer the avatarUrl from the backend response (works across devices).
+          // Fall back to the localStorage key for sessions before backend support.
           const storedAvatarUrl =
-            localStorage.getItem(`codify_avatar_${loginData.user.userId}`) ?? undefined;
+            loginData.user.avatarUrl ??
+            localStorage.getItem(`codify_avatar_${loginData.user.userId}`) ??
+            undefined;
 
           const user: User = {
             id: loginData.user.userId,
@@ -131,27 +133,44 @@ export class AuthService {
   logout(): void {
     localStorage.removeItem('codify_user');
     localStorage.removeItem('codify_token');
-    // Note: codify_avatar_<userId> is intentionally kept so the image
-    // is restored on next login without backend involvement.
+    // codify_avatar_<userId> intentionally kept as a local fallback
+    // until the backend fully returns avatarUrl on every login response.
     this._currentUser.set(null);
   }
 
   /**
-   * Called after a successful Cloudinary upload during registration.
-   * Stores the URL keyed by userId so it survives logout/login cycles
-   * on the same browser, then patches the live user signal immediately.
+   * Called after a successful Cloudinary upload.
+   * 1. Patches the live user signal immediately (instant UI update).
+   * 2. Saves the URL to localStorage as a fallback for the current browser.
+   * 3. Persists the URL to the backend so it works on any device after login.
    */
   setAvatarUrl(url: string): void {
     const current = this._currentUser();
     if (!current) return;
+
     const updated: User = { ...current, avatarUrl: url };
     this._currentUser.set(updated);
+
     try {
-      // Keyed by userId — multiple users on the same browser each get their own entry
+      // Local fallback — used if backend hasn't shipped avatarUrl in login response yet
       localStorage.setItem(`codify_avatar_${current.id}`, url);
       localStorage.setItem('codify_user', JSON.stringify(updated));
     } catch {
       // localStorage full — image still visible in memory for this session
+    }
+
+    // Persist to backend — fire and forget (UI already updated above)
+    const token = localStorage.getItem('codify_token');
+    if (token) {
+      this.http
+        .put(
+          `${this.baseUrl}/auth/avatar`,
+          { avatarUrl: url },
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
+        .subscribe({
+          error: err => console.warn('Avatar URL could not be saved to backend:', err)
+        });
     }
   }
 

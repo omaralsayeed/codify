@@ -278,3 +278,153 @@ User logs back in
 | Change photo after registration | Not yet implemented — needs an "Edit Profile" upload flow |
 
 When the backend eventually adds `avatarUrl` to the Users table and login response, the `codify_avatar_<userId>` localStorage key can simply be removed — no other frontend changes needed.
+
+---
+
+## 8. Upgrade — Backend Persistence (Current Implementation)
+
+### Why
+localStorage alone means the photo disappears if the user logs in from another device or clears their browser cache. The correct fix is to store the Cloudinary URL in the backend database and return it on every login response.
+
+### What Changed on the Frontend
+
+**`src/app/core/services/auth.service.ts`**
+
+`LoginApiResponse` interface now includes the new backend field:
+```typescript
+user: {
+  userId: string;
+  fullName: string;
+  role: number;
+  avatarUrl?: string; // returned by backend once column is added
+}
+```
+
+`login()` prefers the backend value, falls back to localStorage for existing sessions:
+```typescript
+const storedAvatarUrl =
+  loginData.user.avatarUrl ??                                       // ← backend (cross-device)
+  localStorage.getItem(`codify_avatar_${loginData.user.userId}`) ?? // ← local fallback
+  undefined;
+```
+
+`setAvatarUrl()` now does three things in order:
+1. Patches the live signal → UI updates instantly
+2. Saves to `localStorage` as a local fallback
+3. Fires `PUT /api/users/avatar` to persist to the backend (fire-and-forget, UI never blocked)
+
+```typescript
+this.http.put(
+  `${this.baseUrl}/users/avatar`,
+  { avatarUrl: url },
+  { headers: { Authorization: `Bearer ${token}` } }
+).subscribe({ error: err => console.warn('Avatar URL could not be saved to backend:', err) });
+```
+
+No changes were needed in `register.component.ts` — it already calls `setAvatarUrl()` after the Cloudinary upload.
+
+### Complete Flow After This Upgrade
+
+```
+User picks photo → Angular uploads to Cloudinary
+        ↓
+Cloudinary returns secure_url
+        ↓
+setAvatarUrl(secure_url):
+  • signal patched → navbar shows photo immediately ✅
+  • saved to localStorage as fallback
+  • PUT /api/users/avatar { avatarUrl } → saved in DB ✅
+        ↓
+User logs out → logs back in on ANY device
+  • login response includes avatarUrl from DB
+  • photo restored everywhere ✅
+```
+
+---
+
+## 9. Backend Requirements — For Backend Team
+
+### 1 — Add `AvatarUrl` column to Users table
+
+```sql
+ALTER TABLE Users ADD AvatarUrl NVARCHAR(500) NULL;
+```
+
+Or in the EF Core entity:
+```csharp
+public string? AvatarUrl { get; set; }
+```
+
+---
+
+### 2 — Return `avatarUrl` in the login response
+
+Current login response shape:
+```json
+{
+  "data": {
+    "token": "...",
+    "expiresAt": "...",
+    "user": {
+      "userId": "...",
+      "fullName": "...",
+      "role": 0
+    }
+  }
+}
+```
+
+Required shape (add one field):
+```json
+{
+  "data": {
+    "token": "...",
+    "expiresAt": "...",
+    "user": {
+      "userId": "...",
+      "fullName": "...",
+      "role": 0,
+      "avatarUrl": "https://res.cloudinary.com/mg7dsqv2/image/upload/..."
+    }
+  }
+}
+```
+
+---
+
+### 3 — Add endpoint `PUT /api/users/avatar`
+
+- **Auth:** JWT Bearer token required
+- **Request body:**
+```json
+{ "avatarUrl": "https://res.cloudinary.com/mg7dsqv2/image/upload/..." }
+```
+- **Behaviour:** Update `AvatarUrl` for the user identified by the JWT claim
+- **Response:** `200 OK` (body ignored by frontend)
+- **Validation:** `avatarUrl` must be a non-empty string, max 500 chars, must start with `https://res.cloudinary.com/`
+
+Example C# controller action:
+```csharp
+[HttpPut("avatar")]
+[Authorize]
+public async Task<IActionResult> UpdateAvatar([FromBody] UpdateAvatarDto dto)
+{
+    var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    await _userService.UpdateAvatarUrlAsync(userId, dto.AvatarUrl);
+    return Ok();
+}
+
+public record UpdateAvatarDto(string AvatarUrl);
+```
+
+---
+
+### Summary for Backend Team
+
+| What | Where | Notes |
+|------|-------|-------|
+| Add `AvatarUrl` column | `Users` table | `NVARCHAR(500)`, nullable |
+| Return `avatarUrl` in login response | `POST /api/auth/login` | Map the DB column into the user object in the response |
+| New endpoint | `PUT /api/users/avatar` | JWT-protected, saves URL for the currently authenticated user |
+
+The frontend is already calling `PUT /api/users/avatar` on every Cloudinary upload. Once the endpoint exists, the URL will be stored in the DB automatically. Once the login response includes `avatarUrl`, the localStorage fallback becomes redundant and can be cleaned up on the frontend side with no other changes needed.
