@@ -1,13 +1,94 @@
-import { Component, ChangeDetectionStrategy, signal, computed, inject, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink, ActivatedRoute } from '@angular/router';
-import { AdminService, AdminUserRow } from '../../../core/services/admin.service';
+import { RouterLink } from '@angular/router';
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+export interface AdminUserRow {
+  id: string;
+  name: string;
+  initials: string;
+  email: string;
+  role: 'student' | 'instructor' | 'admin';
+  status: 'active' | 'pending';
+  registeredAt: string;   // ISO date
+  lastActiveAt: string | null;
+  problemsSolved?: number;
+  organization?: string;
+}
 
 type RoleFilter   = 'all' | 'student' | 'instructor';
 type StatusFilter = 'all' | 'active' | 'pending';
 type SortField    = 'name' | 'registeredAt' | 'lastActiveAt' | 'role';
 type SortDir      = 'asc' | 'desc';
+
+// ── Mock data ─────────────────────────────────────────────────────────────────
+
+const MOCK_USERS: AdminUserRow[] = [
+  {
+    id: 'u1', name: 'Karim Ahmed',    initials: 'KA', email: 'karim@example.com',
+    role: 'student',    status: 'active',  registeredAt: '2026-06-01T10:00:00Z',
+    lastActiveAt: '2026-08-13T14:22:00Z', problemsSolved: 38,
+  },
+  {
+    id: 'u2', name: 'Layla Mostafa',  initials: 'LM', email: 'layla@example.com',
+    role: 'student',    status: 'active',  registeredAt: '2026-06-03T09:00:00Z',
+    lastActiveAt: '2026-08-12T11:00:00Z', problemsSolved: 34,
+  },
+  {
+    id: 'u3', name: 'Omar Sherif',    initials: 'OS', email: 'omar@example.com',
+    role: 'student',    status: 'active',  registeredAt: '2026-06-05T08:30:00Z',
+    lastActiveAt: '2026-08-11T16:45:00Z', problemsSolved: 31,
+  },
+  {
+    id: 'u4', name: 'Sara Mahmoud',   initials: 'SM', email: 'sara@example.com',
+    role: 'student',    status: 'active',  registeredAt: '2026-06-07T11:00:00Z',
+    lastActiveAt: '2026-08-10T09:30:00Z', problemsSolved: 29,
+  },
+  {
+    id: 'u5', name: 'Ahmed Hassan',   initials: 'AH', email: 'ahmed@example.com',
+    role: 'student',    status: 'active',  registeredAt: '2026-06-10T14:00:00Z',
+    lastActiveAt: '2026-08-09T13:00:00Z', problemsSolved: 21,
+  },
+  {
+    id: 'u6', name: 'Nour Ibrahim',   initials: 'NI', email: 'nour@example.com',
+    role: 'student',    status: 'active',  registeredAt: '2026-06-12T10:30:00Z',
+    lastActiveAt: '2026-08-08T10:00:00Z', problemsSolved: 18,
+  },
+  {
+    id: 'i1', name: 'Dr. Hana Saad',  initials: 'HS', email: 'hana@university.edu',
+    role: 'instructor', status: 'active',  registeredAt: '2026-05-15T09:00:00Z',
+    lastActiveAt: '2026-08-13T08:00:00Z', organization: 'Cairo University',
+  },
+  {
+    id: 'i2', name: 'Prof. Tarek Ali', initials: 'TA', email: 'tarek@university.edu',
+    role: 'instructor', status: 'active',  registeredAt: '2026-05-20T10:00:00Z',
+    lastActiveAt: '2026-08-12T09:00:00Z', organization: 'AUC',
+  },
+  {
+    id: 'i3', name: 'Mona Fawzy',     initials: 'MF', email: 'mona@institute.org',
+    role: 'instructor', status: 'active',  registeredAt: '2026-05-25T11:00:00Z',
+    lastActiveAt: '2026-08-10T15:00:00Z', organization: 'AAST',
+  },
+  {
+    id: 'i4', name: 'Youssef Nabil',  initials: 'YN', email: 'youssef@tech.edu',
+    role: 'instructor', status: 'pending', registeredAt: '2026-08-10T12:00:00Z',
+    lastActiveAt: null, organization: 'GUC',
+  },
+  {
+    id: 'i5', name: 'Rania Khalil',   initials: 'RK', email: 'rania@college.edu',
+    role: 'instructor', status: 'pending', registeredAt: '2026-08-11T14:00:00Z',
+    lastActiveAt: null, organization: 'MTI',
+  },
+  {
+    id: 'i6', name: 'Sameh Gamal',    initials: 'SG', email: 'sameh@edu.com',
+    role: 'instructor', status: 'pending', registeredAt: '2026-08-12T09:30:00Z',
+    lastActiveAt: null, organization: 'Ain Shams',
+  },
+];
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 @Component({
   selector: 'app-admin-users',
@@ -17,9 +98,7 @@ type SortDir      = 'asc' | 'desc';
   templateUrl: './admin-users.component.html',
   styleUrl:    './admin-users.component.scss',
 })
-export class AdminUsersComponent implements OnInit {
-  private readonly adminSvc = inject(AdminService);
-  private readonly route = inject(ActivatedRoute);
+export class AdminUsersComponent {
 
   // ── State ──────────────────────────────────────────────────────────────────
   readonly searchQuery   = signal('');
@@ -32,39 +111,10 @@ export class AdminUsersComponent implements OnInit {
   readonly confirmUser   = signal<AdminUserRow | null>(null);
   readonly confirmAction = signal<'activate' | 'set-pending' | null>(null);
 
-  readonly hasActiveFilters = computed(() =>
-    this.searchQuery().trim() !== '' ||
-    this.roleFilter() !== 'all' ||
-    this.statusFilter() !== 'all'
+  private allUsers = signal<AdminUserRow[]>(
+    // Admins are never shown in this list
+    MOCK_USERS.filter(u => u.role !== 'admin')
   );
-
-  clearFilters(): void {
-    this.searchQuery.set('');
-    this.roleFilter.set('all');
-    this.statusFilter.set('all');
-  }
-
-  private allUsers = signal<AdminUserRow[]>([]);
-
-  ngOnInit(): void {
-    const statusParam = this.route.snapshot.queryParamMap.get('status');
-    if (statusParam === 'pending') {
-      this.statusFilter.set('pending');
-    }
-
-    this.loadUsers();
-  }
-
-  loadUsers(): void {
-    this.adminSvc.getUsers().subscribe({
-      next: (users) => {
-        this.allUsers.set(users.filter(u => u.role !== 'admin'));
-      },
-      error: () => {
-        this.allUsers.set([]);
-      }
-    });
-  }
 
   // ── Derived list ───────────────────────────────────────────────────────────
   readonly filteredUsers = computed(() => {
@@ -108,7 +158,7 @@ export class AdminUsersComponent implements OnInit {
       this.sortDir.update(d => d === 'asc' ? 'desc' : 'asc');
     } else {
       this.sortField.set(field);
-      this.sortDir.set('asc');
+      this.sortDir.set('desc');
     }
   }
 
@@ -117,112 +167,76 @@ export class AdminUsersComponent implements OnInit {
     return this.sortDir() === 'asc' ? '↑' : '↓';
   }
 
-  // ── Quick approve (for pending instructors in the table) ────────────────────
-  quickApprove(user: AdminUserRow, event: Event): void {
-    event.stopPropagation();
-    this.adminSvc.approveInstructor(user.id).subscribe({
-      next: () => {
-        this.allUsers.update(list =>
-          list.map(u => u.id === user.id ? { ...u, status: 'active' } : u)
-        );
-      }
-    });
+  // ── Badge helpers ──────────────────────────────────────────────────────────
+  roleBadgeClass(role: string): string {
+    if (role === 'instructor') return 'badge--gold';
+    if (role === 'admin')      return 'badge--red';
+    return 'badge--blue';
   }
 
-  // ── Modal confirmation ─────────────────────────────────────────────────────
-  openConfirm(user: AdminUserRow, action: 'activate' | 'set-pending'): void {
-    this.confirmUser.set(user);
-    this.confirmAction.set(action);
+  statusBadgeClass(status: string): string {
+    return status === 'active' ? 'badge--active' : 'badge--pending';
   }
 
-  closeConfirm(): void {
-    this.confirmUser.set(null);
-    this.confirmAction.set(null);
+  avatarClass(role: string): string {
+    if (role === 'instructor') return 'avatar--gold';
+    if (role === 'admin')      return 'avatar--red';
+    return 'avatar--blue';
   }
 
-  closeModal(): void {
-    this.closeConfirm();
-  }
-
-  confirmChange(): void {
-    this.executeConfirm();
-  }
-
-  executeConfirm(): void {
-    const u = this.confirmUser();
-    const action = this.confirmAction();
-    if (!u || !action) return;
-
-    if (action === 'activate') {
-      this.adminSvc.approveInstructor(u.id).subscribe({
-        next: () => {
-          this.allUsers.update(list =>
-            list.map(user => user.id === u.id ? { ...user, status: 'active' } : user)
-          );
-          this.closeConfirm();
-        }
-      });
-    } else {
-      this.adminSvc.updateUserStatus(u.id, 'pending').subscribe({
-        next: () => {
-          this.allUsers.update(list =>
-            list.map(user => user.id === u.id ? { ...user, status: 'pending' } : user)
-          );
-          this.closeConfirm();
-        }
-      });
-    }
-  }
-
-  requestStatusChange(user: AdminUserRow, event?: Event): void {
-    if (event) event.stopPropagation();
-    const action = user.status === 'active' ? 'set-pending' : 'activate';
-    this.openConfirm(user, action);
-  }
-
-  // ── Template formatters ────────────────────────────────────────────────────
+  // ── Date formatting ────────────────────────────────────────────────────────
   formatDate(iso: string | null): string {
     if (!iso) return '—';
-    return new Date(iso).toLocaleDateString('en-US', {
-      year:  'numeric',
-      month: 'short',
-      day:   'numeric',
-    });
+    return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
   }
 
   timeAgo(iso: string | null): string {
     if (!iso) return 'Never';
     const diff = Date.now() - new Date(iso).getTime();
     const mins = Math.floor(diff / 60000);
-    if (mins < 60) return `${mins}m ago`;
+    if (mins < 60)   return `${mins}m ago`;
     const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs}h ago`;
+    if (hrs < 24)    return `${hrs}h ago`;
     const days = Math.floor(hrs / 24);
-    if (days < 30) return `${days}d ago`;
-    return `${Math.floor(days / 30)}mo ago`;
+    if (days < 30)   return `${days}d ago`;
+    const months = Math.floor(days / 30);
+    return `${months}mo ago`;
   }
 
-  formatDateTime(iso: string | null): string {
-    if (!iso) return 'Never';
-    const d = new Date(iso);
-    return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} at ${d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
+  // ── Status toggle (with confirmation modal) ────────────────────────────────
+  requestStatusChange(user: AdminUserRow, event: Event): void {
+    event.stopPropagation();
+    this.confirmUser.set(user);
+    this.confirmAction.set(user.status === 'active' ? 'set-pending' : 'activate');
   }
 
-  avatarClass(role: string): string {
-    if (role === 'admin') return 'avatar--admin';
-    if (role === 'instructor') return 'avatar--instructor';
-    return 'avatar--student';
+  confirmChange(): void {
+    const user   = this.confirmUser();
+    const action = this.confirmAction();
+    if (!user || !action) return;
+
+    const newStatus = action === 'activate' ? 'active' : 'pending';
+    this.allUsers.update(list =>
+      list.map(u => u.id === user.id ? { ...u, status: newStatus } : u)
+    );
+    this.closeModal();
   }
 
-  roleBadgeClass(role: string): string {
-    if (role === 'admin') return 'badge--admin';
-    if (role === 'instructor') return 'badge--instructor';
-    return 'badge--student';
+  closeModal(): void {
+    this.confirmUser.set(null);
+    this.confirmAction.set(null);
   }
 
-  statusBadgeClass(status: string): string {
-    if (status === 'active') return 'badge--active';
-    if (status === 'pending') return 'badge--pending';
-    return 'badge--inactive';
+  // ── Filter reset ───────────────────────────────────────────────────────────
+  clearFilters(): void {
+    this.searchQuery.set('');
+    this.roleFilter.set('all');
+    this.statusFilter.set('all');
+  }
+
+  get hasActiveFilters(): boolean {
+    return this.searchQuery() !== '' ||
+           this.roleFilter() !== 'all' ||
+           this.statusFilter() !== 'all';
   }
 }

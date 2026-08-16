@@ -56,7 +56,7 @@
     </select>
 
     <!-- Clear filters -->
-    @if (hasActiveFilters()) {
+    @if (hasActiveFilters) {
       <button class="clear-btn" (click)="clearFilters()" aria-label="Clear all filters">
         ✕ Clear
       </button>
@@ -180,13 +180,13 @@
       <span class="empty-icon" aria-hidden="true">🔍</span>
       <p class="empty-title">No users found</p>
       <p class="empty-sub">
-        @if (hasActiveFilters()) {
+        @if (hasActiveFilters) {
           Try adjusting your search or filters.
         } @else {
           No users registered yet.
         }
       </p>
-      @if (hasActiveFilters()) {
+      @if (hasActiveFilters) {
         <button class="clear-btn clear-btn--center" (click)="clearFilters()">Clear filters</button>
       }
     </div>

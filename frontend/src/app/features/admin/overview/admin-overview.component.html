@@ -4,13 +4,14 @@
   <div class="page-header">
     <div>
       <h1 class="page-title">Platform Overview</h1>
-      <p class="page-sub">Live snapshot of platform users, problems, and submission metrics directly from the database.</p>
+      <p class="page-sub">Live snapshot of all platform activity — all numbers are mocked until backend is ready.</p>
     </div>
+    <span class="mock-badge">⚠ Mock data</span>
   </div>
 
   <!-- ── Stat cards ───────────────────────────────────────────────────────── -->
   <div class="stat-grid">
-    @for (card of statCards(); track card.label) {
+    @for (card of statCards; track card.label) {
       <div class="stat-card" [ngClass]="card.colorClass">
         <span class="stat-icon" aria-hidden="true">{{ card.icon }}</span>
         <div class="stat-body">
@@ -24,7 +25,7 @@
 
   <!-- ── Secondary info row ───────────────────────────────────────────────── -->
   <div class="info-row">
-    @for (item of infoItems(); track item.label) {
+    @for (item of infoItems; track item.label) {
       <div class="info-cell">
         <span class="info-value">{{ item.value }}</span>
         <span class="info-label">{{ item.label }}</span>
@@ -40,8 +41,8 @@
       <a class="action-btn action-btn--orange" routerLink="../users" [queryParams]="{status: 'pending'}">
         <span aria-hidden="true">⏳</span>
         Review Pending Instructors
-        @if (stats().pendingInstructors > 0) {
-          <span class="action-badge">{{ stats().pendingInstructors }}</span>
+        @if (stats.pendingInstructors > 0) {
+          <span class="action-badge">{{ stats.pendingInstructors }}</span>
         }
       </a>
       <a class="action-btn action-btn--blue" routerLink="../users">
