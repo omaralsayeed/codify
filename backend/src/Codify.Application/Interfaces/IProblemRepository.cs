@@ -15,6 +15,9 @@ public interface IProblemRepository
     /// <summary>Returns all active problems with their tags (for RAG ingestion).</summary>
     Task<List<Problem>> GetAllActiveWithTagsAsync();
 
+    /// <summary>Total count of non-deleted problems. Used for admin stats.</summary>
+    Task<int> GetTotalCountAsync();
+
     Task AddAsync(Problem problem);
     Task SaveChangesAsync();
 }

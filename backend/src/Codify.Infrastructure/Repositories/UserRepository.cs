@@ -1,5 +1,7 @@
+using Codify.Application.DTOs.Admin;
 using Codify.Application.Interfaces;
 using Codify.Domain.Entities;
+using Codify.Domain.Enums;
 using Codify.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -44,10 +46,103 @@ public class UserRepository(CodifyDbContext db) : IUserRepository
 
     public async Task<IReadOnlyList<User>> GetPendingInstructorsAsync() =>
         await db.Users
-            .Where(u => u.Role == Domain.Enums.UserRole.Instructor
-                     && u.Status == Domain.Enums.UserStatus.Pending)
+            .Where(u => u.Role == UserRole.Instructor
+                     && u.Status == UserStatus.Pending)
             .OrderBy(u => u.CreatedAt)
             .ToListAsync();
+
+    // ── Admin queries ─────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Paginated, filterable list of all non-admin users.
+    /// Supports search by name/email, filter by role/status, sort, and paging.
+    /// Admins are always excluded from this list.
+    /// </summary>
+    public async Task<(IReadOnlyList<User> Items, int TotalCount)> GetAdminUsersAsync(
+        AdminUserFilterRequest filter)
+    {
+        var query = db.Users
+            .Where(u => u.Role != UserRole.Admin && !u.IsDeleted)
+            .AsQueryable();
+
+        // Search: case-insensitive contains on name OR email
+        if (!string.IsNullOrWhiteSpace(filter.Search))
+        {
+            var term = filter.Search.ToLower();
+            query = query.Where(u =>
+                u.FullName.ToLower().Contains(term) ||
+                u.Email.ToLower().Contains(term));
+        }
+
+        // Role filter
+        if (!string.IsNullOrWhiteSpace(filter.Role))
+        {
+            var role = filter.Role.ToLower() switch
+            {
+                "student"    => UserRole.Student,
+                "instructor" => UserRole.Instructor,
+                _            => (UserRole?)null
+            };
+            if (role.HasValue)
+                query = query.Where(u => u.Role == role.Value);
+        }
+
+        // Status filter
+        if (!string.IsNullOrWhiteSpace(filter.Status))
+        {
+            var status = filter.Status.ToLower() switch
+            {
+                "active"  => UserStatus.Active,
+                "pending" => UserStatus.Pending,
+                _         => (UserStatus?)null
+            };
+            if (status.HasValue)
+                query = query.Where(u => u.Status == status.Value);
+        }
+
+        // Sort
+        query = (filter.SortBy?.ToLower(), filter.SortDir?.ToLower()) switch
+        {
+            ("name",         "asc")  => query.OrderBy(u => u.FullName),
+            ("name",         _)      => query.OrderByDescending(u => u.FullName),
+            ("lastactiveat", "asc")  => query.OrderBy(u => u.LastLoginAt),
+            ("lastactiveat", _)      => query.OrderByDescending(u => u.LastLoginAt),
+            ("registeredat", "asc")  => query.OrderBy(u => u.CreatedAt),
+            _                        => query.OrderByDescending(u => u.CreatedAt)
+        };
+
+        var total = await query.CountAsync();
+
+        var items = await query
+            .Skip((filter.Page - 1) * filter.PageSize)
+            .Take(filter.PageSize)
+            .ToListAsync();
+
+        return (items, total);
+    }
+
+    /// <summary>
+    /// Returns a single non-admin user with their last 5 submissions (+ Problem title)
+    /// and PerformanceProfile. Returns null if not found or if the user is an admin.
+    /// </summary>
+    public async Task<User?> GetByIdWithRecentSubmissionsAsync(Guid id)
+    {
+        var user = await db.Users
+            .Include(u => u.PerformanceProfile)
+            .Include(u => u.Submissions.OrderByDescending(s => s.SubmittedAt).Take(5))
+                .ThenInclude(s => s.Problem)
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(u => u.Id == id && u.Role != UserRole.Admin);
+
+        return user;
+    }
+
+    /// <summary>Count of non-admin, non-deleted users registered on or after <paramref name="from"/> (UTC).</summary>
+    public async Task<int> GetNewUsersCountAsync(DateTime from) =>
+        await db.Users
+            .CountAsync(u => u.Role != UserRole.Admin
+                          && !u.IsDeleted
+                          && u.CreatedAt >= from);
 
     public async Task AddAsync(User user) =>
         await db.Users.AddAsync(user);

@@ -47,6 +47,10 @@ public class SubmissionRepository(CodifyDbContext db) : ISubmissionRepository
                         && s.Status == SubmissionStatus.Accepted
                         && s.Id != excludeSubmissionId);
 
+    /// <summary>Count of submissions created on or after <paramref name="from"/> (UTC). Used for admin stats.</summary>
+    public async Task<int> GetCountFromAsync(DateTime from) =>
+        await db.Submissions.CountAsync(s => s.SubmittedAt >= from);
+
     public async Task AddAsync(Submission submission) =>
         await db.Submissions.AddAsync(submission);
 

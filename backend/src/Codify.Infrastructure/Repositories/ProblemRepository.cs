@@ -65,6 +65,9 @@ public class ProblemRepository(CodifyDbContext db) : IProblemRepository
             .Where(p => p.IsActive && !p.IsDeleted)
             .ToListAsync();
 
+    public async Task<int> GetTotalCountAsync() =>
+        await db.Problems.CountAsync(p => !p.IsDeleted);
+
     public async Task AddAsync(Problem problem) =>
         await db.Problems.AddAsync(problem);
 

@@ -11,10 +11,10 @@
 
 | # | Method | Endpoint | Phase | Status |
 |---|---|---|---|---|
-| 1 | GET | `/api/admin/stats` | 1 | ❌ Not built |
-| 2 | GET | `/api/admin/users` | 1 | ❌ Not built |
-| 3 | GET | `/api/admin/users/:id` | 1 | ❌ Not built |
-| 4 | PATCH | `/api/admin/users/:id/status` | 1 | ❌ Not built |
+| 1 | GET | `/api/admin/stats` | 1 | ✅ Done |
+| 2 | GET | `/api/admin/users` | 1 | ✅ Done |
+| 3 | GET | `/api/admin/users/:id` | 1 | ✅ Done |
+| 4 | PATCH | `/api/admin/users/:id/status` | 1 | ✅ Done |
 | 5 | GET | `/api/admin/problems` | 2 | ❌ Not built |
 | 6 | POST | `/api/problems` | 2 | ⚠️ Exists but wrong role |
 | 7 | PATCH | `/api/problems/:id` | 2 | ⚠️ Exists as PUT, wrong role |
@@ -142,51 +142,39 @@
 - Refactored `Approve()` to be a one-line convenience wrapper around `SetStatus(Active)`
 - Effort: ~10 min
 
-#### Task 1.2 — New DTOs: Admin user responses
-- Create `src/Codify.Application/DTOs/Admin/AdminStatsResponse.cs`
-- Create `src/Codify.Application/DTOs/Admin/AdminUserRow.cs`
-- Create `src/Codify.Application/DTOs/Admin/AdminUserDetailResponse.cs`
-- Create `src/Codify.Application/DTOs/Admin/AdminUserSubmissionRow.cs`
-- Create `src/Codify.Application/DTOs/Admin/AdminUserFilterRequest.cs`
-- Create `src/Codify.Application/DTOs/Admin/UpdateUserStatusRequest.cs`
+#### Task 1.2 — New DTOs: Admin user responses ✅ DONE
+- Created `src/Codify.Application/DTOs/Admin/AdminStatsResponse.cs`
+- Created `src/Codify.Application/DTOs/Admin/AdminUserRow.cs`
+- Created `src/Codify.Application/DTOs/Admin/AdminUserDetailResponse.cs`
+- Created `src/Codify.Application/DTOs/Admin/AdminUserSubmissionRow.cs`
+- Created `src/Codify.Application/DTOs/Admin/AdminUserFilterRequest.cs`
+- Created `src/Codify.Application/DTOs/Admin/UpdateUserStatusRequest.cs`
 - Effort: ~20 min
 
-#### Task 1.3 — Repository layer: new user queries
-- File: `src/Codify.Application/Interfaces/IUserRepository.cs`
-  - Add `GetAdminUsersAsync(AdminUserFilterRequest filter)`
-  - Add `GetByIdWithRecentSubmissionsAsync(Guid id)`
-  - Add `GetNewUsersCountAsync(DateTime from)`
-- File: `src/Codify.Infrastructure/Repositories/UserRepository.cs`
-  - Implement all 3 methods
-  - `GetAdminUsersAsync`: EF query on `db.Users` excluding `Role == Admin`, with search/filter/sort/pagination
-  - `GetByIdWithRecentSubmissionsAsync`: `Include(u => u.Submissions).ThenInclude(s => s.Problem)` + filter last 5
+#### Task 1.3 — Repository layer: new user queries ✅ DONE
+- `IUserRepository` extended with `GetAdminUsersAsync`, `GetByIdWithRecentSubmissionsAsync`, `GetNewUsersCountAsync`
+- `UserRepository` implements all 3 — EF split queries, filter/sort/page logic, excludes admins and deleted users
+- `ISubmissionRepository` extended with `GetCountFromAsync`
+- `SubmissionRepository` implements it — single `CountAsync` with date filter
+- `IProblemRepository` extended with `GetTotalCountAsync`
+- `ProblemRepository` implements it
 - Effort: ~45 min
 
-#### Task 1.4 — Repository layer: submissions count for stats
-- File: `src/Codify.Application/Interfaces/ISubmissionRepository.cs`
-  - Add `GetCountTodayAsync()`
-- File: `src/Codify.Infrastructure/Repositories/SubmissionRepository.cs`
-  - Implement: `WHERE SubmittedAt >= today_UTC_midnight`
+#### Task 1.4 — Repository layer: submissions count for stats ✅ DONE
+- `ISubmissionRepository.GetCountFromAsync(DateTime from)` added (covered in Task 1.3 above)
 - Effort: ~15 min
 
-#### Task 1.5 — Service layer: extend `IAdminService` + `AdminService`
-- File: `src/Codify.Application/Interfaces/IAdminService.cs`
-  - Add `GetStatsAsync()`
-  - Add `GetUsersAsync(AdminUserFilterRequest filter)`
-  - Add `GetUserByIdAsync(Guid id)`
-  - Add `UpdateUserStatusAsync(Guid id, string status, Guid adminId)`
-- File: `src/Codify.Application/Services/AdminService.cs`
-  - Implement all 4 methods
-  - `GetStatsAsync`: calls user repo counts + submission repo count + problem repo count
-  - `UpdateUserStatusAsync`: validates status string, blocks if target is Admin, calls `User.SetStatus()`
+#### Task 1.5 — Service layer: extend `IAdminService` + `AdminService` ✅ DONE
+- `IAdminService` extended with `GetStatsAsync`, `GetUsersAsync`, `GetUserByIdAsync`, `UpdateUserStatusAsync`
+- `AdminService` constructor updated to inject `ISubmissionRepository` + `IProblemRepository`
+- All 4 methods implemented including `ComputeInitials` and `ComputeStreak` helpers
 - Effort: ~60 min
 
-#### Task 1.6 — Controller layer: add 4 endpoints to `AdminController`
-- File: `src/Codify.API/Controllers/AdminController.cs`
-  - Add `GET /api/admin/stats`
-  - Add `GET /api/admin/users`
-  - Add `GET /api/admin/users/{id}`
-  - Add `PATCH /api/admin/users/{id}/status`
+#### Task 1.6 — Controller layer: add 4 endpoints to `AdminController` ✅ DONE
+- `GET /api/admin/stats` → `GetStats()`
+- `GET /api/admin/users` → `GetUsers([FromQuery] AdminUserFilterRequest)`
+- `GET /api/admin/users/{id}` → `GetUserById(Guid id)`
+- `PATCH /api/admin/users/{id}/status` → `UpdateUserStatus(Guid id, [FromBody] UpdateUserStatusRequest)`
 - Effort: ~30 min
 
 **Sprint 1 Deliverables:** 4 endpoints live. Frontend Overview + Users pages fully functional.
