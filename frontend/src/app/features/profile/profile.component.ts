@@ -23,6 +23,7 @@ import {
 } from '../../core/models/analytics.model';
 import { ActivityHeatmapComponent } from './activity-heatmap.component';
 import { SolvedRingComponent, RingDifficultyData } from './solved-ring.component';
+import { EditProfileComponent } from './edit-profile/edit-profile.component';
 import {
   buildHeatmapGrid,
   activityDaysToMap,
@@ -43,7 +44,7 @@ function easeOut(t: number): number {
   selector: 'app-profile',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, RouterLink, ActivityHeatmapComponent, SolvedRingComponent],
+  imports: [CommonModule, RouterLink, ActivityHeatmapComponent, SolvedRingComponent, EditProfileComponent],
   templateUrl: './profile.component.html',
   styleUrl:    './profile.component.scss',
   host: {
@@ -61,7 +62,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
   isLoading = false;
   error: string | null = null;
 
-  /** Profile photo saved during registration (base64 from localStorage) */
+  readonly showEditModal = signal(false);
+
+  /** Profile photo saved during registration */
   savedAvatar: string | null = null;
 
   // ── Reduced motion ────────────────────────────────────────────────────────
@@ -263,12 +266,28 @@ export class ProfileComponent implements OnInit, OnDestroy {
     requestAnimationFrame(tick);
   }
 
+  // ── Edit profile modal ───────────────────────────────────────────────────
+
+  openEditModal():  void { this.showEditModal.set(true);  }
+  closeEditModal(): void { this.showEditModal.set(false); }
+
+  onProfileSaved(): void {
+    this.showEditModal.set(false);
+    const username = this.route.snapshot.paramMap.get('username') ?? '';
+    this.load(username);
+    const u = this.authService.currentUser();
+    this.savedAvatar = u?.avatarUrl ?? localStorage.getItem('codify_avatar');
+    this.cdr.markForCheck();
+  }
+
   // ── Own-profile detection ─────────────────────────────────────────────────
 
   get isOwnProfile(): boolean {
     const u = this.authService.currentUser();
     if (!u || !this.profile) return false;
-    return toSlug(u.name) === this.profile.user.username;
+    // Compare by slug — also accept when the logged-in user's slug matches the URL param
+    const urlUsername = this.route.snapshot.paramMap.get('username') ?? '';
+    return toSlug(u.name) === urlUsername;
   }
 
   // ── Topic groups ──────────────────────────────────────────────────────────

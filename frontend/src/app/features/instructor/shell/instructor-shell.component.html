@@ -46,7 +46,17 @@
 
       <!-- Logged-in user at bottom of sidebar -->
       <div class="sidebar-footer">
-        <span class="inst-user">{{ auth.user()?.name }}</span>
+        <a
+          routerLink="/instructor/profile"
+          routerLinkActive="active"
+          class="nav-item sidebar-profile-link"
+          [attr.aria-label]="'View profile for ' + auth.user()?.name"
+        >
+          <span class="sidebar-avatar" aria-hidden="true">
+            {{ auth.user()?.avatarInitials }}
+          </span>
+          <span class="inst-user">{{ auth.user()?.name }}</span>
+        </a>
       </div>
 
     </nav>

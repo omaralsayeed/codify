@@ -99,7 +99,9 @@
           <span class="sidebar-role">{{ profile.user.role | titlecase }}</span>
 
           @if (isOwnProfile) {
-            <button class="edit-profile-btn" type="button" aria-label="Edit your profile">
+            <button class="edit-profile-btn" type="button"
+                    aria-label="Edit your profile"
+                    (click)="openEditModal()">
               Edit Profile
             </button>
           }
@@ -442,3 +444,10 @@
   }
 
 </div><!-- /profile-page -->
+
+@if (showEditModal()) {
+  <app-edit-profile
+    (close)="closeEditModal()"
+    (saved)="onProfileSaved()"
+  />
+}

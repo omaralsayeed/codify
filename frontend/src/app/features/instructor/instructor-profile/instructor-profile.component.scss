@@ -1,0 +1,432 @@
+@use '../../../styles/variables' as *;
+
+// ── Page shell ────────────────────────────────────────────────────────────────
+
+.ip-page {
+  min-height: calc(100vh - 64px);
+  background: $ivory;
+  padding: 40px 32px 80px;
+
+  @media (max-width: $tablet) { padding: 28px 20px 60px; }
+  @media (max-width: $mobile) { padding: 20px 16px 48px; }
+}
+
+// ── Two-column layout ─────────────────────────────────────────────────────────
+
+.ip-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 32px;
+  max-width: 960px;
+  margin: 0 auto;
+  align-items: start;
+
+  @media (max-width: $tablet) {
+    grid-template-columns: 220px 1fr;
+    gap: 24px;
+  }
+
+  @media (max-width: $mobile) {
+    grid-template-columns: 1fr;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LEFT SIDEBAR
+// ═══════════════════════════════════════════════════════════════════════════
+
+.ip-sidebar {
+  background: $white;
+  border: 1px solid $border;
+  border-radius: $r-lg;
+  padding: 28px 24px;
+  box-shadow: $shadow;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+
+  position: sticky;
+  top: 80px;
+
+  @media (max-width: $mobile) { position: static; }
+}
+
+// ── Avatar ────────────────────────────────────────────────────────────────────
+
+.ip-avatar-wrap {
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.ip-avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: $ff-body;
+  font-size: 34px;
+  font-weight: 800;
+  color: $white;
+  outline: 2.5px solid $blue;
+  outline-offset: 3px;
+
+  &--photo {
+    object-fit: cover;
+    font-size: 0; // hide initials when photo shows
+  }
+}
+
+.ip-avatar-upload {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 30px;
+  height: 30px;
+  background: $navy;
+  color: $ivory;
+  border: 2px solid $white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover:not(:disabled) { background: $navy2; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+  &:focus-visible { outline: 2px solid $blue; outline-offset: 2px; }
+}
+
+.ip-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: $white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
+.ip-avatar-error {
+  font-size: 11px;
+  color: $red;
+  margin: -2px 0 4px;
+  text-align: center;
+}
+
+// ── Identity ──────────────────────────────────────────────────────────────────
+
+.ip-name {
+  font-family: $ff-body;
+  font-size: 20px;
+  font-weight: 800;
+  color: $navy;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.ip-role-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  background: $gold-lt;
+  color: $gold-dark;
+  padding: 3px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin: 4px 0 6px;
+}
+
+.ip-headline {
+  font-size: 13px;
+  color: $muted;
+  margin: 0 0 8px;
+  line-height: 1.4;
+  font-style: italic;
+}
+
+// ── Meta rows ─────────────────────────────────────────────────────────────────
+
+.ip-meta {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 8px 0;
+  text-align: left;
+}
+
+.ip-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: $muted;
+
+  svg { flex-shrink: 0; opacity: 0.7; }
+  span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+
+// ── Social links ──────────────────────────────────────────────────────────────
+
+.ip-social {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.ip-social-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: $r;
+  border: 1px solid $border;
+  background: transparent;
+  color: $muted;
+  font-size: 12px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+
+  &:hover {
+    background: rgba(26,43,74,0.05);
+    color: $navy;
+    border-color: rgba(26,43,74,0.2);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// RIGHT MAIN
+// ═══════════════════════════════════════════════════════════════════════════
+
+.ip-main {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+// ── Card ──────────────────────────────────────────────────────────────────────
+
+.ip-card {
+  background: $white;
+  border: 1px solid $border;
+  border-radius: $r-lg;
+  padding: 24px;
+  box-shadow: $shadow;
+}
+
+.ip-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.ip-card-title {
+  font-family: $ff-display;
+  font-size: 18px;
+  color: $navy;
+  margin: 0;
+}
+
+// ── Bio ───────────────────────────────────────────────────────────────────────
+
+.ip-bio {
+  font-size: 14px;
+  color: $charcoal;
+  line-height: 1.7;
+  margin: 0;
+
+  &--empty {
+    color: $muted;
+    font-style: italic;
+    opacity: 0.7;
+  }
+}
+
+// ── Buttons ───────────────────────────────────────────────────────────────────
+
+.ip-btn {
+  height: 38px;
+  padding: 0 18px;
+  border-radius: $r;
+  font-family: $ff-body;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  &--edit {
+    background: transparent;
+    border: 1px solid $border;
+    color: $muted;
+    &:hover { border-color: $navy2; color: $navy; }
+  }
+
+  &--save {
+    background: $navy;
+    border: none;
+    color: $ivory;
+    &:hover:not(:disabled) { background: $navy2; }
+    &:disabled { opacity: 0.6; cursor: not-allowed; }
+  }
+
+  &--cancel {
+    background: transparent;
+    border: 1px solid $border;
+    color: $muted;
+    &:hover { border-color: $navy2; color: $navy; }
+  }
+
+  &:focus-visible { outline: 2px solid $blue; outline-offset: 2px; }
+}
+
+// ── Banners ───────────────────────────────────────────────────────────────────
+
+.ip-banner {
+  padding: 10px 14px;
+  border-radius: $r;
+  font-size: 13px;
+  margin-bottom: 12px;
+
+  &--error {
+    background: $red-lt;
+    border: 1px solid rgba(211,47,47,0.2);
+    color: $red;
+  }
+
+  &--ok {
+    background: $teal-lt;
+    border: 1px solid rgba(29,158,117,0.25);
+    color: $teal;
+    font-weight: 600;
+  }
+}
+
+// ── Form ──────────────────────────────────────────────────────────────────────
+
+.ip-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.ip-form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ip-form-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: $muted;
+  margin: 0;
+}
+
+.ip-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.ip-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: $charcoal;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ip-req { color: $red; }
+
+.ip-char {
+  font-size: 11px;
+  color: $muted;
+  text-align: right;
+}
+
+.ip-input {
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid $border;
+  border-radius: $r;
+  font-family: $ff-body;
+  font-size: 14px;
+  color: $charcoal;
+  background: $white;
+  outline: none;
+  box-sizing: border-box;
+  width: 100%;
+  transition: border-color 0.15s, box-shadow 0.15s;
+
+  &:focus {
+    border-color: $blue;
+    box-shadow: 0 0 0 3px rgba(46,134,171,0.12);
+  }
+
+  &::placeholder { color: $muted; opacity: 0.7; }
+}
+
+.ip-textarea {
+  height: auto;
+  padding: 11px 14px;
+  resize: vertical;
+  min-height: 100px;
+  line-height: 1.5;
+}
+
+// ── Social field row ──────────────────────────────────────────────────────────
+
+.ip-social-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ip-social-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: $ivory2;
+  color: $navy2;
+  font-size: 11px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+// ── Actions row ───────────────────────────────────────────────────────────────
+
+.ip-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid $border;
+}
