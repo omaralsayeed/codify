@@ -70,11 +70,16 @@ export class RegisterComponent {
   showPassword = false;
   showConfirmPassword = false;
   profilePicturePreview: string | null = null;
-  /** The raw File selected by the user — kept so we can upload it later */
-  private selectedFile: File | null = null;
+
+  /**
+   * Promise that resolves to the Cloudinary secure_url (or null on failure).
+   * Kicked off immediately when the user picks a file — runs in the background
+   * while they fill in the rest of the form, so upload is likely done by submit.
+   */
+  private avatarUploadPromise: Promise<string | null> | null = null;
+
   registerError = '';
   isSubmitting = false;
-  isUploadingAvatar = false;
 
   registerForm = new FormGroup({
     fullName: new FormControl('', [Validators.required]),
@@ -141,17 +146,31 @@ export class RegisterComponent {
 
   onProfilePictureSelect(event: Event): void {
     const input = event.target as HTMLInputElement;
-    if (input.files && input.files[0]) {
-      const file = input.files[0];
-      this.selectedFile = file;
+    if (!input.files?.[0]) return;
 
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        this.profilePicturePreview = e.target?.result as string;
-        this.cdr.detectChanges();
-      };
-      reader.readAsDataURL(file);
-    }
+    const file = input.files[0];
+
+    // Show preview immediately
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      this.profilePicturePreview = e.target?.result as string;
+      this.cdr.detectChanges();
+    };
+    reader.readAsDataURL(file);
+
+    // Start uploading to Cloudinary RIGHT NOW in the background.
+    // By the time the user finishes filling the form and hits submit,
+    // the upload will likely already be done.
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', CLOUDINARY_PRESET);
+    formData.append('folder', 'codify_avatars');
+
+    this.avatarUploadPromise = this.http
+      .post<{ secure_url: string }>(CLOUDINARY_UPLOAD_URL, formData)
+      .toPromise()
+      .then(res => res?.secure_url ?? null)
+      .catch(() => null); // upload failure never blocks registration
   }
 
   togglePasswordVisibility(field: 'password' | 'confirmPassword'): void {
@@ -215,63 +234,47 @@ export class RegisterComponent {
     this.registerError = '';
     this.isSubmitting = true;
 
-    // Use custom org name if 'Other' was selected
     const resolvedOrg = organization === 'Other' ? (organizationOther || '') : (organization || '');
 
-    // ── Step 1: upload avatar to Cloudinary (if a file was selected) ────────
-    const doRegister = (avatarUrl?: string) => {
-      this.authService.register({
-        fullName: fullName!,
-        email: email!,
-        password: password!,
-        role: role as 'student' | 'instructor',
-        organization: resolvedOrg || undefined
-      }).subscribe({
-        next: result => {
-          this.isSubmitting = false;
-          this.isUploadingAvatar = false;
-          if (result.pendingApproval) {
-            this.router.navigate(['/auth/pending-approval']);
-          } else if (result.success) {
-            if (avatarUrl) {
-              // Push Cloudinary URL into live user signal + localStorage
-              this.authService.setAvatarUrl(avatarUrl);
-            }
-            this.router.navigate(['/']);
-          } else {
-            this.registerError = result.error || 'Registration failed. Please try again.';
-            this.cdr.detectChanges();
+    // Capture the upload promise NOW before it gets cleared.
+    // We don't await it here — registration fires immediately.
+    const uploadPromise = this.avatarUploadPromise;
+
+    // ── Register immediately — never wait on the photo ───────────────────
+    this.authService.register({
+      fullName: fullName!,
+      email: email!,
+      password: password!,
+      role: role as 'student' | 'instructor',
+      organization: resolvedOrg || undefined
+    }).subscribe({
+      next: result => {
+        this.isSubmitting = false;
+        if (result.pendingApproval) {
+          this.router.navigate(['/auth/pending-approval']);
+        } else if (result.success) {
+          // Navigate home straight away — don't wait for the photo
+          this.router.navigate(['/']);
+
+          // If a photo was selected, wait for its upload to finish (it's likely
+          // already done) then save the URL. Runs silently in the background.
+          if (uploadPromise) {
+            uploadPromise.then(avatarUrl => {
+              if (avatarUrl) {
+                this.authService.setAvatarUrl(avatarUrl);
+              }
+            });
           }
-        },
-        error: err => {
-          this.isSubmitting = false;
-          this.isUploadingAvatar = false;
-          this.registerError = err?.error?.message || err?.message || 'Registration failed. Please try again.';
+        } else {
+          this.registerError = result.error || 'Registration failed. Please try again.';
           this.cdr.detectChanges();
         }
-      });
-    };
-
-    if (this.selectedFile) {
-      this.isUploadingAvatar = true;
-      const formData = new FormData();
-      formData.append('file', this.selectedFile);
-      formData.append('upload_preset', CLOUDINARY_PRESET);
-      formData.append('folder', 'codify_avatars');
-
-      this.http.post<{ secure_url: string }>(CLOUDINARY_UPLOAD_URL, formData).subscribe({
-        next: res => {
-          this.isUploadingAvatar = false;
-          doRegister(res.secure_url);
-        },
-        error: () => {
-          // Upload failed — continue registration without image rather than blocking the user
-          this.isUploadingAvatar = false;
-          doRegister();
-        }
-      });
-    } else {
-      doRegister();
-    }
+      },
+      error: err => {
+        this.isSubmitting = false;
+        this.registerError = err?.error?.message || err?.message || 'Registration failed. Please try again.';
+        this.cdr.detectChanges();
+      }
+    });
   }
 }
