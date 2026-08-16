@@ -419,7 +419,7 @@ onSubmit(): void {
 | 1.2 | Verify backend reachable + admin JWT works | ✅ Done — `admin@codify.com` / `Admin@123456` |
 | 2 | Wire overview stats | ✅ Done |
 | 3 | Wire users list + status toggle | ✅ Done |
-| 4 | Wire user detail + status toggle | ❌ |
+| 4 | Wire user detail + status toggle | ✅ Done |
 | 5 | Wire problems list + toggle + delete | ❌ |
 | 6 | Wire problem form create + edit | ❌ |
 
