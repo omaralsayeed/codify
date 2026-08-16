@@ -122,19 +122,37 @@ public class UserRepository(CodifyDbContext db) : IUserRepository
     }
 
     /// <summary>
-    /// Returns a single non-admin user with their last 5 submissions (+ Problem title)
-    /// and PerformanceProfile. Returns null if not found or if the user is an admin.
+    /// Returns a single non-admin user with their last 5 submissions (+ Problem title),
+    /// PerformanceProfile, and the real total submission count.
+    ///
+    /// Uses two separate queries because EF Core does not support filtered Include
+    /// (.Take()) combined with AsSplitQuery on the same entity.
     /// </summary>
-    public async Task<User?> GetByIdWithRecentSubmissionsAsync(Guid id)
+    public async Task<(User? User, int TotalSubmissions)> GetByIdWithRecentSubmissionsAsync(Guid id)
     {
+        // Query 1: user + PerformanceProfile
         var user = await db.Users
             .Include(u => u.PerformanceProfile)
-            .Include(u => u.Submissions.OrderByDescending(s => s.SubmittedAt).Take(5))
-                .ThenInclude(s => s.Problem)
-            .AsSplitQuery()
             .FirstOrDefaultAsync(u => u.Id == id && u.Role != UserRole.Admin);
 
-        return user;
+        if (user is null) return (null, 0);
+
+        // Query 2: last 5 submissions with Problem title
+        var recentSubmissions = await db.Submissions
+            .Include(s => s.Problem)
+            .Where(s => s.UserId == id)
+            .OrderByDescending(s => s.SubmittedAt)
+            .Take(5)
+            .ToListAsync();
+
+        // Query 3: real total count (cheap COUNT(*))
+        var totalCount = await db.Submissions.CountAsync(s => s.UserId == id);
+
+        // Populate navigation collection so mapping layer can read them uniformly
+        foreach (var sub in recentSubmissions)
+            user.Submissions.Add(sub);
+
+        return (user, totalCount);
     }
 
     /// <summary>Count of non-admin, non-deleted users registered on or after <paramref name="from"/> (UTC).</summary>

@@ -33,10 +33,11 @@ public interface IUserRepository
     Task<(IReadOnlyList<User> Items, int TotalCount)> GetAdminUsersAsync(AdminUserFilterRequest filter);
 
     /// <summary>
-    /// Returns a single non-admin user with their last 5 submissions (+ Problem) and PerformanceProfile.
-    /// Returns null if the user does not exist or is an admin.
+    /// Returns a single non-admin user with their last 5 submissions (+ Problem title),
+    /// PerformanceProfile, and the real total submission count.
+    /// Returns null user if not found or if the user is an admin.
     /// </summary>
-    Task<User?> GetByIdWithRecentSubmissionsAsync(Guid id);
+    Task<(User? User, int TotalSubmissions)> GetByIdWithRecentSubmissionsAsync(Guid id);
 
     /// <summary>Count of users registered on or after <paramref name="from"/> (UTC).</summary>
     Task<int> GetNewUsersCountAsync(DateTime from);

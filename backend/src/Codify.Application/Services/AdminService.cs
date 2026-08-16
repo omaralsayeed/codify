@@ -57,18 +57,15 @@ public class AdminService(
         var todayMidnight = DateTime.UtcNow.Date;
         var weekAgo       = todayMidnight.AddDays(-6); // last 7 days inclusive
 
-        // Fetch all non-admin users in one call then aggregate in memory —
-        // avoids multiple DB round-trips for small platforms.
-        var (users, _) = await userRepo.GetAdminUsersAsync(new AdminUserFilterRequest
-        {
-            Page     = 1,
-            PageSize = int.MaxValue
-        });
-
-        int totalStudents      = users.Count(u => u.Role == UserRole.Student);
-        int totalInstructors   = users.Count(u => u.Role == UserRole.Instructor);
-        int activeInstructors  = users.Count(u => u.Role == UserRole.Instructor && u.Status == UserStatus.Active);
-        int pendingInstructors = users.Count(u => u.Role == UserRole.Instructor && u.Status == UserStatus.Pending);
+        // Direct counts — no need to load all users into memory
+        int totalStudents      = (await userRepo.GetAdminUsersAsync(
+            new AdminUserFilterRequest { Role = "student",    Page = 1, PageSize = 1 })).TotalCount;
+        int totalInstructors   = (await userRepo.GetAdminUsersAsync(
+            new AdminUserFilterRequest { Role = "instructor", Page = 1, PageSize = 1 })).TotalCount;
+        int activeInstructors  = (await userRepo.GetAdminUsersAsync(
+            new AdminUserFilterRequest { Role = "instructor", Status = "active",  Page = 1, PageSize = 1 })).TotalCount;
+        int pendingInstructors = (await userRepo.GetAdminUsersAsync(
+            new AdminUserFilterRequest { Role = "instructor", Status = "pending", Page = 1, PageSize = 1 })).TotalCount;
 
         int newUsersToday    = await userRepo.GetNewUsersCountAsync(todayMidnight);
         int newUsersThisWeek = await userRepo.GetNewUsersCountAsync(weekAgo);
@@ -100,10 +97,10 @@ public class AdminService(
 
     public async Task<AdminUserDetailResponse> GetUserByIdAsync(Guid id)
     {
-        var user = await userRepo.GetByIdWithRecentSubmissionsAsync(id)
-            ?? throw new NotFoundException("User not found.");
+        var (user, totalSubmissions) = await userRepo.GetByIdWithRecentSubmissionsAsync(id);
+        if (user is null) throw new NotFoundException("User not found.");
 
-        return MapToUserDetail(user);
+        return MapToUserDetail(user, totalSubmissions);
     }
 
     public async Task<AdminUserDetailResponse> UpdateUserStatusAsync(
@@ -113,8 +110,8 @@ public class AdminService(
         if (normalised is not ("active" or "pending"))
             throw new ValidationException("Status must be 'active' or 'pending'.");
 
-        var user = await userRepo.GetByIdWithRecentSubmissionsAsync(userId)
-            ?? throw new NotFoundException("User not found.");
+        var (user, totalSubmissions) = await userRepo.GetByIdWithRecentSubmissionsAsync(userId);
+        if (user is null) throw new NotFoundException("User not found.");
 
         if (user.Role == UserRole.Admin)
             throw new ForbiddenException("Cannot change the status of an admin account.");
@@ -123,7 +120,7 @@ public class AdminService(
         user.SetStatus(newStatus, adminId);
         await userRepo.SaveChangesAsync();
 
-        return MapToUserDetail(user);
+        return MapToUserDetail(user, totalSubmissions);
     }
 
     // ── Mapping helpers ───────────────────────────────────────────────────────
@@ -142,7 +139,7 @@ public class AdminService(
         Organization   = u.Role == UserRole.Instructor ? u.Organization : null
     };
 
-    private static AdminUserDetailResponse MapToUserDetail(User u)
+    private static AdminUserDetailResponse MapToUserDetail(User u, int totalSubmissions)
     {
         var recentSubs = u.Submissions
             .OrderByDescending(s => s.SubmittedAt)
@@ -189,7 +186,7 @@ public class AdminService(
             ProblemsSolved   = u.Role == UserRole.Student ? u.SolvedProblems : null,
             AvgScore         = u.Role == UserRole.Student ? avgScore : null,
             Streak           = streak,
-            TotalSubmissions = u.Submissions.Count,
+            TotalSubmissions = totalSubmissions,
             RecentSubmissions = recentSubs.Select(s => new AdminUserSubmissionRow
             {
                 ProblemTitle = s.Problem?.Title ?? string.Empty,
