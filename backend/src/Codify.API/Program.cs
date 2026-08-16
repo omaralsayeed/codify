@@ -158,6 +158,7 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate();
     await ConceptTagSeed.SeedAsync(db);
     await ProblemSeed.SeedAsync(db);
+    await AdminSeed.SeedAsync(db);
 }
 
 // Auto-ingest concept tags into Chroma Cloud on startup (fire-and-forget).
