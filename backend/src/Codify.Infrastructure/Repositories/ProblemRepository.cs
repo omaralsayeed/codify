@@ -41,6 +41,9 @@ public class ProblemRepository(CodifyDbContext db) : IProblemRepository
         return (items, total);
     }
 
+    public async Task<Problem?> GetByIdAsync(Guid id) =>
+        await db.Problems.FirstOrDefaultAsync(p => p.Id == id && !p.IsDeleted);
+
     public async Task<Problem?> GetByIdWithDetailsAsync(Guid id) =>
         await db.Problems
             .Include(p => p.ProblemTags)

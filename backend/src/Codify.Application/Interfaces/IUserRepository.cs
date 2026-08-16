@@ -42,6 +42,12 @@ public interface IUserRepository
     /// <summary>Count of users registered on or after <paramref name="from"/> (UTC).</summary>
     Task<int> GetNewUsersCountAsync(DateTime from);
 
+    /// <summary>Returns the last <paramref name="count"/> submissions for a user with Problem loaded.</summary>
+    Task<IReadOnlyList<Submission>> GetRecentSubmissionsAsync(Guid userId, int count);
+
+    /// <summary>Total submission count for a user.</summary>
+    Task<int> GetTotalSubmissionsCountAsync(Guid userId);
+
     Task AddAsync(User user);
     Task SaveChangesAsync();
 }

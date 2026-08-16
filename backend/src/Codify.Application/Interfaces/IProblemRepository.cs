@@ -7,6 +7,10 @@ namespace Codify.Application.Interfaces;
 public interface IProblemRepository
 {
     Task<(IEnumerable<Problem> Items, int TotalCount)> GetAllAsync(ProblemFilterRequest filter, bool isInstructor);
+
+    /// <summary>Returns a problem by id with no navigation properties loaded. Used for lightweight mutations.</summary>
+    Task<Problem?> GetByIdAsync(Guid id);
+
     Task<Problem?> GetByIdWithDetailsAsync(Guid id);
     Task<Problem?> GetByIdWithTestCasesAsync(Guid id);
 

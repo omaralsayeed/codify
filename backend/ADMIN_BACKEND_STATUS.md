@@ -238,25 +238,26 @@
 - Response was returning `null` — fixed to `{ "data": { "id": "uuid", "deleted": true } }` per spec
 - `DeleteAsync` now returns the `Guid` so controller can include it in the response
 
-#### Task 3.3 — `initials` field decision
-- The spec asks for `initials` (e.g., "Karim Ahmed" → "KA") in user list responses.
-- The `User` entity has no `Initials` property. Frontend said they can derive it.
-- **Decision: compute it in the mapping in `AdminService`, don't store in DB.**
-- Implementation: `string.Concat(name.Split(' ').Take(2).Select(w => char.ToUpper(w[0])))`
-- Effort: ~5 min (just the mapping logic)
+#### Task 3.3 — `initials` field ✅ VERIFIED — already done
+- `ComputeInitials(string fullName)` already in `AdminService`, called from both `MapToUserRow` and `MapToUserDetail`
+- Logic: `string.Concat(fullName.Split(' ', RemoveEmptyEntries).Take(2).Select(w => char.ToUpper(w[0])))`
+- No DB column needed, no changes required
 
-#### Task 3.4 — Verify login `ACCOUNT_PENDING` response format
-- Spec says login must return `403` with `{ "errorCode": "ACCOUNT_PENDING" }` for pending users.
-- Currently `AuthService` throws `PendingApprovalException` which returns a generic `{ "message": "..." }`.
-- Check `ExceptionMiddleware` — if it doesn't return `errorCode`, update it to include it for this specific exception type.
-- Effort: ~15 min
+#### Task 3.4 — Login `ACCOUNT_PENDING` response format ✅ VERIFIED — already correct
+- `ExceptionMiddleware` already maps `PendingApprovalException` → `HTTP 403` with `errorCode: "ACCOUNT_PENDING"`
+- `ApiResponse.Fail` includes both `errorCode` and `message` fields
+- Spec requirement fully met, no changes required
 
-#### Task 3.5 — Verify admin is excluded from `/api/admin/users`
-- Double-check `GetAdminUsersAsync` filters `Role != Admin`.
-- Verify `GET /api/admin/users/:id` returns `404` if user is an admin.
-- Effort: ~10 min (code review + test)
+#### Task 3.5 — Admin exclusion verification ✅ VERIFIED + 1 fix applied
+- `GetAdminUsersAsync`: `WHERE Role != Admin` confirmed ✅
+- `GetByIdWithRecentSubmissionsAsync`: `WHERE Role != Admin` confirmed → returns `null` → service throws `404` ✅
+- **Bug found:** `UpdateUserStatusAsync` called `GetByIdWithRecentSubmissionsAsync` which silently returned `null` for admins → threw `404`. Spec requires `403` for admin targets.
+- **Fixed:** Now loads user via `GetByIdAsync` first (no role filter) to check for admin → throws `403`, then proceeds with full load for response
 
-**Sprint 3 Deliverables:** All 9 endpoints complete. Every admin panel page fully operational.
+**Sprint 3 review bugs found and fixed:**
+
+- **Bug 2 (EF tracking conflict):** `UpdateUserStatusAsync` was loading the user twice — once via `GetByIdAsync` (FindAsync, tracked) then again via `GetByIdWithRecentSubmissionsAsync` (FirstOrDefaultAsync, second tracked instance of same key) → runtime `InvalidOperationException`. Fixed by loading once via `GetByIdAsync`, applying the status change, saving, then building the response using two focused queries: `GetRecentSubmissionsAsync` and `GetTotalSubmissionsCountAsync` (both new helpers added to `IUserRepository` + `UserRepository`).
+- **Issue 3 & 4 (unnecessary loads):** `SetActiveAsync` and `DeleteAsync` were loading tags + test cases via `GetByIdWithDetailsAsync` just to flip a flag. Added `IProblemRepository.GetByIdAsync` (lightweight, no nav includes) and switched both methods to use it.
 
 ---
 

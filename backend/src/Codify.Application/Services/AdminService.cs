@@ -110,15 +110,27 @@ public class AdminService(
         if (normalised is not ("active" or "pending"))
             throw new ValidationException("Status must be 'active' or 'pending'.");
 
-        var (user, totalSubmissions) = await userRepo.GetByIdWithRecentSubmissionsAsync(userId);
-        if (user is null) throw new NotFoundException("User not found.");
+        // Single load — GetByIdAsync returns the entity whether or not the user is an admin.
+        var user = await userRepo.GetByIdAsync(userId)
+            ?? throw new NotFoundException("User not found.");
 
+        // 403 — spec explicitly says cannot change admin status
         if (user.Role == UserRole.Admin)
             throw new ForbiddenException("Cannot change the status of an admin account.");
 
+        // Apply status change and persist
         var newStatus = normalised == "active" ? UserStatus.Active : UserStatus.Pending;
         user.SetStatus(newStatus, adminId);
         await userRepo.SaveChangesAsync();
+
+        // Build full response — load recent submissions + total count separately.
+        // We pass the already-loaded user to avoid a third EF query for the user itself.
+        var recentSubmissions = await userRepo.GetRecentSubmissionsAsync(userId, count: 5);
+        var totalSubmissions  = await userRepo.GetTotalSubmissionsCountAsync(userId);
+
+        // Attach to navigation so MapToUserDetail can read them
+        foreach (var sub in recentSubmissions)
+            user.Submissions.Add(sub);
 
         return MapToUserDetail(user, totalSubmissions);
     }

@@ -162,6 +162,19 @@ public class UserRepository(CodifyDbContext db) : IUserRepository
                           && !u.IsDeleted
                           && u.CreatedAt >= from);
 
+    /// <summary>Returns the last <paramref name="count"/> submissions for a user with Problem loaded.</summary>
+    public async Task<IReadOnlyList<Submission>> GetRecentSubmissionsAsync(Guid userId, int count) =>
+        await db.Submissions
+            .Include(s => s.Problem)
+            .Where(s => s.UserId == userId)
+            .OrderByDescending(s => s.SubmittedAt)
+            .Take(count)
+            .ToListAsync();
+
+    /// <summary>Total submission count for a user (cheap COUNT query).</summary>
+    public async Task<int> GetTotalSubmissionsCountAsync(Guid userId) =>
+        await db.Submissions.CountAsync(s => s.UserId == userId);
+
     public async Task AddAsync(User user) =>
         await db.Users.AddAsync(user);
 

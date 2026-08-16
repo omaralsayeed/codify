@@ -166,7 +166,8 @@ public class ProblemService(
 
     public async Task<(Guid Id, bool IsActive)> SetActiveAsync(Guid id, bool isActive)
     {
-        var problem = await problemRepo.GetByIdWithDetailsAsync(id)
+        // Lightweight load — no need for tags or test cases just to flip a flag
+        var problem = await problemRepo.GetByIdAsync(id)
             ?? throw new NotFoundException($"Problem {id} not found.");
 
         problem.SetActive(isActive);
@@ -177,7 +178,8 @@ public class ProblemService(
 
     public async Task<Guid> DeleteAsync(Guid id)
     {
-        var problem = await problemRepo.GetByIdWithDetailsAsync(id)
+        // Lightweight load — no need for tags or test cases for a soft delete
+        var problem = await problemRepo.GetByIdAsync(id)
             ?? throw new NotFoundException($"Problem {id} not found.");
 
         problem.SoftDelete();
