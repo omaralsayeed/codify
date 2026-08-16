@@ -44,12 +44,24 @@ public class ProblemsController(IProblemService problemService, ISubmissionServi
         return Ok(ApiResponse.Ok(result));
     }
 
+    /// <summary>
+    /// Toggles a problem's active/inactive state without touching any other fields.
+    /// PATCH /api/problems/:id/status
+    /// </summary>
+    [HttpPatch("{id:guid}/status")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> SetStatus(Guid id, [FromBody] ProblemStatusUpdateRequest request)
+    {
+        var (problemId, isActive) = await problemService.SetActiveAsync(id, request.IsActive);
+        return Ok(ApiResponse.Ok(new { id = problemId, isActive }));
+    }
+
     [HttpDelete("{id:guid}")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Delete(Guid id)
     {
-        await problemService.DeleteAsync(id);
-        return Ok(ApiResponse.Ok(null));
+        var deletedId = await problemService.DeleteAsync(id);
+        return Ok(ApiResponse.Ok(new { id = deletedId, deleted = true }));
     }
 
     [HttpGet("{id:guid}/submissions")]

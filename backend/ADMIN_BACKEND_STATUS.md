@@ -18,8 +18,8 @@
 | 5 | GET | `/api/admin/problems` | 2 | ✅ Done |
 | 6 | POST | `/api/problems` | 2 | ✅ Done |
 | 7 | PATCH | `/api/problems/:id` | 2 | ✅ Done |
-| 8 | PATCH | `/api/problems/:id/status` | 3 | ❌ Not built |
-| 9 | DELETE | `/api/problems/:id` | 3 | ⚠️ Exists but wrong role |
+| 8 | PATCH | `/api/problems/:id/status` | 3 | ✅ Done |
+| 9 | DELETE | `/api/problems/:id` | 3 | ✅ Done |
 
 ---
 
@@ -226,17 +226,17 @@
 ### Sprint 3 — Polish & Remaining Endpoints (Phase 3)
 **Goal:** Problem status toggle + soft delete. Final cleanup.
 
-#### Task 3.1 — `PATCH /api/problems/:id/status`
+#### Task 3.1 — `PATCH /api/problems/:id/status` ✅ DONE
 - New DTO: `ProblemStatusUpdateRequest` — `{ IsActive: bool }`
-- New service method on `IProblemService`: `SetActiveAsync(Guid id, bool isActive)`
-- Implement in `ProblemService`: calls `problem.Deactivate()` or re-activates
-- Add to `ProblemsController` with `[Authorize(Roles = "Admin")]`
-- **Note:** Need to add `Activate()` method to `Problem` entity (currently only `Deactivate()` exists)
-- Effort: ~25 min
+- `IProblemService.SetActiveAsync(Guid, bool)` added — returns `(Guid Id, bool IsActive)`
+- `ProblemService` implements it: loads problem, calls `SetActive()`, saves
+- `ProblemsController` endpoint: `PATCH /api/problems/{id}/status` with `[Authorize(Roles = "Admin")]`
+- Response: `{ "data": { "id": "uuid", "isActive": false } }` matching spec exactly
 
-#### Task 3.2 — `DELETE /api/problems/:id` role fix (from Sprint 2)
-- Already covered in Task 2.1 — just confirm it's done.
-- Effort: 0 min (done in Sprint 2)
+#### Task 3.2 — `DELETE /api/problems/:id` role fix ✅ DONE (Sprint 2) + response fixed
+- Role was already `Admin` from Sprint 2 Task 2.1
+- Response was returning `null` — fixed to `{ "data": { "id": "uuid", "deleted": true } }` per spec
+- `DeleteAsync` now returns the `Guid` so controller can include it in the response
 
 #### Task 3.3 — `initials` field decision
 - The spec asks for `initials` (e.g., "Karim Ahmed" → "KA") in user list responses.

@@ -164,13 +164,26 @@ public class ProblemService(
         return MapToDetail(problem);
     }
 
-    public async Task DeleteAsync(Guid id)
+    public async Task<(Guid Id, bool IsActive)> SetActiveAsync(Guid id, bool isActive)
+    {
+        var problem = await problemRepo.GetByIdWithDetailsAsync(id)
+            ?? throw new NotFoundException($"Problem {id} not found.");
+
+        problem.SetActive(isActive);
+        await problemRepo.SaveChangesAsync();
+
+        return (problem.Id, problem.IsActive);
+    }
+
+    public async Task<Guid> DeleteAsync(Guid id)
     {
         var problem = await problemRepo.GetByIdWithDetailsAsync(id)
             ?? throw new NotFoundException($"Problem {id} not found.");
 
         problem.SoftDelete();
         await problemRepo.SaveChangesAsync();
+
+        return problem.Id;
     }
 
     private static ProblemSummaryResponse MapToSummary(Problem p) => new()
