@@ -852,9 +852,46 @@
   justify-content: space-between;
   gap: 12px;
   padding: 10px 16px;
-  background: #252526; // VS Code header background
+  background: #252526;
   border-bottom: 1px solid #3e3e42;
   flex-shrink: 0;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+// ── macOS-style window dots ───────────────────────────────────────────────────
+.editor-window-dots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 4px;
+  flex-shrink: 0;
+
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+
+  .dot-red    { background: #ff5f56; }
+  .dot-yellow { background: #ffbd2e; }
+  .dot-green  { background: #27c93f; }
+}
+
+// ── Editor filename pill ──────────────────────────────────────────────────────
+.editor-filename {
+  font-family: $ff-mono;
+  font-size: 12px;
+  font-weight: 500;
+  color: #cccccc;
+  background: #2d2d2d;
+  padding: 3px 10px;
+  border-radius: 4px;
+  border: 1px solid #3e3e42;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
 }
 
 .editor-header-left {
@@ -957,6 +994,76 @@
   &:focus-visible {
     outline: 1px solid #007acc;
     outline-offset: 2px;
+  }
+}
+
+// Theme toggle — same base as editor-icon-btn, gets a subtle brand tint on hover
+.theme-toggle-btn {
+  color: #cccccc;
+
+  &:hover {
+    background: rgba(50, 145, 185, 0.18);
+    color: #3291b9;
+  }
+}
+
+// ── Editor wrapper + light theme overrides ────────────────────────────────────
+.editor-wrapper {
+  display: contents; // transparent wrapper — doesn't affect layout in dark mode
+
+  // Light theme: override the dark chrome surrounding Monaco
+  &--light {
+
+    .right-panel-content {
+      background: #EAF4F8;
+    }
+
+    .editor-header {
+      background: #d8edf4;
+      border-bottom-color: #B8DCE8;
+    }
+
+    .editor-filename {
+      background: #cce4ef;
+      color: #1a3d4d;
+      border-color: #B8DCE8;
+    }
+
+    .language-selector,
+    .autocomplete-toggle {
+      color: #1a3d4d;
+    }
+
+    .language-dropdown {
+      background-color: #cce4ef;
+      border-color: #B8DCE8;
+      color: #1a3d4d;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%231a3d4d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+
+      &:hover {
+        background-color: #b8dce8;
+        border-color: #3291b9;
+      }
+    }
+
+    .editor-icon-btn {
+      color: #1a3d4d;
+
+      &:hover {
+        background: rgba(50, 145, 185, 0.15);
+        color: #3291b9;
+      }
+    }
+
+    .editor-body {
+      background: #EAF4F8;
+    }
+
+    .editor-status-bar {
+      background: #3291b9;
+      color: #ffffff;
+      border-top: 1px solid #B8DCE8;
+    }
   }
 }
 

@@ -325,6 +325,17 @@ public:
   // ── Editor highlight state (Chunk 8) ─────────────────────────────────────
   editorHighlighting: boolean = false;  // drives .monaco-editor-host--highlight class
 
+  // ── Theme state ───────────────────────────────────────────────────────────
+  isDarkTheme = true;  // default dark; toggled by the sun/moon button
+
+  /** File extension shown in the editor filename pill */
+  get fileExtension(): string {
+    const map: Record<string, string> = {
+      python: 'py', csharp: 'cs', javascript: 'js', java: 'java', cpp: 'cpp',
+    };
+    return map[this.selectedLanguage] ?? 'txt';
+  }
+
   // ── Monaco editor options ─────────────────────────────────────────────────
 
   /** Maps our language values to Monaco language IDs */
@@ -371,6 +382,10 @@ public:
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     registerCustomCompletions((window as any).monaco);
 
+    // Register brand-tinted light + dark themes once
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    this.registerCustomThemes((window as any).monaco);
+
     // Keep currentCode in sync when the user types
     editor.onDidChangeModelContent(() => {
       this.zone.run(() => {
@@ -385,6 +400,41 @@ public:
         this.cursorColumn = e.position.column;
       });
     });
+  }
+
+  /** Defines codify-dark and codify-light themes. Safe to call multiple times. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private registerCustomThemes(monacoGlobal: any): void {
+    monacoGlobal.editor.defineTheme('codify-dark', {
+      base: 'vs-dark',
+      inherit: true,
+      rules: [],
+      colors: {},   // keep existing dark appearance as-is
+    });
+
+    monacoGlobal.editor.defineTheme('codify-light', {
+      base: 'vs',
+      inherit: true,
+      rules: [],
+      colors: {
+        'editor.background':              '#EAF4F8',
+        'editor.lineHighlightBackground': '#DCEAF1',
+        'editorLineNumber.foreground':    '#7FA8BC',
+        'editorLineNumber.activeForeground': '#3291b9',
+        'editorCursor.foreground':        '#3291b9',
+        'editor.selectionBackground':     '#B8DCE8',
+      },
+    });
+
+    // Apply the correct theme for the current state right away
+    monacoGlobal.editor.setTheme(this.isDarkTheme ? 'codify-dark' : 'codify-light');
+  }
+
+  /** Switches between codify-dark and codify-light — called by the toolbar button */
+  toggleTheme(): void {
+    this.isDarkTheme = !this.isDarkTheme;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).monaco?.editor?.setTheme(this.isDarkTheme ? 'codify-dark' : 'codify-light');
   }
 
   private get previousHintTexts(): string[] {
