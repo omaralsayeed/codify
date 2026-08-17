@@ -1,7 +1,9 @@
-import { Component, OnInit, OnDestroy, inject, HostListener, signal, ElementRef, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, HostListener, signal, ElementRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
+import { MonacoEditorModule } from 'ngx-monaco-editor-v2';
 import { AuthService } from '../../core/services/auth.service';
 import { SubmissionService } from '../../core/services/submission.service';
 import { HintService } from '../../core/services/hint.service';
@@ -55,7 +57,7 @@ export interface HintHistoryItem {
 @Component({
   selector: 'app-problem-page',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, FormsModule, MonacoEditorModule],
   templateUrl: './problem-page.component.html',
   styleUrl: './problem-page.component.scss',
 })
@@ -67,9 +69,19 @@ export class ProblemPageComponent implements OnInit, OnDestroy {
   private  readonly route          = inject(ActivatedRoute);
   private  readonly elRef          = inject(ElementRef);
   private  readonly router         = inject(Router);
+  private  readonly zone           = inject(NgZone);
 
-  /** Direct reference to the code textarea for imperative value sync after hint apply */
-  @ViewChild('editorTextarea') private editorTextareaRef?: ElementRef<HTMLTextAreaElement>;
+  /** Monaco editor instance — set via (onInit) binding */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private monacoEditor: any = null;
+
+  /**
+   * Passed to [model] on <ngx-monaco-editor>.
+   * Drives both the displayed code AND the active syntax language.
+   * We rebuild this object whenever the code or language changes so
+   * Monaco's ControlValueAccessor picks up the new value.
+   */
+  editorModel: { value: string; language: string } = { value: '', language: 'python' };
 
   // ── Problem data ──────────────────────────────────────────────────────────
   problemId: string = '';
@@ -310,7 +322,64 @@ public:
   private hintOverlayIntervalId: ReturnType<typeof setInterval> | null = null;
 
   // ── Editor highlight state (Chunk 8) ─────────────────────────────────────
-  editorHighlighting: boolean = false;  // drives .editor-textarea--highlight class
+  editorHighlighting: boolean = false;  // drives .monaco-editor-host--highlight class
+
+  // ── Monaco editor options ─────────────────────────────────────────────────
+
+  /** Maps our language values to Monaco language IDs */
+  private monacoLanguage(lang: string): string {
+    const map: Record<string, string> = {
+      python:     'python',
+      csharp:     'csharp',
+      javascript: 'javascript',
+      java:       'java',
+      cpp:        'cpp',
+    };
+    return map[lang] ?? 'plaintext';
+  }
+
+  /** Options object passed to <ngx-monaco-editor [options]> — language NOT included here, handled via [model] */
+  /** IMPORTANT: plain property not a getter — a getter returns a new object every CD cycle
+   *  which triggers the library's effect() → reinit() → editor wiped loop. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  readonly editorOptions: any = {
+    theme:                      'vs-dark',
+    fontSize:                   13,
+    fontFamily:                 'Consolas, "Courier New", monospace',
+    lineHeight:                 20,
+    minimap:                    { enabled: false },
+    scrollBeyondLastLine:       false,
+    automaticLayout:            true,
+    tabSize:                    4,
+    wordWrap:                   'off',
+    quickSuggestions:           true,
+    suggestOnTriggerCharacters: true,
+    scrollbar: {
+      verticalScrollbarSize:    10,
+      horizontalScrollbarSize:  10,
+    },
+  };
+
+  /** Called by (onInit) once Monaco is ready — stores the editor instance */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onMonacoInit(editor: any): void {
+    this.monacoEditor = editor;
+
+    // Keep currentCode in sync when the user types
+    editor.onDidChangeModelContent(() => {
+      this.zone.run(() => {
+        this.currentCode = editor.getValue();
+      });
+    });
+
+    // Keep cursorLine / cursorColumn in sync using Monaco's native event
+    editor.onDidChangeCursorPosition((e: { position: { lineNumber: number; column: number } }) => {
+      this.zone.run(() => {
+        this.cursorLine   = e.position.lineNumber;
+        this.cursorColumn = e.position.column;
+      });
+    });
+  }
 
   private get previousHintTexts(): string[] {
     return this.hintHistory.map(h => h.explanation);
@@ -355,6 +424,7 @@ public:
     const python = this.languages.find(l => l.value === 'python')!;
     this.currentCode         = python.starterCode;
     this.originalStarterCode = python.starterCode;
+    this.editorModel = { value: python.starterCode, language: 'python' };
   }
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -389,6 +459,8 @@ public:
             lang.starterCode = problem.starterCode[this.selectedLanguage];
             this.currentCode = lang.starterCode;
             this.originalStarterCode = lang.starterCode;
+            // Sync the Monaco model binding with the freshly loaded starter code
+            this.editorModel = { value: lang.starterCode, language: this.monacoLanguage(this.selectedLanguage) };
           }
         }
         
@@ -687,16 +759,13 @@ public:
       lines.splice(start - 1, deleteCount, ...replacementLines);
     }
 
-    // ── Step 4: Commit to component state AND textarea DOM ────────────────────
+    // ── Step 4: Commit to component state AND Monaco editor ──────────────────
     const updatedCode = lines.join('\n');
     this.currentCode  = updatedCode;
 
-    // [value]="currentCode" is a one-way binding — Angular won't re-render the
-    // textarea's DOM value until the next change-detection cycle that it detects
-    // as a real change. Setting the native value directly gives instant feedback.
-    if (this.editorTextareaRef?.nativeElement) {
-      this.editorTextareaRef.nativeElement.value = updatedCode;
-    }
+    // Rebuild editorModel so Monaco reflects the new code via its [model] binding.
+    // We preserve the current language so syntax highlighting is unchanged.
+    this.editorModel = { value: updatedCode, language: this.monacoLanguage(this.selectedLanguage) };
 
     // ── Step 5: Surface the explanation ──────────────────────────────────────
     // Use the first change's explanation (most contextually relevant).
@@ -723,7 +792,7 @@ public:
    *    If called while the overlay is already visible it updates in-place.
    */
   private triggerHintAppliedAnimation(): void {
-    // ── Editor textarea highlight ─────────────────────────────────────────
+    // ── Monaco editor container highlight ────────────────────────────────
     if (!this.prefersReducedMotion()) {
       this.editorHighlighting = true;
       setTimeout(() => { this.editorHighlighting = false; }, 800);
@@ -882,37 +951,26 @@ public:
    * switch to the editor view first so the scroll lands on screen.
    */
   jumpToLine(lineNumber: number): void {
-    if (!this.editorTextareaRef?.nativeElement) return;
-
     // On mobile the editor panel may be hidden — switch to it first
     if (this.activeView !== 'editor') {
       this.activeView = 'editor';
     }
 
-    const textarea = this.editorTextareaRef.nativeElement;
-    const lines    = textarea.value.split('\n');
+    if (this.monacoEditor) {
+      const lineCount = this.monacoEditor.getModel()?.getLineCount() ?? 1;
+      const target    = Math.max(1, Math.min(lineNumber, lineCount));
+      this.monacoEditor.revealLineInCenter(target);
+      this.monacoEditor.setPosition({ lineNumber: target, column: 1 });
+      this.monacoEditor.focus();
+    }
 
-    // Clamp to valid range
-    const targetLine  = Math.max(1, Math.min(lineNumber, lines.length));
-    // Character offset = sum of lengths of all lines before the target + newline chars
-    const charOffset  = lines.slice(0, targetLine - 1).reduce((sum, l) => sum + l.length + 1, 0);
-
-    // Move cursor to the line and scroll it into view
-    textarea.focus();
-    textarea.setSelectionRange(charOffset, charOffset);
-
-    // scrollTop: approximate line height is 20px (matches .editor-textarea line-height)
-    const LINE_HEIGHT_PX = 20;
-    const visibleLines   = Math.floor(textarea.clientHeight / LINE_HEIGHT_PX);
-    textarea.scrollTop   = Math.max(0, (targetLine - Math.floor(visibleLines / 2)) * LINE_HEIGHT_PX);
-
-    // Reuse the existing green highlight animation from the hint system
+    // Reuse the green highlight animation from the hint system
     if (!this.prefersReducedMotion()) {
       this.editorHighlighting = true;
       setTimeout(() => { this.editorHighlighting = false; }, 800);
     }
 
-    console.log('[jumpToLine] scrolled to line', targetLine);
+    console.log('[jumpToLine] scrolled to line', lineNumber);
   }
 
   // ── Problem actions ───────────────────────────────────────────────────────
@@ -935,27 +993,25 @@ public:
 
     this.selectedLanguage = newLanguage;
     const lang = this.languages.find(l => l.value === newLanguage);
-    if (lang) {
-      this.currentCode         = lang.starterCode;
-      this.originalStarterCode = lang.starterCode;
+    const starterCode = lang?.starterCode ?? '';
+
+    this.currentCode         = starterCode;
+    this.originalStarterCode = starterCode;
+
+    // Rebuild editorModel — new object reference forces Monaco to update both
+    // the displayed code and the syntax highlighting language in one shot.
+    this.editorModel = { value: starterCode, language: this.monacoLanguage(newLanguage) };
+  }
+
+  toggleAutocomplete(): void {
+    this.isAutocompleteEnabled = !this.isAutocompleteEnabled;
+    if (this.monacoEditor) {
+      this.monacoEditor.updateOptions({
+        quickSuggestions:           this.isAutocompleteEnabled,
+        suggestOnTriggerCharacters: this.isAutocompleteEnabled,
+      });
     }
-  }
-
-  toggleAutocomplete(): void { this.isAutocompleteEnabled = !this.isAutocompleteEnabled; }
-  toggleFullscreen():   void { this.isEditorFullscreen    = !this.isEditorFullscreen;    }
-
-  onEditorInput(event: Event): void {
-    const target = event.target as HTMLTextAreaElement;
-    this.currentCode = target.value;
-    this.updateCursorPosition(target);
-  }
-
-  private updateCursorPosition(textarea: HTMLTextAreaElement): void {
-    const text  = textarea.value.substring(0, textarea.selectionStart);
-    const lines = text.split('\n');
-    this.cursorLine   = lines.length;
-    this.cursorColumn = lines[lines.length - 1].length + 1;
-  }
+  }  toggleFullscreen():   void { this.isEditorFullscreen    = !this.isEditorFullscreen;    }
 
   // ── Bottom panel ──────────────────────────────────────────────────────────
   toggleBottomPanel():            void { this.isBottomPanelOpen = !this.isBottomPanelOpen; }

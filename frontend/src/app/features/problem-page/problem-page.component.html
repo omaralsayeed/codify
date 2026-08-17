@@ -604,26 +604,14 @@
 
           <!-- Editor Body -->
           <div class="editor-body" [class.editor-body--glow]="editorGlowing">
-            <!-- Line Numbers -->
-            <div class="editor-line-numbers" aria-hidden="true">
-              @for (line of currentCode.split('\n'); track $index) {
-                <div class="line-number">{{ $index + 1 }}</div>
-              }
-            </div>
-
-            <!-- Code Textarea -->
-            <textarea
-              #editorTextarea
-              class="editor-textarea"
-              [class.editor-textarea--highlight]="editorHighlighting"
-              [value]="currentCode"
-              (input)="onEditorInput($event)"
-              spellcheck="false"
-              autocomplete="off"
-              autocorrect="off"
-              autocapitalize="off"
-              aria-label="Code editor"
-              placeholder="Write your code here..."></textarea>
+            <!-- Monaco Editor -->
+            <ngx-monaco-editor
+              class="monaco-editor-host"
+              [class.monaco-editor-host--highlight]="editorHighlighting"
+              [options]="editorOptions"
+              [model]="editorModel"
+              (onInit)="onMonacoInit($event)">
+            </ngx-monaco-editor>
           </div>
 
           <!-- ── Hint Explanation Overlay Card ─────────────────────────── -->
