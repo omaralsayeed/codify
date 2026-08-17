@@ -23,11 +23,15 @@ public static class AdminSeed
 
     public static async Task SeedAsync(CodifyDbContext db)
     {
-        // Idempotent — do nothing if any admin already exists or if default email is already registered
-        if (await db.Users.IgnoreQueryFilters().AnyAsync(u => u.Role == UserRole.Admin || u.Email == DefaultEmail))
-            return;
-
         var passwordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword);
+
+        var existing = await db.Users.IgnoreQueryFilters().FirstOrDefaultAsync(u => u.Email == DefaultEmail);
+        if (existing is not null)
+        {
+            existing.ResetCredentials(passwordHash, UserRole.Admin, UserStatus.Active);
+            await db.SaveChangesAsync();
+            return;
+        }
 
         var admin = User.Create(
             fullName:     DefaultFullName,

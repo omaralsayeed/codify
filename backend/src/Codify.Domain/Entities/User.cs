@@ -99,4 +99,13 @@ public class User
         IsDeleted = true;
         UpdatedAt = DateTime.UtcNow;
     }
+
+    public void ResetCredentials(string passwordHash, UserRole role, UserStatus status)
+    {
+        PasswordHash = passwordHash;
+        Role = role;
+        Status = status;
+        IsDeleted = false;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }
