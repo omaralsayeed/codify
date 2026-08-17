@@ -35,7 +35,24 @@ public class ProblemService(
 
     public async Task<ProblemDetailResponse> CreateAsync(CreateProblemRequest request, Guid authorId)
     {
-        var tags = await tagRepo.GetByIdsAsync(request.TagIds);
+        // ── Validation ────────────────────────────────────────────────────────
+        if (request.Tags is null || request.Tags.Count == 0)
+            throw new ValidationException("At least one tag is required.");
+
+        if (request.SampleTestCases is null || request.SampleTestCases.Count == 0)
+            throw new ValidationException("At least one sample test case is required.");
+
+        foreach (var tc in request.SampleTestCases)
+        {
+            if (string.IsNullOrWhiteSpace(tc.Input) || string.IsNullOrWhiteSpace(tc.ExpectedOutput))
+                throw new ValidationException("Each sample test case must have a non-empty input and expected output.");
+        }
+
+        // ── Duplicate title check → 409 ───────────────────────────────────────
+        if (await problemRepo.ExistsWithTitleAsync(request.Title))
+            throw new ConflictException("A problem with this title already exists.");
+
+        // ── Build entity ──────────────────────────────────────────────────────
         var languageJson = JsonSerializer.Serialize(request.LanguageSupport);
 
         var problem = Problem.Create(
@@ -48,18 +65,29 @@ public class ProblemService(
             request.TimeLimitMs,
             request.MemoryLimitMb);
 
-        foreach (var tag in tags)
-            problem.ProblemTags.Add(ProblemTag.Create(problem.Id, tag.Id));
+        // Apply IsActive (defaults to true on Create, but spec allows overriding)
+        if (!request.IsActive)
+            problem.SetActive(false);
 
+        // ── Resolve tags by name (create if new) ──────────────────────────────
+        foreach (var tagName in request.Tags)
+        {
+            var tag = await tagRepo.GetOrCreateByNameAsync(tagName.Trim());
+            problem.ProblemTags.Add(ProblemTag.Create(problem.Id, tag.Id));
+        }
+
+        // ── Sample test cases ─────────────────────────────────────────────────
         int orderIndex = 0;
-        foreach (var tc in request.TestCases)
+        foreach (var tc in request.SampleTestCases)
+        {
             problem.TestCases.Add(TestCase.Create(
                 problem.Id,
-                tc.InputData,
+                tc.Input,
                 tc.ExpectedOutput,
-                tc.IsSample,
-                tc.VisibilityMode,
+                isSample: true,
+                TestCaseVisibility.Public,
                 orderIndex++));
+        }
 
         await problemRepo.AddAsync(problem);
         await problemRepo.SaveChangesAsync();
@@ -72,16 +100,36 @@ public class ProblemService(
         var problem = await problemRepo.GetByIdWithDetailsAsync(id)
             ?? throw new NotFoundException($"Problem {id} not found.");
 
-        var newTitle = request.Title ?? problem.Title;
-        var newStatement = request.Statement ?? problem.Statement;
-        var newDifficulty = request.Difficulty ?? problem.Difficulty;
-        var newConstraints = request.Constraints ?? problem.Constraints;
+        // ── Duplicate title check when title is being changed ─────────────────
+        if (request.Title is not null &&
+            !string.Equals(request.Title, problem.Title, StringComparison.OrdinalIgnoreCase) &&
+            await problemRepo.ExistsWithTitleAsync(request.Title, excludeId: id))
+        {
+            throw new ConflictException("A problem with this title already exists.");
+        }
+
+        // ── Core content fields — only apply what was sent ────────────────────
+        var newTitle        = request.Title        ?? problem.Title;
+        var newStatement    = request.Statement    ?? problem.Statement;
+        var newDifficulty   = request.Difficulty   ?? problem.Difficulty;
+        var newConstraints  = request.Constraints  ?? problem.Constraints;
         var newLanguageJson = request.LanguageSupport is not null
             ? JsonSerializer.Serialize(request.LanguageSupport)
             : problem.LanguageSupportJson;
 
         problem.Update(newTitle, newStatement, newDifficulty, newConstraints, newLanguageJson);
 
+        // ── Active state toggle ───────────────────────────────────────────────
+        if (request.IsActive.HasValue)
+            problem.SetActive(request.IsActive.Value);
+
+        // ── Resource limits ───────────────────────────────────────────────────
+        if (request.TimeLimitMs.HasValue || request.MemoryLimitMb.HasValue)
+            problem.UpdateLimits(
+                request.TimeLimitMs   ?? problem.TimeLimitMs,
+                request.MemoryLimitMb ?? problem.MemoryLimitMb);
+
+        // ── Tags — resolve names, clear and replace when provided ─────────────
         if (request.TagIds is not null)
         {
             problem.ProblemTags.Clear();
@@ -90,26 +138,63 @@ public class ProblemService(
                 problem.ProblemTags.Add(ProblemTag.Create(problem.Id, tag.Id));
         }
 
+        // ── Sample test cases — clear and replace when provided ───────────────
+        if (request.SampleTestCases is not null)
+        {
+            var existingSamples = problem.TestCases
+                .Where(tc => tc.IsSample && !tc.IsDeleted)
+                .ToList();
+            foreach (var tc in existingSamples)
+                tc.SoftDelete();
+
+            int orderIndex = problem.TestCases.Count(tc => !tc.IsSample && !tc.IsDeleted);
+            foreach (var sample in request.SampleTestCases)
+            {
+                problem.TestCases.Add(TestCase.Create(
+                    problem.Id,
+                    sample.Input,
+                    sample.ExpectedOutput,
+                    isSample: true,
+                    TestCaseVisibility.Public,
+                    orderIndex++));
+            }
+        }
+
         await problemRepo.SaveChangesAsync();
         return MapToDetail(problem);
     }
 
-    public async Task DeleteAsync(Guid id)
+    public async Task<(Guid Id, bool IsActive)> SetActiveAsync(Guid id, bool isActive)
     {
-        var problem = await problemRepo.GetByIdWithDetailsAsync(id)
+        // Lightweight load — no need for tags or test cases just to flip a flag
+        var problem = await problemRepo.GetByIdAsync(id)
+            ?? throw new NotFoundException($"Problem {id} not found.");
+
+        problem.SetActive(isActive);
+        await problemRepo.SaveChangesAsync();
+
+        return (problem.Id, problem.IsActive);
+    }
+
+    public async Task<Guid> DeleteAsync(Guid id)
+    {
+        // Lightweight load — no need for tags or test cases for a soft delete
+        var problem = await problemRepo.GetByIdAsync(id)
             ?? throw new NotFoundException($"Problem {id} not found.");
 
         problem.SoftDelete();
         await problemRepo.SaveChangesAsync();
+
+        return problem.Id;
     }
 
     private static ProblemSummaryResponse MapToSummary(Problem p) => new()
     {
-        Id = p.Id,
-        Title = p.Title,
+        Id         = p.Id,
+        Title      = p.Title,
         Difficulty = p.Difficulty,
-        Tags = p.ProblemTags.Select(pt => pt.ConceptTag.Name).ToList(),
-        IsActive = p.IsActive
+        Tags       = p.ProblemTags.Select(pt => pt.ConceptTag.Name).ToList(),
+        IsActive   = p.IsActive
     };
 
     private static ProblemDetailResponse MapToDetail(Problem p)
@@ -117,26 +202,27 @@ public class ProblemService(
         var languages = JsonSerializer.Deserialize<List<string>>(p.LanguageSupportJson) ?? [];
         return new ProblemDetailResponse
         {
-            Id = p.Id,
-            Title = p.Title,
-            Slug = p.Slug,
-            Statement = p.Statement,
-            Difficulty = p.Difficulty,
-            Constraints = p.Constraints,
-            LanguageSupport = languages,
-            Tags = p.ProblemTags.Select(pt => pt.ConceptTag.Name).ToList(),
-            IsActive = p.IsActive,
-            IsPublic = p.IsPublic,
-            TimeLimitMs = p.TimeLimitMs,
-            MemoryLimitMb = p.MemoryLimitMb,
+            Id                       = p.Id,
+            Title                    = p.Title,
+            Slug                     = p.Slug,
+            Statement                = p.Statement,
+            Difficulty               = p.Difficulty,
+            Constraints              = p.Constraints,
+            LanguageSupport          = languages,
+            Tags                     = p.ProblemTags.Select(pt => pt.ConceptTag.Name).ToList(),
+            IsActive                 = p.IsActive,
+            IsPublic                 = p.IsPublic,
+            TimeLimitMs              = p.TimeLimitMs,
+            MemoryLimitMb            = p.MemoryLimitMb,
             AcceptedSubmissionsCount = p.AcceptedSubmissionsCount,
-            TotalSubmissionsCount = p.TotalSubmissionsCount,
+            TotalSubmissionsCount    = p.TotalSubmissionsCount,
+            // Bug 4 fix: exclude soft-deleted test cases from the response
             SampleTestCases = p.TestCases
-                .Where(tc => tc.IsSample)
+                .Where(tc => tc.IsSample && !tc.IsDeleted)
                 .OrderBy(tc => tc.OrderIndex)
                 .Select(tc => new SampleTestCaseResponse
                 {
-                    Input = tc.InputData,
+                    Input          = tc.InputData,
                     ExpectedOutput = tc.ExpectedOutput
                 }).ToList()
         };

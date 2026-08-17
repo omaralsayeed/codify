@@ -1,3 +1,4 @@
+using Codify.Application.DTOs.Admin;
 using Codify.Domain.Entities;
 
 namespace Codify.Application.Interfaces;
@@ -31,6 +32,30 @@ public interface IUserRepository
 
     /// <summary>Returns all instructors with Status = Pending, ordered by registration date.</summary>
     Task<IReadOnlyList<User>> GetPendingInstructorsAsync();
+
+    // ── Admin queries ─────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Paginated, filterable list of all non-admin users for the admin panel.
+    /// Supports search by name/email, filter by role/status, sort, and paging.
+    /// </summary>
+    Task<(IReadOnlyList<User> Items, int TotalCount)> GetAdminUsersAsync(AdminUserFilterRequest filter);
+
+    /// <summary>
+    /// Returns a single non-admin user with their last 5 submissions (+ Problem title),
+    /// PerformanceProfile, and the real total submission count.
+    /// Returns null user if not found or if the user is an admin.
+    /// </summary>
+    Task<(User? User, int TotalSubmissions)> GetByIdWithRecentSubmissionsAsync(Guid id);
+
+    /// <summary>Count of users registered on or after <paramref name="from"/> (UTC).</summary>
+    Task<int> GetNewUsersCountAsync(DateTime from);
+
+    /// <summary>Returns the last <paramref name="count"/> submissions for a user with Problem loaded.</summary>
+    Task<IReadOnlyList<Submission>> GetRecentSubmissionsAsync(Guid userId, int count);
+
+    /// <summary>Total submission count for a user.</summary>
+    Task<int> GetTotalSubmissionsCountAsync(Guid userId);
 
     Task AddAsync(User user);
     Task SaveChangesAsync();

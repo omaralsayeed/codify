@@ -25,6 +25,17 @@ public class ConceptTagRepository(CodifyDbContext db) : IConceptTagRepository
         // Case-insensitive check — important for preventing "DP" and "dp" as separate tags
         await db.ConceptTags.FirstOrDefaultAsync(t => t.Name.ToLower() == name.ToLower());
 
+    public async Task<ConceptTag> GetOrCreateByNameAsync(string name)
+    {
+        var existing = await GetByNameAsync(name);
+        if (existing is not null) return existing;
+
+        var tag = ConceptTag.Create(name, string.Empty);
+        await db.ConceptTags.AddAsync(tag);
+        await db.SaveChangesAsync();
+        return tag;
+    }
+
     public async Task AddAsync(ConceptTag tag) =>
         await db.ConceptTags.AddAsync(tag);
 

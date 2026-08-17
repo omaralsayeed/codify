@@ -363,3 +363,48 @@
   border-radius: 20px;
   font-family: $ff-mono;
 }
+
+// ── Loading skeletons ─────────────────────────────────────────────────────────
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+%skeleton-base {
+  background: linear-gradient(90deg, $ivory2 25%, darken($ivory2, 4%) 50%, $ivory2 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+  border-radius: $r;
+}
+
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+
+  @media (max-width: $tablet) { grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: $mobile) { grid-template-columns: 1fr 1fr; gap: 8px; }
+}
+
+.skeleton-card {
+  @extend %skeleton-base;
+  height: 96px;
+}
+
+.skeleton-row {
+  @extend %skeleton-base;
+  height: 68px;
+}
+
+// ── Error banner ──────────────────────────────────────────────────────────────
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  background: $red-lt;
+  color: $red;
+  border: 1px solid rgba($red, 0.25);
+  border-radius: $r;
+  font-size: 14px;
+}

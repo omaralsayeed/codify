@@ -60,15 +60,22 @@ public class User
     public void RecordLogin() => LastLoginAt = DateTime.UtcNow;
 
     /// <summary>
-    /// Approves a pending instructor account. Call this from the admin approval flow.
+    /// General-purpose status setter for admin use.
+    /// Sets the user to Active or Pending and records the admin who made the change.
+    /// Use this for the admin panel "activate / set-pending" toggle.
     /// </summary>
-    public void Approve(Guid approvedByAdminId)
+    public void SetStatus(UserStatus status, Guid adminId)
     {
-        Status = UserStatus.Active;
-        ReviewedBy = approvedByAdminId;
+        Status = status;
+        ReviewedBy = adminId;
         ReviewedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
     }
+
+    /// <summary>
+    /// Approves a pending instructor account. Convenience wrapper around SetStatus(Active).
+    /// </summary>
+    public void Approve(Guid approvedByAdminId) => SetStatus(UserStatus.Active, approvedByAdminId);
 
     public void UpdateProfile(string? fullName, string? bio, string? organization, string? avatarUrl = null)
     {

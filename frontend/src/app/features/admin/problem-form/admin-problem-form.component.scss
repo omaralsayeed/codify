@@ -492,3 +492,67 @@
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+// ── Loading skeletons ─────────────────────────────────────────────────────────
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+%sk {
+  background: linear-gradient(90deg, $ivory2 25%, darken($ivory2, 5%) 50%, $ivory2 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+  border-radius: $r;
+  display: block;
+}
+
+.skeleton {
+  @extend %sk;
+  &--title     { height: 24px; width: 40%; margin-bottom: 12px; }
+  &--block     { height: 80px; width: 100%; margin-bottom: 12px; }
+  &--block-tall { height: 200px; width: 100%; margin-bottom: 12px; }
+}
+
+.form-skeleton {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  background: $white;
+  border: 1px solid $border;
+  border-radius: $r;
+  padding: 28px;
+  box-shadow: $shadow;
+
+  @media (max-width: $tablet) { grid-template-columns: 1fr; }
+}
+
+.skeleton-col {
+  display: flex;
+  flex-direction: column;
+}
+
+// ── Error banner ──────────────────────────────────────────────────────────────
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  background: $red-lt;
+  color: $red;
+  border: 1px solid rgba($red, 0.25);
+  border-radius: $r;
+  font-size: 14px;
+}
+
+// ── Form-level error message ──────────────────────────────────────────────────
+.form-error-msg {
+  font-size: 13px;
+  color: $red;
+  background: $red-lt;
+  border: 1px solid rgba($red, 0.2);
+  border-radius: $r;
+  padding: 8px 14px;
+  margin: 0;
+  flex: 1;
+}
