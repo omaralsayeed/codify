@@ -366,6 +366,7 @@ public:
     wordWrap:                   'off',
     quickSuggestions:           true,
     suggestOnTriggerCharacters: true,
+    showFoldingControls:        'never',   // hide gutter fold arrows; folding still works via keyboard
     scrollbar: {
       verticalScrollbarSize:    10,
       horizontalScrollbarSize:  10,
@@ -417,12 +418,12 @@ public:
       inherit: true,
       rules: [],
       colors: {
-        'editor.background':              '#EAF4F8',
-        'editor.lineHighlightBackground': '#DCEAF1',
-        'editorLineNumber.foreground':    '#7FA8BC',
+        'editor.background':                 '#F9FCFD',
+        'editor.lineHighlightBackground':    '#EAF3F7',
+        'editorLineNumber.foreground':       '#9CC0D0',
         'editorLineNumber.activeForeground': '#3291b9',
-        'editorCursor.foreground':        '#3291b9',
-        'editor.selectionBackground':     '#B8DCE8',
+        'editorCursor.foreground':           '#3291b9',
+        'editor.selectionBackground':        '#D3E9F1',
       },
     });
 

@@ -327,14 +327,6 @@
   right: 12px; // top-right corner of left panel
 }
 
-.panel-collapse-btn--right {
-  left: 12px; // top-left corner of right panel
-
-  svg {
-    transform: rotate(180deg); // flip chevron to point right
-  }
-}
-
 .panel-expand-btn {
   position: absolute;
   top: 12px;
@@ -949,30 +941,9 @@
   }
 }
 
-// Autocomplete Toggle
-.autocomplete-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-family: $ff-body;
-  font-size: 13px;
-  color: #cccccc;
-  cursor: pointer;
-  user-select: none;
+// Autocomplete Toggle — removed (replaced by icon-only button in toolbar-actions)
 
-  input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    cursor: pointer;
-    accent-color: #007acc;
-  }
-
-  span {
-    white-space: nowrap;
-  }
-}
-
-// Editor Icon Buttons
+// Editor Icon Buttons — kept for any legacy references
 .editor-icon-btn {
   display: flex;
   align-items: center;
@@ -997,72 +968,115 @@
   }
 }
 
-// Theme toggle — same base as editor-icon-btn, gets a subtle brand tint on hover
-.theme-toggle-btn {
-  color: #cccccc;
+// ── Toolbar actions cluster (right side of editor header) ─────────────────────
+.editor-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+// Icon-only toggle button — base state (inactive / plain)
+.icon-toggle-btn {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  border: none;
+  background: transparent;
+  color: #9d9d9d;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+
+  svg { flex-shrink: 0; }
 
   &:hover {
-    background: rgba(50, 145, 185, 0.18);
-    color: #3291b9;
+    background: rgba(255, 255, 255, 0.08);
+    color: #cccccc;
+  }
+
+  &:focus-visible {
+    outline: 1px solid #007acc;
+    outline-offset: 2px;
+  }
+
+  // Active / ON state — brand blue fill
+  &--active {
+    background: #3291b9;
+    color: #ffffff;
+
+    &:hover {
+      background: darken(#3291b9, 8%);
+      color: #ffffff;
+    }
   }
 }
 
 // ── Editor wrapper + light theme overrides ────────────────────────────────────
 .editor-wrapper {
-  display: contents; // transparent wrapper — doesn't affect layout in dark mode
+  display: contents; // transparent in dark mode — no layout impact
 
-  // Light theme: override the dark chrome surrounding Monaco
   &--light {
 
     .right-panel-content {
-      background: #EAF4F8;
+      background: #F9FCFD;
     }
 
     .editor-header {
-      background: #d8edf4;
-      border-bottom-color: #B8DCE8;
+      background: #e2f0f5;
+      border-bottom-color: #D3E9F1;
     }
 
     .editor-filename {
-      background: #cce4ef;
+      background: #d3e9f1;
       color: #1a3d4d;
-      border-color: #B8DCE8;
+      border-color: #D3E9F1;
     }
 
-    .language-selector,
-    .autocomplete-toggle {
+    .language-selector {
       color: #1a3d4d;
     }
 
     .language-dropdown {
-      background-color: #cce4ef;
-      border-color: #B8DCE8;
+      background-color: #d3e9f1;
+      border-color: #D3E9F1;
       color: #1a3d4d;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%231a3d4d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
 
       &:hover {
-        background-color: #b8dce8;
+        background-color: #c4dde8;
         border-color: #3291b9;
       }
     }
 
-    .editor-icon-btn {
-      color: #1a3d4d;
+    // Icon buttons adopt dark text on the light background
+    .icon-toggle-btn {
+      color: #4a7a92;
 
       &:hover {
-        background: rgba(50, 145, 185, 0.15);
+        background: rgba(50, 145, 185, 0.12);
         color: #3291b9;
+      }
+
+      &--active {
+        background: #3291b9;
+        color: #ffffff;
+
+        &:hover {
+          background: darken(#3291b9, 8%);
+        }
       }
     }
 
     .editor-body {
-      background: #EAF4F8;
+      background: #F9FCFD;
     }
 
     .editor-status-bar {
       background: #3291b9;
       color: #ffffff;
-      border-top: 1px solid #B8DCE8;
+      border-top: 1px solid #D3E9F1;
     }
   }
 }

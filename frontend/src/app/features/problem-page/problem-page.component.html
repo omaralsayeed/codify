@@ -532,19 +532,6 @@
           </button>
         }
 
-        <!-- Collapse button (top-left corner of right panel) -->
-        <button 
-          class="panel-collapse-btn panel-collapse-btn--right"
-          (click)="toggleRightPanel()"
-          type="button"
-          aria-label="Hide code editor">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-               fill="none" stroke="currentColor" stroke-width="2"
-               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <polyline points="9 18 15 12 9 6"></polyline>
-          </svg>
-        </button>
-
         <!-- Right panel content -->
         <div class="editor-wrapper" [class.editor-wrapper--light]="!isDarkTheme">
         <div class="right-panel-content" [class.right-panel-content--fullscreen]="isEditorFullscreen">
@@ -576,71 +563,89 @@
                   }
                 </select>
               </label>
-
-              <!-- Autocomplete Toggle -->
-              <label class="autocomplete-toggle">
-                <input 
-                  type="checkbox"
-                  [checked]="isAutocompleteEnabled"
-                  (change)="toggleAutocomplete()"
-                  aria-label="Toggle autocomplete" />
-                <span>Autocomplete</span>
-              </label>
             </div>
 
             <div class="editor-header-right">
-              <!-- Theme Toggle (sun = go light, moon = go dark) -->
-              <button
-                class="editor-icon-btn theme-toggle-btn"
-                (click)="toggleTheme()"
-                type="button"
-                [attr.aria-label]="isDarkTheme ? 'Switch to light theme' : 'Switch to dark theme'"
-                title="Toggle editor theme">
-                @if (isDarkTheme) {
-                  <!-- Sun icon — click to go light -->
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-                       fill="none" stroke="currentColor" stroke-width="2"
-                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <circle cx="12" cy="12" r="5"></circle>
-                    <line x1="12" y1="1" x2="12" y2="3"></line>
-                    <line x1="12" y1="21" x2="12" y2="23"></line>
-                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-                    <line x1="1" y1="12" x2="3" y2="12"></line>
-                    <line x1="21" y1="12" x2="23" y2="12"></line>
-                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-                  </svg>
-                } @else {
-                  <!-- Moon icon — click to go dark -->
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-                       fill="none" stroke="currentColor" stroke-width="2"
-                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-                  </svg>
-                }
-              </button>
+              <!-- Icon-only toolbar actions: Autocomplete | Theme | Fullscreen -->
+              <div class="editor-toolbar-actions">
 
-              <!-- Fullscreen Toggle -->
-              <button 
-                class="editor-icon-btn"
-                (click)="toggleFullscreen()"
-                type="button"
-                [attr.aria-label]="isEditorFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'">
-                @if (isEditorFullscreen) {
+                <!-- Autocomplete toggle — wand icon, highlighted when ON -->
+                <button
+                  type="button"
+                  class="icon-toggle-btn"
+                  [class.icon-toggle-btn--active]="isAutocompleteEnabled"
+                  (click)="toggleAutocomplete()"
+                  [attr.aria-label]="isAutocompleteEnabled ? 'Disable autocomplete' : 'Enable autocomplete'"
+                  title="Toggle autocomplete">
+                  <!-- Wand / magic-suggestion icon -->
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
                        fill="none" stroke="currentColor" stroke-width="2"
                        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path>
+                    <path d="M15 4V2"></path>
+                    <path d="M15 16v-2"></path>
+                    <path d="M8 9h2"></path>
+                    <path d="M20 9h2"></path>
+                    <path d="M17.8 11.8 19 13"></path>
+                    <path d="M15 9h.01"></path>
+                    <path d="M17.8 6.2 19 5"></path>
+                    <path d="m3 21 9-9"></path>
+                    <path d="M12.2 6.2 11 5"></path>
                   </svg>
-                } @else {
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-                       fill="none" stroke="currentColor" stroke-width="2"
-                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
-                  </svg>
-                }
-              </button>
+                </button>
+
+                <!-- Theme toggle — sun = currently dark (click to go light), moon = currently light (click to go dark) -->
+                <button
+                  type="button"
+                  class="icon-toggle-btn"
+                  (click)="toggleTheme()"
+                  [attr.aria-label]="isDarkTheme ? 'Switch to light theme' : 'Switch to dark theme'"
+                  title="Toggle editor theme">
+                  @if (isDarkTheme) {
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                         fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <circle cx="12" cy="12" r="5"></circle>
+                      <line x1="12" y1="1" x2="12" y2="3"></line>
+                      <line x1="12" y1="21" x2="12" y2="23"></line>
+                      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                      <line x1="1" y1="12" x2="3" y2="12"></line>
+                      <line x1="21" y1="12" x2="23" y2="12"></line>
+                      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                  } @else {
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                         fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                  }
+                </button>
+
+                <!-- Fullscreen toggle -->
+                <button
+                  type="button"
+                  class="icon-toggle-btn"
+                  (click)="toggleFullscreen()"
+                  [attr.aria-label]="isEditorFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'"
+                  title="Toggle fullscreen">
+                  @if (isEditorFullscreen) {
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                         fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path>
+                    </svg>
+                  } @else {
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                         fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+                    </svg>
+                  }
+                </button>
+
+              </div>
             </div>
           </header>
 
