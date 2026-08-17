@@ -23,8 +23,8 @@ public static class AdminSeed
 
     public static async Task SeedAsync(CodifyDbContext db)
     {
-        // Idempotent — do nothing if any admin already exists
-        if (await db.Users.AnyAsync(u => u.Role == UserRole.Admin))
+        // Idempotent — do nothing if any admin already exists or if default email is already registered
+        if (await db.Users.IgnoreQueryFilters().AnyAsync(u => u.Role == UserRole.Admin || u.Email == DefaultEmail))
             return;
 
         var passwordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword);
