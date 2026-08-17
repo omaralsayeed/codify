@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { MonacoEditorModule } from 'ngx-monaco-editor-v2';
+import { registerCustomCompletions } from '../../core/monaco/custom-completions';
 import { AuthService } from '../../core/services/auth.service';
 import { SubmissionService } from '../../core/services/submission.service';
 import { HintService } from '../../core/services/hint.service';
@@ -364,6 +365,11 @@ public:
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onMonacoInit(editor: any): void {
     this.monacoEditor = editor;
+
+    // Register custom snippet completions once — global to the Monaco instance.
+    // window.monaco is guaranteed to exist at this point because initMonaco() ran.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    registerCustomCompletions((window as any).monaco);
 
     // Keep currentCode in sync when the user types
     editor.onDidChangeModelContent(() => {
