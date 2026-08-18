@@ -327,14 +327,6 @@
   right: 12px; // top-right corner of left panel
 }
 
-.panel-collapse-btn--right {
-  left: 12px; // top-left corner of right panel
-
-  svg {
-    transform: rotate(180deg); // flip chevron to point right
-  }
-}
-
 .panel-expand-btn {
   position: absolute;
   top: 12px;
@@ -852,9 +844,46 @@
   justify-content: space-between;
   gap: 12px;
   padding: 10px 16px;
-  background: #252526; // VS Code header background
+  background: #252526;
   border-bottom: 1px solid #3e3e42;
   flex-shrink: 0;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+// ── macOS-style window dots ───────────────────────────────────────────────────
+.editor-window-dots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 4px;
+  flex-shrink: 0;
+
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+
+  .dot-red    { background: #ff5f56; }
+  .dot-yellow { background: #ffbd2e; }
+  .dot-green  { background: #27c93f; }
+}
+
+// ── Editor filename pill ──────────────────────────────────────────────────────
+.editor-filename {
+  font-family: $ff-mono;
+  font-size: 12px;
+  font-weight: 500;
+  color: #cccccc;
+  background: #2d2d2d;
+  padding: 3px 10px;
+  border-radius: 4px;
+  border: 1px solid #3e3e42;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
 }
 
 .editor-header-left {
@@ -912,30 +941,9 @@
   }
 }
 
-// Autocomplete Toggle
-.autocomplete-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-family: $ff-body;
-  font-size: 13px;
-  color: #cccccc;
-  cursor: pointer;
-  user-select: none;
+// Autocomplete Toggle — removed (replaced by icon-only button in toolbar-actions)
 
-  input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    cursor: pointer;
-    accent-color: #007acc;
-  }
-
-  span {
-    white-space: nowrap;
-  }
-}
-
-// Editor Icon Buttons
+// Editor Icon Buttons — kept for any legacy references
 .editor-icon-btn {
   display: flex;
   align-items: center;
@@ -960,6 +968,119 @@
   }
 }
 
+// ── Toolbar actions cluster (right side of editor header) ─────────────────────
+.editor-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+// Icon-only toggle button — base state (inactive / plain)
+.icon-toggle-btn {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  border: none;
+  background: transparent;
+  color: #9d9d9d;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+
+  svg { flex-shrink: 0; }
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #cccccc;
+  }
+
+  &:focus-visible {
+    outline: 1px solid #007acc;
+    outline-offset: 2px;
+  }
+
+  // Active / ON state — brand blue fill
+  &--active {
+    background: #3291b9;
+    color: #ffffff;
+
+    &:hover {
+      background: darken(#3291b9, 8%);
+      color: #ffffff;
+    }
+  }
+}
+
+// ── Editor wrapper + light theme overrides ────────────────────────────────────
+.editor-wrapper {
+  display: contents; // transparent in dark mode — no layout impact
+
+  &--light {
+
+    .right-panel-content {
+      background: #F9FCFD;
+    }
+
+    .editor-header {
+      background: #e2f0f5;
+      border-bottom-color: #D3E9F1;
+    }
+
+    .editor-filename {
+      background: #d3e9f1;
+      color: #1a3d4d;
+      border-color: #D3E9F1;
+    }
+
+    .language-selector {
+      color: #1a3d4d;
+    }
+
+    .language-dropdown {
+      background-color: #d3e9f1;
+      border-color: #D3E9F1;
+      color: #1a3d4d;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%231a3d4d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+
+      &:hover {
+        background-color: #c4dde8;
+        border-color: #3291b9;
+      }
+    }
+
+    // Icon buttons adopt dark text on the light background
+    .icon-toggle-btn {
+      color: #4a7a92;
+
+      &:hover {
+        background: rgba(50, 145, 185, 0.12);
+        color: #3291b9;
+      }
+
+      &--active {
+        background: #3291b9;
+        color: #ffffff;
+
+        &:hover {
+          background: darken(#3291b9, 8%);
+        }
+      }
+    }
+
+    .editor-body {
+      background: #F9FCFD;
+    }
+
+    .editor-status-bar {
+      background: #3291b9;
+      color: #ffffff;
+      border-top: 1px solid #D3E9F1;
+    }
+  }
+}
+
 // ── Editor Body ───────────────────────────────────────────────────────────────
 .editor-body {
   display: flex;
@@ -967,70 +1088,21 @@
   overflow: hidden;
   background: #1e1e1e;
   position: relative;
+  // Explicit height so the Monaco host can resolve 100% against a real value
+  height: 0; // flex:1 takes over, but 100% child needs a non-auto parent height
 }
 
-.editor-line-numbers {
-  display: flex;
-  flex-direction: column;
-  background: #1e1e1e;
-  border-right: 1px solid #3e3e42;
-  padding: 12px 8px;
-  user-select: none;
-  flex-shrink: 0;
-  overflow: hidden;
-}
-
-.line-number {
-  font-family: $ff-mono;
-  font-size: 13px;
-  line-height: 20px;
-  color: #858585;
-  text-align: right;
-  min-width: 32px;
-  padding-right: 8px;
-}
-
-.editor-textarea {
+// Monaco editor host element — fills the entire editor-body
+.monaco-editor-host {
   flex: 1;
-  background: #1e1e1e;
-  color: #d4d4d4;
-  font-family: $ff-mono;
-  font-size: 13px;
-  line-height: 20px;
-  padding: 12px 16px;
-  border: none;
-  outline: none;
-  resize: none;
-  overflow-y: auto;
-  overflow-x: auto;
-  white-space: pre;
-  tab-size: 4;
-  caret-color: #ffffff;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
 
-  &::placeholder {
-    color: #6a6a6a;
-  }
-
-  &::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: #1e1e1e;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: #424242;
-    border-radius: 5px;
-
-    &:hover {
-      background: #4e4e4e;
-    }
-  }
-
-  &::-webkit-scrollbar-corner {
-    background: #1e1e1e;
+  // Override the library's own :host { height: 200px } default
+  // The ::ng-deep targets the inner .editor-container div inside the component
+  &::ng-deep .editor-container {
+    height: 100% !important;
   }
 }
 
@@ -2017,11 +2089,6 @@
     padding-right: 4px;
   }
 
-  .editor-textarea {
-    font-size: 12px;
-    line-height: 18px;
-    padding: 8px 12px;
-  }
 
   .editor-status-bar {
     font-size: 11px;
@@ -2830,16 +2897,16 @@
   animation: fadeIn 0.2s ease-out both;
 }
 
-// ── Editor textarea hint highlight ────────────────────────────────────────────
-// Copilot-style soft green flash on the whole textarea (800ms)
+// ── Monaco editor hint highlight ──────────────────────────────────────────────
+// Copilot-style soft green flash on the Monaco editor container (800ms)
 
 @keyframes hintHighlight {
-  0%   { background-color: #1e1e1e; }
-  15%  { background-color: rgba(29, 158, 117, 0.14); }
-  100% { background-color: #1e1e1e; }
+  0%   { box-shadow: inset 0 0 0 0 rgba(29, 158, 117, 0); }
+  15%  { box-shadow: inset 0 0 0 3px rgba(29, 158, 117, 0.45); }
+  100% { box-shadow: inset 0 0 0 0 rgba(29, 158, 117, 0); }
 }
 
-.editor-textarea--highlight {
+.monaco-editor-host--highlight {
   animation: hintHighlight 0.8s ease-out both;
 }
 
@@ -3004,7 +3071,7 @@
 @media (prefers-reduced-motion: reduce) {
   .toolbar-btn--hint-loading { animation: none; }
   .hint-overlay-card         { animation: none; }
-  .editor-textarea--highlight { animation: none; }
+  .monaco-editor-host--highlight { animation: none; }
   .tab-hint-count             { animation: none; }
   .hint-item                  { animation: none; }
 }
