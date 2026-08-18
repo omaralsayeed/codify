@@ -98,6 +98,13 @@ public class OpenAiChatClient(
                     BinaryData.FromString(tool.ParametersJsonSchema)));
             }
 
+            _logger.LogInformation(
+                "🔵 Sending LLM request: Model={Model}, BaseUrl={BaseUrl}, Messages={MessageCount}, Tools={ToolCount}",
+                model, 
+                string.IsNullOrWhiteSpace(_options.BaseUrl) ? "https://api.openai.com" : _options.BaseUrl,
+                chatMessages.Count, 
+                tools.Count);
+
             var completion = await client.CompleteChatAsync(chatMessages, chatOptions, cancellationToken);
             stopwatch.Stop();
 
@@ -120,7 +127,7 @@ public class OpenAiChatClient(
                 var totalTokens = usage?.TotalTokenCount ?? 0;
 
                 _logger.LogInformation(
-                    "LLM requested {Count} tool call(s): {Tools}. Model={Model} TotalTokens={TotalTokens} LatencyMs={LatencyMs}",
+                    "🟢 LLM requested {Count} tool call(s): {Tools}. Model={Model} TotalTokens={TotalTokens} LatencyMs={LatencyMs}",
                     toolCalls.Count, string.Join(",", toolCalls.Select(t => t.Name)), model, totalTokens, stopwatch.ElapsedMilliseconds);
 
                 return new LlmResponse { ToolCalls = toolCalls, ModelUsed = model, TotalTokens = totalTokens };
@@ -131,17 +138,24 @@ public class OpenAiChatClient(
             var finalTotalTokens = finalUsage?.TotalTokenCount ?? 0;
 
             _logger.LogInformation(
-                "LLM returned final text. Model={Model} TotalTokens={TotalTokens} LatencyMs={LatencyMs}",
-                model, finalTotalTokens, stopwatch.ElapsedMilliseconds);
+                "🟢 LLM returned final text (length={Length}). Model={Model} TotalTokens={TotalTokens} LatencyMs={LatencyMs}",
+                text.Length, model, finalTotalTokens, stopwatch.ElapsedMilliseconds);
 
             return new LlmResponse { FinalText = text, ModelUsed = model, TotalTokens = finalTotalTokens };
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
+            var baseUrl = string.IsNullOrWhiteSpace(_options.BaseUrl) ? "https://api.openai.com" : _options.BaseUrl;
+            
+            // Extract more details from the exception
+            var innerMsg = ex.InnerException?.Message ?? "No inner exception";
+            var stackTrace = ex.StackTrace?.Split('\n').FirstOrDefault()?.Trim() ?? "No stack trace";
+            
             _logger.LogError(ex,
-                "LLM tool-calling call failed. Model={Model} LatencyMs={LatencyMs}",
-                model, stopwatch.ElapsedMilliseconds);
+                "🔴 LLM tool-calling call failed. Model={Model} LatencyMs={LatencyMs} ErrorType={ErrorType} BaseUrl={BaseUrl} " +
+                "InnerException={InnerMsg} TopStackFrame={StackTrace}",
+                model, stopwatch.ElapsedMilliseconds, ex.GetType().Name, baseUrl, innerMsg, stackTrace);
             throw;
         }
     }
@@ -190,6 +204,11 @@ public class OpenAiChatClient(
     {
         if (!string.IsNullOrWhiteSpace(_options.BaseUrl))
         {
+            _logger.LogInformation(
+                "🔧 Building OpenAI client with custom BaseUrl: {BaseUrl}, Model: {Model}, ApiKey: {ApiKeyPreview}...",
+                _options.BaseUrl, model, 
+                string.IsNullOrWhiteSpace(_options.ApiKey) ? "(empty)" : $"{_options.ApiKey[..Math.Min(10, _options.ApiKey.Length)]}...");
+
             var clientOptions = new OpenAIClientOptions
             {
                 Endpoint = new Uri(_options.BaseUrl.TrimEnd('/') + "/")
@@ -197,6 +216,7 @@ public class OpenAiChatClient(
             return new OpenAIClient(new ApiKeyCredential(_options.ApiKey), clientOptions).GetChatClient(model);
         }
 
+        _logger.LogInformation("🔧 Building OpenAI client with standard endpoint, Model: {Model}", model);
         return new OpenAIClient(new ApiKeyCredential(_options.ApiKey)).GetChatClient(model);
     }
 }

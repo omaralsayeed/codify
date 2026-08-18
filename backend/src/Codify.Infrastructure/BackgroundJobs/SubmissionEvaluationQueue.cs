@@ -1,5 +1,6 @@
 using System.Threading.Channels;
 using Codify.Application.Interfaces;
+using Microsoft.Extensions.Logging;
 
 namespace Codify.Infrastructure.BackgroundJobs;
 
@@ -10,7 +11,7 @@ namespace Codify.Infrastructure.BackgroundJobs;
 /// Unbounded by design — SubmissionsController already rate-limits POST /submissions
 /// (30/hour/user), so the queue can never grow unboundedly fast in practice.
 /// </summary>
-public class SubmissionEvaluationQueue : ISubmissionEvaluationQueue
+public class SubmissionEvaluationQueue(ILogger<SubmissionEvaluationQueue> logger) : ISubmissionEvaluationQueue
 {
     private readonly Channel<Guid> _channel = Channel.CreateUnbounded<Guid>(
         new UnboundedChannelOptions
@@ -21,8 +22,15 @@ public class SubmissionEvaluationQueue : ISubmissionEvaluationQueue
 
     public void QueueSubmission(Guid submissionId)
     {
+        logger.LogInformation("📬 [QUEUE] Queuing submission {SubmissionId} for background evaluation", submissionId);
+        
         if (!_channel.Writer.TryWrite(submissionId))
+        {
+            logger.LogError("🔴 [QUEUE] FAILED to queue submission {SubmissionId}!", submissionId);
             throw new InvalidOperationException("Failed to queue submission for evaluation.");
+        }
+        
+        logger.LogInformation("✅ [QUEUE] Submission {SubmissionId} queued successfully", submissionId);
     }
 
     public async Task<Guid> DequeueAsync(CancellationToken cancellationToken) =>

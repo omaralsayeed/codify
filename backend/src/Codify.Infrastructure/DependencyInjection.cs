@@ -49,6 +49,7 @@ public static class DependencyInjection
         services.AddScoped<ISubmissionService, SubmissionService>();
         services.AddScoped<ITestCaseService, TestCaseService>();
         services.AddScoped<IExecutionService, ExecutionService>();
+        services.AddScoped<ICodeWrapperService, CodeWrapperService>();
         services.AddScoped<IQuickRunService, QuickRunService>();
         services.AddScoped<IQuickRunWithTestsService, QuickRunWithTestsService>();
         services.AddScoped<IAiHintService, AiHintService>();

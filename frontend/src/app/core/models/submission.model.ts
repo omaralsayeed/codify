@@ -62,6 +62,17 @@ export interface SubmissionFeedback {
   feedbackItems: FeedbackItem[];
 }
 
+export interface TestCaseResultDetail {
+  testCaseId: string;
+  orderIndex: number;
+  isSample: boolean;
+  verdict: string;
+  executionTimeMs: number;
+  memoryUsedKb: number;
+  actualOutput: string | null;
+  stderr: string | null;
+}
+
 export interface SubmissionDetailResponse {
   submissionId: string;
   problemId: string;
@@ -77,4 +88,5 @@ export interface SubmissionDetailResponse {
   score: number;
   result: SubmissionResult;
   aiFeedback: FeedbackItem[];
+  testCaseResults?: TestCaseResultDetail[];
 }

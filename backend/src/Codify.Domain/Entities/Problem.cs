@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Codify.Domain.Enums;
 
 namespace Codify.Domain.Entities;
@@ -23,6 +24,7 @@ public class Problem
     public int TotalSubmissionsCount { get; private set; }
     public DateTime UpdatedAt { get; private set; }
     public bool IsDeleted { get; private set; }
+    public string? CodeTemplateJson { get; private set; }
 
     // Navigation
     public User? Author { get; private set; }
@@ -114,6 +116,18 @@ public class Problem
         IsDeleted = true;
         IsActive = false;
         UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Deserializes the CodeTemplateJson field into a dictionary of templates per language.
+    /// Returns null if no templates are defined.
+    /// </summary>
+    public Dictionary<string, CodeTemplate>? GetCodeTemplates()
+    {
+        if (string.IsNullOrWhiteSpace(CodeTemplateJson))
+            return null;
+            
+        return JsonSerializer.Deserialize<Dictionary<string, CodeTemplate>>(CodeTemplateJson);
     }
 
     private static string GenerateSlug(string title) =>

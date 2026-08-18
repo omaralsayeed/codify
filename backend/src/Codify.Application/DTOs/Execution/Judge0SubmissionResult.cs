@@ -6,6 +6,9 @@ namespace Codify.Application.DTOs.Execution;
 /// </summary>
 public class Judge0SubmissionResult
 {
+    /// <summary>Judge0's submission token for tracking and logging purposes.</summary>
+    public string? Token { get; set; }
+    
     /// <summary>Judge0's numeric status id — see <see cref="Codify.Application.Execution.Judge0Status"/>.</summary>
     public int StatusId { get; set; }
     public string StatusDescription { get; set; } = string.Empty;

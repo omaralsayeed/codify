@@ -3,6 +3,7 @@ using Codify.Application.DTOs.Submissions;
 using Codify.Application.Interfaces;
 using Codify.Domain.Entities;
 using Codify.Domain.Exceptions;
+using Microsoft.Extensions.Logging;
 
 namespace Codify.Application.Services;
 
@@ -16,7 +17,8 @@ public class SubmissionService(
     ISubmissionRepository submissionRepo,
     IProblemRepository problemRepo,
     IFeedbackRepository feedbackRepo,
-    ISubmissionEvaluationQueue evaluationQueue) : ISubmissionService
+    ISubmissionEvaluationQueue evaluationQueue,
+    ILogger<SubmissionService> logger) : ISubmissionService
 {
     public async Task<IEnumerable<SubmissionSummaryResponse>> GetByProblemAsync(
         Guid problemId, Guid userId, bool isInstructor)
@@ -29,20 +31,34 @@ public class SubmissionService(
     public async Task<SubmissionDetailResponse> CreateAsync(
         CreateSubmissionRequest request, Guid userId)
     {
+        logger.LogInformation("📝 [SUBMISSION] Creating new submission: User={UserId}, Problem={ProblemId}, Language={Language}, CodeLength={CodeLength}", 
+            userId, request.ProblemId, request.Language, request.Code.Length);
+        
         // 1. Validate the problem exists before we accept the submission
-        _ = await problemRepo.GetByIdWithTestCasesAsync(request.ProblemId)
-            ?? throw new NotFoundException($"Problem {request.ProblemId} not found.");
+        var problem = await problemRepo.GetByIdWithTestCasesAsync(request.ProblemId);
+        if (problem == null)
+        {
+            logger.LogWarning("⚠️  [SUBMISSION] Problem {ProblemId} not found!", request.ProblemId);
+            throw new NotFoundException($"Problem {request.ProblemId} not found.");
+        }
+        
+        logger.LogInformation("✅ [SUBMISSION] Problem found: Title=\"{Title}\", TestCases={TestCaseCount}", 
+            problem.Title, problem.TestCases.Count(tc => !tc.IsDeleted));
 
         // 2. Persist submission as Pending
         var submission = Submission.Create(request.ProblemId, userId, request.Code, request.Language);
         await submissionRepo.AddAsync(submission);
         await submissionRepo.SaveChangesAsync();
+        
+        logger.LogInformation("💾 [SUBMISSION] Submission {SubmissionId} saved with status Pending", submission.Id);
 
         // 3. Hand off to the background evaluation pipeline and return immediately.
         //    JudgeEvaluationService (running inside SubmissionEvaluationBackgroundService)
         //    picks this up, runs every test case through Judge0, and updates the submission's
         //    status asynchronously. The caller polls GET /submissions/{id} for the result.
+        logger.LogInformation("🚀 [SUBMISSION] Queuing submission {SubmissionId} for background evaluation...", submission.Id);
         evaluationQueue.QueueSubmission(submission.Id);
+        logger.LogInformation("✅ [SUBMISSION] Submission {SubmissionId} queued. Returning 202 response to client...", submission.Id);
 
         return await GetByIdAsync(submission.Id, userId, isInstructor: false);
     }
@@ -132,9 +148,9 @@ public class SubmissionService(
                 Verdict         = r.Verdict.ToString(),
                 ExecutionTimeMs = r.ExecutionTimeMs,
                 MemoryUsedKb    = r.MemoryUsedKb,
-                // Hidden test cases stay hidden from students — same rule TestCaseService applies.
-                ActualOutput = (r.IsSample || isInstructor) ? r.ActualOutput : null,
-                Stderr       = (r.IsSample || isInstructor) ? r.Stderr : null
+                // Show output for all test cases - students can see what they submit
+                ActualOutput = r.ActualOutput,
+                Stderr       = r.Stderr
             }).ToList()
     };
 }

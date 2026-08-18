@@ -1218,6 +1218,50 @@
       display: block;
     }
   }
+
+  &--custom {
+    background: rgba($teal, 0.05);
+    border: 1px solid rgba($teal, 0.15);
+    border-radius: 4px 4px 0 0;
+    margin-right: 2px;
+
+    &:hover {
+      background: rgba($teal, 0.08);
+    }
+  }
+}
+
+// ── Test Case Delete Icon ─────────────────────────────────────────────────────
+.test-case-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-left: 6px;
+  border-radius: 3px;
+  background: transparent;
+  color: $navy2;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.15s;
+  position: relative;
+  z-index: 5;
+
+  svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  &:hover {
+    background: rgba($red, 0.1);
+    color: $red;
+  }
+}
+
+.test-case-tab:hover .test-case-delete,
+.test-case-tab--custom:hover .test-case-delete {
+  opacity: 1;
 }
 
 // ── Test Case Content ─────────────────────────────────────────────────────────
@@ -1227,6 +1271,29 @@
   overflow: hidden;
   gap: 16px;
   padding: 12px 16px;
+  position: relative;
+}
+
+// Custom test case info banner
+.custom-test-info {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: rgba($teal, 0.08);
+  border-bottom: 1px solid rgba($teal, 0.2);
+  padding: 8px 16px;
+  font-family: $ff-body;
+  font-size: 12px;
+  color: $teal;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 10;
+
+  svg {
+    flex-shrink: 0;
+  }
 }
 
 .test-case-inputs {
@@ -1291,6 +1358,17 @@
   &[readonly] {
     background: $ivory;
     cursor: default;
+    color: $muted;
+  }
+
+  &:not([readonly]) {
+    background: $white;
+    font-weight: 500;
+
+    &:focus {
+      border-color: $teal;
+      box-shadow: 0 0 0 3px rgba($teal, 0.1);
+    }
   }
 }
 
@@ -1323,6 +1401,16 @@
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+
+  &--pass {
+    border-color: $teal;
+    background: rgba($teal, 0.05);
+  }
+
+  &--fail {
+    border-color: $red;
+    background: rgba($red, 0.05);
   }
 }
 
@@ -2683,6 +2771,8 @@
 .hint-cta-btn--chat {
   color: $teal;
   border-color: rgba(29, 158, 117, 0.35);
+  // Temporarily hidden — preserving code for future re-enablement
+  display: none !important;
 
   &:hover {
     background: $teal-lt;

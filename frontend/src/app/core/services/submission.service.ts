@@ -264,6 +264,7 @@ export class SubmissionService {
         outputSummary: accepted ? 'All test cases passed.' : undefined,
       },
       aiFeedback: [],
+      testCaseResults: [],
     };
   }
 

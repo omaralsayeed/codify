@@ -148,10 +148,12 @@ public:
 
   // ── Test cases ────────────────────────────────────────────────────────────
   testCases = [
-    { id: 1, label: 'Case 1', nums: '[2,7,11,15]', target: '9',  expected: '[0,1]' },
-    { id: 2, label: 'Case 2', nums: '[3,2,4]',     target: '6',  expected: '[1,2]' },
-    { id: 3, label: 'Case 3', nums: '[3,3]',        target: '6',  expected: '[0,1]' },
+    { id: 1, label: 'Case 1', nums: '[2,7,11,15]', target: '9',  expected: '[0,1]', isCustom: false },
+    { id: 2, label: 'Case 2', nums: '[3,2,4]',     target: '6',  expected: '[1,2]', isCustom: false },
+    { id: 3, label: 'Case 3', nums: '[3,3]',        target: '6',  expected: '[0,1]', isCustom: false },
   ];
+  
+  private nextCustomTestId = 1000; // Start custom IDs at 1000 to avoid conflicts
 
   // ── Run state ─────────────────────────────────────────────────────────────
   runPhase: RunPhase = 'idle';
@@ -159,11 +161,23 @@ public:
   runError:  ServiceError    | null = null;
 
   get currentActualOutput(): string {
+    // First check if we have submission results (from Submit button)
+    if (this.submitResult?.testCaseResults?.length) {
+      const testCase = this.submitResult.testCaseResults[this.activeTestCase];
+      return testCase?.actualOutput ?? '';
+    }
+    // Fall back to run results (from Run button)
     if (!this.runResult?.testResults?.length) return '';
     return this.runResult.testResults[this.activeTestCase]?.actualOutput ?? '';
   }
 
   get currentConsoleOutput(): string {
+    // First check if we have submission results (from Submit button)
+    if (this.submitResult?.testCaseResults?.length) {
+      const testCase = this.submitResult.testCaseResults[this.activeTestCase];
+      return testCase?.stderr ?? '';
+    }
+    // Fall back to run results (from Run button)
     if (!this.runResult) return '';
     return this.runResult.stderr || this.runResult.stdout || '';
   }
@@ -516,6 +530,60 @@ public:
     navigator.clipboard.writeText(this.currentCode).catch(() => {/* clipboard unavailable */});
   }
 
+  // ── Custom Test Cases ─────────────────────────────────────────────────────
+
+  /**
+   * Adds a new custom test case with empty inputs.
+   * Custom test cases are editable and deletable by the user.
+   */
+  onAddTestCase(): void {
+    const newId = this.nextCustomTestId++;
+    const newCase = {
+      id: newId,
+      label: `Case ${this.testCases.length + 1}`,
+      nums: '[]',
+      target: '0',
+      expected: '[]',
+      isCustom: true
+    };
+    this.testCases.push(newCase);
+    // Switch to the new test case
+    this.activeTestCase = this.testCases.length - 1;
+    this.activeBottomTab = 'testcases';
+    if (!this.isBottomPanelOpen) this.isBottomPanelOpen = true;
+  }
+
+  /**
+   * Deletes a custom test case.
+   * Only custom test cases can be deleted (not sample ones).
+   */
+  onDeleteTestCase(index: number): void {
+    const testCase = this.testCases[index];
+    if (!testCase || !testCase.isCustom) return; // Can't delete sample test cases
+    
+    this.testCases.splice(index, 1);
+    
+    // Update labels for remaining test cases
+    this.testCases.forEach((tc, i) => {
+      tc.label = `Case ${i + 1}`;
+    });
+    
+    // Adjust active test case if needed
+    if (this.activeTestCase >= this.testCases.length) {
+      this.activeTestCase = Math.max(0, this.testCases.length - 1);
+    }
+  }
+
+  /**
+   * Updates a custom test case input field.
+   */
+  onUpdateTestCase(index: number, field: 'nums' | 'target' | 'expected', value: string): void {
+    const testCase = this.testCases[index];
+    if (!testCase || !testCase.isCustom) return; // Can't edit sample test cases
+    
+    testCase[field] = value;
+  }
+
   // ── AI Feedback fetch (Chunk 3) ───────────────────────────────────────────
 
   /**
@@ -621,6 +689,14 @@ public:
       error: (err: ServiceError) => {
         this.hintError.set(err);
         this.isHintLoading = false;
+        
+        // Show user-friendly error message
+        if (err.message && err.message.includes('already used all')) {
+          this.showToast('You have used all 3 hints for this problem. Time to solve it yourself!', 5000);
+        } else {
+          this.showToast(err.message || 'Could not fetch hint. Please try again.', 4000);
+        }
+        
         console.error('[HintService ✗]', err);
       },
     });
@@ -960,12 +1036,6 @@ public:
   // ── Bottom panel ──────────────────────────────────────────────────────────
   toggleBottomPanel():            void { this.isBottomPanelOpen = !this.isBottomPanelOpen; }
   setActiveTestCase(i: number):   void { this.activeTestCase = i; }
-
-  addTestCase(): void {
-    const newId = this.testCases.length + 1;
-    this.testCases.push({ id: newId, label: `Case ${newId}`, nums: '[]', target: '0', expected: '[]' });
-    this.activeTestCase = this.testCases.length - 1;
-  }
 
   get currentTestCase() { return this.testCases[this.activeTestCase]; }
 

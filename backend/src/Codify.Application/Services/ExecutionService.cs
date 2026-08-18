@@ -2,6 +2,7 @@ using System.Globalization;
 using Codify.Application.DTOs.Execution;
 using Codify.Application.Execution;
 using Codify.Application.Interfaces;
+using Codify.Domain.Entities;
 using Codify.Domain.Exceptions;
 using Microsoft.Extensions.Logging;
 
@@ -15,6 +16,7 @@ namespace Codify.Application.Services;
 public class ExecutionService(
     IProblemRepository problemRepo,
     IJudge0Client judge0Client,
+    ICodeWrapperService codeWrapperService,
     ILogger<ExecutionService> logger) : IExecutionService
 {
     public async Task<RunCodeResponse> RunAsync(RunCodeRequest request)
@@ -50,7 +52,8 @@ public class ExecutionService(
                 request.Language.ToString(),
                 tc.InputData,
                 problem.TimeLimitMs,
-                problem.MemoryLimitMb);
+                problem.MemoryLimitMb,
+                problem);
 
             totalExecTimeMs += eval.ExecutionTimeMs;
             if (!string.IsNullOrWhiteSpace(eval.Stderr))
@@ -83,12 +86,36 @@ public class ExecutionService(
         string input,
         int timeLimitMs,
         int memoryLimitMb,
+        Problem? problem = null,
         CancellationToken cancellationToken = default)
     {
+        logger.LogInformation("🔧 [JUDGE0] Evaluating code: Language={Language}, TimeLimitMs={TimeLimit}, MemoryLimitMb={MemoryLimit}, InputLength={InputLen}, CodeLength={CodeLen}", 
+            language, timeLimitMs, memoryLimitMb, input.Length, code.Length);
+        
+        // ALWAYS wrap user code to handle I/O automatically
+        var executableCode = code;
+        try
+        {
+            logger.LogInformation("🎯 [JUDGE0] Auto-wrapping user code for {Language}", language);
+            executableCode = codeWrapperService.WrapUserCode(code, language, null!);
+            logger.LogInformation("✅ [JUDGE0] Code wrapped. Original length: {OriginalLen}, Wrapped length: {WrappedLen}", code.Length, executableCode.Length);
+        }
+        catch (NotSupportedException ex)
+        {
+            logger.LogWarning("⚠️  [JUDGE0] Auto-wrapping not supported for {Language}: {Message}. Using code as-is.", language, ex.Message);
+            executableCode = code;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "⚠️  [JUDGE0] Failed to wrap code for {Language}. Using code as-is.", language);
+            executableCode = code;
+        }
+        
         var languageId = Judge0LanguageMap.GetLanguageId(language);
         if (languageId is null)
         {
-            logger.LogWarning("Judge0 evaluation requested for unsupported language '{Language}'.", language);
+            logger.LogWarning("⚠️  [JUDGE0] Unsupported language '{Language}'. Supported: {Supported}", 
+                language, Judge0LanguageMap.SupportedLanguages);
             return new TestCaseExecutionResult
             {
                 ActualOutput = string.Empty,
@@ -97,23 +124,31 @@ public class ExecutionService(
             };
         }
 
+        logger.LogInformation("✅ [JUDGE0] Language mapped: {Language} → Judge0 ID {LanguageId}", language, languageId.Value);
+
         var request = new Judge0SubmissionRequest
         {
-            SourceCode = code,
+            SourceCode = executableCode,
             LanguageId = languageId.Value,
             Stdin = input,
             CpuTimeLimitSeconds = Math.Max(1, timeLimitMs) / 1000d,
             MemoryLimitKb = Math.Max(1, memoryLimitMb) * 1024
         };
 
+        logger.LogInformation("📤 [JUDGE0] Sending request to Judge0: LanguageId={LangId}, CpuLimit={CpuLimit}s, MemoryLimit={MemLimit}KB, StdinLength={StdinLen}, Stdin=\"{Stdin}\"", 
+            request.LanguageId, request.CpuTimeLimitSeconds, request.MemoryLimitKb, request.Stdin?.Length ?? 0, request.Stdin?.Replace("\n", "\\n"));
+
         Judge0SubmissionResult result;
         try
         {
             result = await judge0Client.ExecuteAsync(request, cancellationToken);
+            logger.LogInformation("📥 [JUDGE0] Received response: StatusId={StatusId}, Token={Token}, Time={Time}s, Memory={Memory}KB, PollTimedOut={PollTimedOut}", 
+                result.StatusId, result.Token, result.TimeSeconds, result.MemoryKb, result.PollTimedOut);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Judge0 execution failed for language {Language}.", language);
+            logger.LogError(ex, "🔴 [JUDGE0] Execution FAILED! ErrorType={ErrorType}, Message={Message}", 
+                ex.GetType().Name, ex.Message);
             return new TestCaseExecutionResult
             {
                 ActualOutput = string.Empty,
@@ -122,6 +157,7 @@ public class ExecutionService(
             };
         }
 
+        logger.LogInformation("✅ [JUDGE0] Execution completed successfully");
         return MapToExecutionResult(result);
     }
 
@@ -186,5 +222,5 @@ public class ExecutionService(
             : 0;
 
     private static string NormalizeOutput(string output) =>
-        output.Trim().Replace("\r\n", "\n").Replace("\r", "\n");
+        output?.Trim().Replace("\r\n", "\n").Replace("\r", "\n").Replace(" ", "") ?? string.Empty;
 }

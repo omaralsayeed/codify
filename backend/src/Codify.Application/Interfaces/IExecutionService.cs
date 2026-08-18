@@ -1,4 +1,5 @@
 using Codify.Application.DTOs.Execution;
+using Codify.Domain.Entities;
 
 namespace Codify.Application.Interfaces;
 
@@ -10,6 +11,7 @@ public interface IExecutionService
     /// <summary>
     /// Evaluate code against a single test case input.
     /// Returns the actual stdout output and execution metadata.
+    /// If problem is provided and has code templates, wraps user code automatically.
     /// </summary>
     Task<TestCaseExecutionResult> EvaluateAsync(
         string code,
@@ -17,5 +19,6 @@ public interface IExecutionService
         string input,
         int timeLimitMs,
         int memoryLimitMb,
+        Problem? problem = null,
         CancellationToken cancellationToken = default);
 }

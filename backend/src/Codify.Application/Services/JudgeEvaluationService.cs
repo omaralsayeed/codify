@@ -30,8 +30,13 @@ public class JudgeEvaluationService(
 {
     public async Task EvaluateSubmissionAsync(Guid submissionId, CancellationToken cancellationToken = default)
     {
+        logger.LogInformation("🎬 [EVAL START] Submission {SubmissionId} - Beginning evaluation...", submissionId);
+        
         var submission = await submissionRepo.GetByIdAsync(submissionId)
             ?? throw new NotFoundException($"Submission {submissionId} not found.");
+
+        logger.LogInformation("✅ [EVAL] Submission loaded: User={UserId}, Problem={ProblemId}, Language={Language}", 
+            submission.UserId, submission.ProblemId, submission.Language);
 
         var problem = await problemRepo.GetByIdWithTestCasesAsync(submission.ProblemId)
             ?? throw new NotFoundException($"Problem {submission.ProblemId} not found.");
@@ -41,9 +46,15 @@ public class JudgeEvaluationService(
             .OrderBy(tc => tc.OrderIndex)
             .ToList();
 
+        logger.LogInformation("✅ [EVAL] Problem loaded: Title=\"{Title}\", TestCases={Count} (Samples={Samples}, Hidden={Hidden})", 
+            problem.Title, testCases.Count, 
+            testCases.Count(tc => tc.IsSample), 
+            testCases.Count(tc => !tc.IsSample));
+
         // 1. Transition to Running
         submission.MarkAsRunning();
         await submissionRepo.SaveChangesAsync();
+        logger.LogInformation("🏃 [EVAL] Submission marked as Running");
 
         // 2. Execute every test case (public + hidden) against Judge0
         var testCaseResults = new List<TestCaseResultEntity>();
@@ -55,75 +66,114 @@ public class JudgeEvaluationService(
         string? errorMessage = null;
         SubmissionStatus finalStatus = SubmissionStatus.Accepted;
 
+        logger.LogInformation("🔄 [EVAL] Starting test case execution (total: {Count})...", testCases.Count);
+
         foreach (var tc in testCases)
         {
-            var eval = await executionService.EvaluateAsync(
-                submission.Code,
-                submission.Language.ToString(),
-                tc.InputData,
-                problem.TimeLimitMs,
-                problem.MemoryLimitMb,
-                cancellationToken);
+            logger.LogInformation("🧪 [TEST] Running test case {Index}/{Total}: IsSample={IsSample}, InputLength={InputLen}, ExpectedLength={ExpectedLen}", 
+                tc.OrderIndex + 1, testCases.Count, tc.IsSample, tc.InputData.Length, tc.ExpectedOutput.Length);
 
-            totalExecTimeMs += eval.ExecutionTimeMs;
-            maxMemoryKb = Math.Max(maxMemoryKb, eval.MemoryUsedKb);
-
-            var verdict = DetermineVerdict(eval, tc.ExpectedOutput, problem.MemoryLimitMb);
-
-            testCaseResults.Add(TestCaseResultEntity.Create(
-                submissionId: submission.Id,
-                testCaseId: tc.Id,
-                verdict: verdict,
-                actualOutput: eval.ActualOutput,
-                stderr: string.IsNullOrWhiteSpace(eval.Stderr) ? null : eval.Stderr,
-                executionTimeMs: eval.ExecutionTimeMs,
-                memoryUsedKb: eval.MemoryUsedKb,
-                isSample: tc.IsSample,
-                orderIndex: tc.OrderIndex));
-
-            if (verdict == SubmissionStatus.Accepted)
+            try
             {
-                passed++;
-                continue;
+                var eval = await executionService.EvaluateAsync(
+                    submission.Code,
+                    submission.Language.ToString(),
+                    tc.InputData,
+                    problem.TimeLimitMs,
+                    problem.MemoryLimitMb,
+                    problem,
+                    cancellationToken);
+
+                logger.LogInformation("✅ [TEST] Test case {Index} executed: ExecTime={ExecTime}ms, Memory={Memory}KB, CompileError={CompileError}, RuntimeError={RuntimeError}, TimedOut={TimedOut}", 
+                    tc.OrderIndex + 1, eval.ExecutionTimeMs, eval.MemoryUsedKb, eval.CompileError, eval.RuntimeError, eval.TimedOut);
+
+                totalExecTimeMs += eval.ExecutionTimeMs;
+                maxMemoryKb = Math.Max(maxMemoryKb, eval.MemoryUsedKb);
+
+                var verdict = DetermineVerdict(eval, tc.ExpectedOutput, problem.MemoryLimitMb);
+                
+                logger.LogInformation("⚖️  [TEST] Test case {Index} verdict: {Verdict}", tc.OrderIndex + 1, verdict);
+
+                testCaseResults.Add(TestCaseResultEntity.Create(
+                    submissionId: submission.Id,
+                    testCaseId: tc.Id,
+                    verdict: verdict,
+                    actualOutput: eval.ActualOutput,
+                    stderr: string.IsNullOrWhiteSpace(eval.Stderr) ? null : eval.Stderr,
+                    executionTimeMs: eval.ExecutionTimeMs,
+                    memoryUsedKb: eval.MemoryUsedKb,
+                    isSample: tc.IsSample,
+                    orderIndex: tc.OrderIndex));
+
+                if (verdict == SubmissionStatus.Accepted)
+                {
+                    passed++;
+                    logger.LogInformation("✅ [TEST] Test case {Index} PASSED", tc.OrderIndex + 1);
+                    continue;
+                }
+
+                failed++;
+                logger.LogInformation("❌ [TEST] Test case {Index} FAILED: {Verdict}", tc.OrderIndex + 1, verdict);
+
+                // The submission's overall status takes the first non-Accepted verdict encountered,
+                // matching the original synchronous pipeline's precedence (compile error short-circuits,
+                // otherwise first failure reason wins).
+                if (finalStatus == SubmissionStatus.Accepted)
+                {
+                    finalStatus = verdict;
+                    logger.LogInformation("🎯 [EVAL] Final status set to: {Status}", finalStatus);
+                }
+
+                if (verdict == SubmissionStatus.CompileError)
+                    errorMessage = eval.Stderr;
+                else if (verdict == SubmissionStatus.RuntimeError)
+                    errorMessage ??= eval.Stderr;
+
+                firstFailOutput ??= verdict switch
+                {
+                    SubmissionStatus.TimeLimitExceeded => $"Input: {tc.InputData}\nExpected: {tc.ExpectedOutput}\nActual: (timed out)",
+                    SubmissionStatus.RuntimeError => $"Input: {tc.InputData}\nExpected: {tc.ExpectedOutput}\nActual: (runtime error)",
+                    SubmissionStatus.MemoryLimitExceeded => $"Input: {tc.InputData}\nExpected: {tc.ExpectedOutput}\nActual: (memory limit exceeded)",
+                    _ => $"Input: {tc.InputData}\nExpected: {tc.ExpectedOutput}\nActual: {eval.ActualOutput}"
+                };
+
+                // Compile errors apply to every test case identically — no point burning
+                // Judge0 calls on the remaining ones.
+                if (verdict == SubmissionStatus.CompileError)
+                {
+                    logger.LogWarning("⚠️  [EVAL] Compile error detected. Skipping remaining test cases.");
+                    break;
+                }
             }
-
-            failed++;
-
-            // The submission's overall status takes the first non-Accepted verdict encountered,
-            // matching the original synchronous pipeline's precedence (compile error short-circuits,
-            // otherwise first failure reason wins).
-            if (finalStatus == SubmissionStatus.Accepted)
-                finalStatus = verdict;
-
-            if (verdict == SubmissionStatus.CompileError)
-                errorMessage = eval.Stderr;
-            else if (verdict == SubmissionStatus.RuntimeError)
-                errorMessage ??= eval.Stderr;
-
-            firstFailOutput ??= verdict switch
+            catch (Exception ex)
             {
-                SubmissionStatus.TimeLimitExceeded => $"Input: {tc.InputData}\nExpected: {tc.ExpectedOutput}\nActual: (timed out)",
-                SubmissionStatus.RuntimeError => $"Input: {tc.InputData}\nExpected: {tc.ExpectedOutput}\nActual: (runtime error)",
-                SubmissionStatus.MemoryLimitExceeded => $"Input: {tc.InputData}\nExpected: {tc.ExpectedOutput}\nActual: (memory limit exceeded)",
-                _ => $"Input: {tc.InputData}\nExpected: {tc.ExpectedOutput}\nActual: {eval.ActualOutput}"
-            };
-
-            // Compile errors apply to every test case identically — no point burning
-            // Judge0 calls on the remaining ones.
-            if (verdict == SubmissionStatus.CompileError)
-                break;
+                logger.LogError(ex, "🔴 [TEST] Test case {Index} execution failed with exception: {ErrorType} - {Message}", 
+                    tc.OrderIndex + 1, ex.GetType().Name, ex.Message);
+                throw;
+            }
         }
 
+        logger.LogInformation("📊 [EVAL] All tests completed: Passed={Passed}, Failed={Failed}, TotalTime={TotalTime}ms, MaxMemory={MaxMemory}KB, FinalStatus={Status}", 
+            passed, failed, totalExecTimeMs, maxMemoryKb, finalStatus);
+
         // 3. Persist per-test-case results
+        logger.LogInformation("💾 [EVAL] Persisting {Count} test case results...", testCaseResults.Count);
         await testCaseResultRepo.AddRangeAsync(testCaseResults);
         await testCaseResultRepo.SaveChangesAsync();
+        logger.LogInformation("✅ [EVAL] Test case results saved");
 
         // 4. Update submission status
         bool isAccepted = finalStatus == SubmissionStatus.Accepted;
         if (isAccepted)
+        {
             submission.MarkAsAccepted(totalExecTimeMs, maxMemoryKb, passed, testCases.Count);
+            logger.LogInformation("🎉 [EVAL] Submission marked as ACCEPTED");
+        }
         else
+        {
             submission.MarkAsFailed(finalStatus, passed, testCases.Count);
+            logger.LogInformation("❌ [EVAL] Submission marked as FAILED: {Status}", finalStatus);
+        }
 
         // 5. Persist SubmissionResult (aggregate pass/fail breakdown)
         var submissionResult = SubmissionResult.Create(
@@ -135,10 +185,12 @@ public class JudgeEvaluationService(
             outputSummary: firstFailOutput);
 
         await submissionRepo.AddResultAsync(submissionResult);
+        logger.LogInformation("💾 [EVAL] Submission result saved");
 
         // 6. Update problem-level counters
         problem.IncrementSubmissionCounters(isAccepted);
         await problemRepo.SaveChangesAsync();
+        logger.LogInformation("📊 [EVAL] Problem counters updated");
 
         // 7. If first accepted submission, increment user's solved counter
         if (isAccepted)
@@ -147,25 +199,37 @@ public class JudgeEvaluationService(
                 submission.UserId, submission.ProblemId, submission.Id);
             if (!previousAccepted)
             {
+                logger.LogInformation("🏆 [EVAL] First accepted submission for this user/problem! Incrementing solved count...");
                 var user = await userRepo.GetByIdAsync(submission.UserId);
                 user?.IncrementSolvedProblems();
                 await userRepo.SaveChangesAsync();
+                logger.LogInformation("✅ [EVAL] User solved count incremented");
+            }
+            else
+            {
+                logger.LogInformation("ℹ️  [EVAL] User has previous accepted submission for this problem");
             }
         }
 
         // 8. Fire the Tagging Agent's on-submission hook: tag the current problem
         //    if untagged, scan all other untagged problems, and refresh the student's
         //    concept-tag profile (weak/strong topics).
+        logger.LogInformation("🏷️  [EVAL] Running tagging agent...");
         await taggingService.TagOnSubmissionAsync(submission.ProblemId, submission.UserId, cancellationToken);
+        logger.LogInformation("✅ [EVAL] Tagging completed");
 
         // 9. Final save for submission status + result
         await submissionRepo.SaveChangesAsync();
+        logger.LogInformation("💾 [EVAL] Final submission state saved");
 
         // 10. Run the Code Checker Agent. We're already off the request thread (this whole
         //     method runs inside the background worker), so we await it directly instead of
         //     spawning a second fire-and-forget task — but a failure here must never take
         //     down the evaluation that already succeeded.
+        logger.LogInformation("🤖 [EVAL] Starting Code Checker Agent...");
         await RunCodeCheckerAgentAsync(submission, problem, cancellationToken);
+        
+        logger.LogInformation("🏁 [EVAL COMPLETE] Submission {SubmissionId} evaluation finished successfully", submissionId);
     }
 
     // ── Private ───────────────────────────────────────────────────
@@ -229,5 +293,5 @@ public class JudgeEvaluationService(
     }
 
     private static string NormalizeOutput(string output) =>
-        output.Trim().Replace("\r\n", "\n").Replace("\r", "\n");
+        output?.Trim().Replace("\r\n", "\n").Replace("\r", "\n").Replace(" ", "") ?? string.Empty;
 }
