@@ -2,7 +2,7 @@ import { Component, inject, OnInit, ChangeDetectionStrategy, signal } from '@ang
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ContestService } from '../../core/services/contest.service';
-import { StudentContestsOverview, Contest, StudentPastContest } from '../../core/models/contest.model';
+import { StudentContestsOverview } from '../../core/models/contest.model';
 
 @Component({
   selector: 'app-student-contests',
@@ -17,6 +17,8 @@ export class StudentContestsComponent implements OnInit {
 
   readonly isLoading = signal(true);
   readonly overview = signal<StudentContestsOverview | null>(null);
+  readonly respondingContestId = signal<string | null>(null);
+  readonly actionMessage = signal<{ type: 'success' | 'error'; text: string } | null>(null);
 
   ngOnInit(): void {
     this.fetchOverview();
@@ -31,6 +33,29 @@ export class StudentContestsComponent implements OnInit {
       },
       error: () => {
         this.isLoading.set(false);
+      }
+    });
+  }
+
+  respondToInvitation(contestId: string, accept: boolean): void {
+    this.respondingContestId.set(contestId);
+    this.actionMessage.set(null);
+
+    this.contestSvc.respondToInvitation$(contestId, accept).subscribe({
+      next: (res) => {
+        this.respondingContestId.set(null);
+        this.actionMessage.set({
+          type: 'success',
+          text: accept ? 'Contest invitation accepted! You can now participate in this contest.' : 'Contest invitation declined.',
+        });
+        this.fetchOverview();
+      },
+      error: (err) => {
+        this.respondingContestId.set(null);
+        this.actionMessage.set({
+          type: 'error',
+          text: err?.error?.message ?? 'Failed to update invitation status.',
+        });
       }
     });
   }

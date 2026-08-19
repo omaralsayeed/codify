@@ -4,9 +4,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ContestService } from '../../../core/services/contest.service';
-import { ProblemService } from '../../../core/services/problem.service';
 import { Contest, ContestResult } from '../../../core/models/contest.model';
-import { Problem } from '../../../core/models/problem.model';
 
 /** One bar bucket in the score-distribution chart */
 interface ScoreBucket {
@@ -34,7 +32,6 @@ interface ProblemAccuracy {
 export class InstructorContestDetailComponent implements OnInit {
   private readonly route      = inject(ActivatedRoute);
   private readonly contestSvc = inject(ContestService);
-  private readonly problemSvc = inject(ProblemService);
 
   readonly contest = signal<Contest | 'not-found' | null>(null);
   readonly results = signal<ContestResult[]>([]);
@@ -61,7 +58,8 @@ export class InstructorContestDetailComponent implements OnInit {
         if (res.length > 0) {
           this.avgScore       = Math.round(res.reduce((s, r) => s + r.score, 0) / res.length);
           this.avgAccuracy    = Math.round(res.reduce((s, r) => s + r.accuracy, 0) / res.length);
-          this.completionRate = Math.round((res.length / Math.max(found.assignedStudentIds.length, 1)) * 100);
+          const acceptedCount = (found.participants || []).filter(p => p.invitationStatus === 'accepted').length;
+          this.completionRate = Math.round((res.length / Math.max(acceptedCount || found.assignedStudentIds.length, 1)) * 100);
           this.scoreBuckets   = this.buildScoreBuckets(res);
           this.problemAccuracy = this.buildProblemAccuracy(found, res);
         }
@@ -121,7 +119,13 @@ export class InstructorContestDetailComponent implements OnInit {
     });
   }
 
-  // ── Leaderboard badge helpers (reuse integrity badge pattern) ─────────────
+  // ── Status badge helpers ──────────────────────────────────────────────────
+
+  invitationStatusClass(status: string): string {
+    if (status === 'accepted') return 'inv-badge--accepted';
+    if (status === 'declined') return 'inv-badge--declined';
+    return 'inv-badge--pending';
+  }
 
   rankBadgeClass(rank: number): string {
     if (rank === 1) return 'rank--gold';
@@ -146,12 +150,14 @@ export class InstructorContestDetailComponent implements OnInit {
   // ── Date helpers ──────────────────────────────────────────────────────────
 
   formatDate(iso: string): string {
+    if (!iso) return '';
     return new Date(iso).toLocaleDateString('en-GB', {
       day: 'numeric', month: 'short', year: 'numeric',
     });
   }
 
   formatTime(iso: string): string {
+    if (!iso) return '';
     return new Date(iso).toLocaleTimeString('en-GB', {
       hour: '2-digit', minute: '2-digit',
     });
@@ -163,5 +169,9 @@ export class InstructorContestDetailComponent implements OnInit {
       ended: 'badge--ended', draft: 'badge--draft',
     };
     return map[status] ?? '';
+  }
+
+  getInvitationCount(contest: Contest, status: string): number {
+    return (contest.participants || []).filter(p => p.invitationStatus === status).length;
   }
 }

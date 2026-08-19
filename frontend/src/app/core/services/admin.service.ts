@@ -102,7 +102,7 @@ interface RawUserRow {
   name: string;
   initials: string;
   email: string;
-  role: number;
+  role: number | string;
   status: string;
   registeredAt: string;
   lastActiveAt: string | null;
@@ -124,7 +124,7 @@ interface RawUserDetail extends RawUserRow {
 interface RawProblemRow {
   id: string;
   title: string;
-  difficulty: number;
+  difficulty: number | string;
   tags: string[];
   solvedCount: number;
   totalSubmissions: number;

@@ -14,13 +14,89 @@
       </div>
     </header>
 
+    <!-- Feedback Message Banner -->
+    @if (actionMessage(); as msg) {
+      <div class="action-feedback-banner" [class.action-feedback-banner--success]="msg.type === 'success'" [class.action-feedback-banner--error]="msg.type === 'error'">
+        <span>{{ msg.text }}</span>
+        <button type="button" class="btn-dismiss" (click)="actionMessage.set(null)">✕</button>
+      </div>
+    }
+
     @if (isLoading()) {
       <div class="loading-state">
         <div class="spinner"></div>
         <p>Loading your assigned contests...</p>
       </div>
     } @else {
-      <!-- 1. LIVE CONTESTS SECTION -->
+
+      <!-- ── SECTION 0: PENDING CONTEST INVITATIONS ──────────────────────── -->
+      @if (overview()?.pendingInvitations && overview()!.pendingInvitations.length > 0) {
+        <section class="section-block invitations-section">
+          <div class="section-header">
+            <div class="section-title-wrap">
+              <span class="invite-indicator">✉</span>
+              <h2 class="section-title">Contest Invitations</h2>
+            </div>
+            <span class="section-count section-count--gold">{{ overview()?.pendingInvitations?.length }} Pending</span>
+          </div>
+
+          <div class="invitations-grid">
+            @for (contest of overview()?.pendingInvitations; track contest.id) {
+              <div class="invitation-card">
+                <div class="invitation-header">
+                  <div class="invitation-badge-tag">Contest Invitation</div>
+                  <span class="invitation-date">{{ formatDate(contest.startAt) }}</span>
+                </div>
+
+                <h3 class="invitation-title">{{ contest.title }}</h3>
+                @if (contest.description) {
+                  <p class="invitation-desc">{{ contest.description }}</p>
+                }
+
+                <div class="invitation-meta">
+                  <div class="meta-row">
+                    <span class="meta-icon">👤</span>
+                    <span class="meta-txt">Instructor: <strong>{{ contest.instructorName || 'Instructor' }}</strong></span>
+                  </div>
+                  <div class="meta-row">
+                    <span class="meta-icon">🗂️</span>
+                    <span class="meta-txt">{{ contest.problems?.length || contest.problemIds.length }} Problems Included</span>
+                  </div>
+                  <div class="meta-row">
+                    <span class="meta-icon">⏰</span>
+                    <span class="meta-txt">{{ formatDate(contest.startAt) }} – {{ formatDate(contest.endAt) }}</span>
+                  </div>
+                </div>
+
+                <div class="invitation-actions">
+                  <button
+                    type="button"
+                    class="btn-accept"
+                    [disabled]="respondingContestId() === contest.id"
+                    (click)="respondToInvitation(contest.id, true)"
+                  >
+                    @if (respondingContestId() === contest.id) {
+                      <span class="btn-spinner"></span> Accepting…
+                    } @else {
+                      ✓ Accept Invitation
+                    }
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-decline"
+                    [disabled]="respondingContestId() === contest.id"
+                    (click)="respondToInvitation(contest.id, false)"
+                  >
+                    Decline
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+      }
+
+      <!-- ── SECTION 1: LIVE CONTESTS ──────────────────────────────────── -->
       <section class="section-block">
         <div class="section-header">
           <div class="section-title-wrap">
@@ -68,10 +144,10 @@
                 <!-- Problem list preview -->
                 @if (contest.problems && contest.problems.length > 0) {
                   <div class="problem-chips-wrap">
-                    <span class="chips-label">Contest Problems:</span>
+                    <span class="chips-label">Contest Problems ({{ contest.problems.length }}):</span>
                     <div class="chips-list">
                       @for (prob of contest.problems; track prob.id) {
-                        <a [routerLink]="['/problems', prob.id]" class="problem-chip">
+                        <a [routerLink]="['/contests', contest.id]" class="problem-chip">
                           <span class="prob-num">P{{ prob.order }}</span>
                           <span class="prob-name">{{ prob.title }}</span>
                           <span class="prob-pts">{{ prob.points }} pts</span>
@@ -82,23 +158,13 @@
                 }
 
                 <div class="card-footer">
-                  @if (contest.problems && contest.problems.length > 0) {
-                    <a [routerLink]="['/problems', contest.problems[0].id]" class="btn-enter-contest">
-                      <span>Enter Arena & Solve</span>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                        <polyline points="12 5 19 12 12 19"></polyline>
-                      </svg>
-                    </a>
-                  } @else if (contest.problemIds.length > 0) {
-                    <a [routerLink]="['/problems', contest.problemIds[0]]" class="btn-enter-contest">
-                      <span>Enter Arena & Solve</span>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                        <polyline points="12 5 19 12 12 19"></polyline>
-                      </svg>
-                    </a>
-                  }
+                  <a [routerLink]="['/contests', contest.id]" class="btn-enter-contest">
+                    <span>Enter Arena & Choose Problem</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                      <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                  </a>
                 </div>
               </div>
             }
@@ -106,7 +172,7 @@
         }
       </section>
 
-      <!-- 2. UPCOMING CONTESTS SECTION -->
+      <!-- ── SECTION 2: UPCOMING CONTESTS ──────────────────────────────── -->
       @if (overview()?.upcomingContests && overview()!.upcomingContests.length > 0) {
         <section class="section-block">
           <div class="section-header">
@@ -138,13 +204,23 @@
                     <span class="meta-value">{{ contest.problems?.length || contest.problemIds.length }} Problems</span>
                   </div>
                 </div>
+
+                <div class="card-footer">
+                  <a [routerLink]="['/contests', contest.id]" class="btn-enter-contest btn-enter-contest--upcoming">
+                    <span>View Contest Lineup</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                      <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                  </a>
+                </div>
               </div>
             }
           </div>
         </section>
       }
 
-      <!-- 3. HISTORICAL & SOLVED CONTESTS -->
+      <!-- ── SECTION 3: HISTORICAL & SOLVED CONTESTS ────────────────────── -->
       <section class="section-block">
         <div class="section-header">
           <div class="section-title-wrap">

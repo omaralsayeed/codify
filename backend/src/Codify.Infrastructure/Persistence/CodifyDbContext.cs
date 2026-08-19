@@ -19,6 +19,7 @@ public class CodifyDbContext(DbContextOptions<CodifyDbContext> options) : DbCont
     public DbSet<Contest> Contests => Set<Contest>();
     public DbSet<ContestProblem> ContestProblems => Set<ContestProblem>();
     public DbSet<ContestParticipant> ContestParticipants => Set<ContestParticipant>();
+    public DbSet<InstructorStudent> InstructorStudents => Set<InstructorStudent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

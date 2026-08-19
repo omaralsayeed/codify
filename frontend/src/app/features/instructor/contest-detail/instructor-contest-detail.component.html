@@ -30,21 +30,102 @@
             📅 {{ formatDate(c.startAt) }} · {{ formatTime(c.startAt) }}
             → {{ formatDate(c.endAt) }} · {{ formatTime(c.endAt) }}
           </span>
-          <span class="meta-item">👥 {{ c.assignedStudentIds.length }} students</span>
+          <span class="meta-item">👥 {{ (c.participants || c.assignedStudentIds).length }} invited</span>
           <span class="meta-item">🗂️ {{ c.problemIds.length }} problems</span>
         </div>
       </div>
     </div>
 
+    <!-- Invited Students Roster & Statuses -->
+    @if (c.participants && c.participants.length > 0) {
+      <div class="section-card">
+        <div class="section-header-wrap">
+          <div>
+            <h2 class="section-title">Invited Students Roster</h2>
+            <p class="section-sub">Invitation statuses and participation metrics for this contest.</p>
+          </div>
+          <div class="invitation-stats-summary">
+            <span class="summary-chip summary-chip--pending">
+              🟡 {{ getInvitationCount(c, 'pending') }} Pending
+            </span>
+            <span class="summary-chip summary-chip--accepted">
+              🟢 {{ getInvitationCount(c, 'accepted') }} Accepted
+            </span>
+            <span class="summary-chip summary-chip--declined">
+              🔴 {{ getInvitationCount(c, 'declined') }} Declined
+            </span>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="leaderboard-table" aria-label="Invited students list">
+            <thead>
+              <tr>
+                <th scope="col">Student</th>
+                <th scope="col">Email</th>
+                <th scope="col">Invitation Status</th>
+                <th scope="col">Score</th>
+                <th scope="col">Solved</th>
+                <th scope="col">Accuracy</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (p of c.participants; track p.studentId) {
+                <tr class="leaderboard-row">
+                  <td class="col-student font-medium">
+                    <a
+                      class="student-link"
+                      [routerLink]="['../../students', p.studentId]"
+                    >
+                      {{ p.studentName || 'Student' }}
+                    </a>
+                  </td>
+                  <td class="col-muted font-mono">{{ p.studentEmail }}</td>
+                  <td>
+                    <span class="invitation-badge" [ngClass]="invitationStatusClass(p.invitationStatus)">
+                      {{ p.invitationStatus | titlecase }}
+                    </span>
+                  </td>
+                  <td>
+                    @if (p.invitationStatus === 'accepted') {
+                      <span class="score-badge" [ngClass]="scoreBadgeClass(p.score)">
+                        {{ p.score }}
+                      </span>
+                    } @else {
+                      <span class="col-muted">—</span>
+                    }
+                  </td>
+                  <td>
+                    @if (p.invitationStatus === 'accepted') {
+                      {{ p.problemsSolved }}/{{ c.problemIds.length }}
+                    } @else {
+                      <span class="col-muted">—</span>
+                    }
+                  </td>
+                  <td>
+                    @if (p.invitationStatus === 'accepted') {
+                      {{ p.accuracy }}%
+                    } @else {
+                      <span class="col-muted">—</span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+
     <!-- No results state (upcoming / live / draft) -->
-    @if (results().length === 0) {
+    @if (results().length === 0 && (!c.participants || c.participants.length === 0)) {
       <div class="empty-state">
         <span class="empty-icon" aria-hidden="true">⏳</span>
         <p class="empty-text">
           @if (c.status === 'ended') {
             No results recorded for this contest.
           } @else {
-            Analytics will be available once the contest ends.
+            Analytics will be available once students participate.
           }
         </p>
       </div>

@@ -29,6 +29,25 @@ function normalizeContest(c: any): Contest {
     status: normalizeStatus(c.status),
     problemIds: c.problemIds || (c.problems ? c.problems.map((p: any) => p.id) : []),
     assignedStudentIds: c.assignedStudentIds || [],
+    studentEmails: c.studentEmails || [],
+    participants: (c.participants || []).map((p: any) => ({
+      studentId: p.studentId,
+      studentName: p.studentName,
+      studentEmail: p.studentEmail,
+      invitationStatus: (typeof p.invitationStatus === 'number'
+        ? (p.invitationStatus === 1 ? 'accepted' : p.invitationStatus === 2 ? 'declined' : 'pending')
+        : (p.invitationStatus || 'pending').toLowerCase()) as any,
+      respondedAt: p.respondedAt,
+      score: p.score ?? 0,
+      problemsSolved: p.problemsSolved ?? 0,
+      accuracy: p.accuracy ?? 0,
+      rank: p.rank ?? 0,
+    })),
+    myInvitationStatus: c.myInvitationStatus
+      ? (typeof c.myInvitationStatus === 'number'
+        ? (c.myInvitationStatus === 1 ? 'accepted' : c.myInvitationStatus === 2 ? 'declined' : 'pending')
+        : (c.myInvitationStatus || 'pending').toLowerCase()) as any
+      : undefined,
   };
 }
 
@@ -74,6 +93,7 @@ export class ContestService {
       .pipe(
         map(r => {
           const data = r.data;
+          const pending = (data?.pendingInvitations || []).map(normalizeContest);
           const live = (data?.liveContests || []).map(normalizeContest);
           const upcoming = (data?.upcomingContests || []).map(normalizeContest);
           const past = (data?.pastContests || []).map(p => ({
@@ -81,8 +101,9 @@ export class ContestService {
             problems: p.problems || [],
           }));
           return {
-            hasActiveContestNotification: data?.hasActiveContestNotification || live.length > 0,
+            hasActiveContestNotification: data?.hasActiveContestNotification || live.length > 0 || pending.length > 0,
             activeContestsCount: data?.activeContestsCount || live.length,
+            pendingInvitations: pending,
             liveContests: live,
             upcomingContests: upcoming,
             pastContests: past,
@@ -92,6 +113,7 @@ export class ContestService {
           of({
             hasActiveContestNotification: false,
             activeContestsCount: 0,
+            pendingInvitations: [],
             liveContests: [],
             upcomingContests: [],
             pastContests: [],
@@ -172,39 +194,34 @@ export class ContestService {
       );
   }
 
-  createContest(payload: CreateContestPayload): Contest {
-    if (payload.problemIds.length === 0) {
-      throw new Error('A contest must include at least one problem.');
-    }
-    if (payload.assignedStudentIds.length === 0) {
-      throw new Error('A contest must be assigned to at least one student.');
-    }
-    if (new Date(payload.endAt) <= new Date(payload.startAt)) {
-      throw new Error('End date must be after start date.');
-    }
+  respondToInvitation$(contestId: string, accept: boolean): Observable<{ success: boolean; message: string }> {
+    return this.http
+      .post<ApiEnvelope<{ contestId: string; accepted: boolean; message: string }>>(
+        `${this.baseUrl}/${contestId}/invitations/respond`,
+        { accept },
+        { headers: this.headers() }
+      )
+      .pipe(
+        map(r => ({
+          success: r.success,
+          message: r.data?.message || (accept ? 'Invitation accepted' : 'Invitation declined')
+        }))
+      );
+  }
 
-    const start = new Date(payload.startAt);
-    const end   = new Date(payload.endAt);
-    const nowDate = new Date();
+  searchStudents$(query: string = ''): Observable<{ id: string; name: string; email: string }[]> {
+    const url = query
+      ? `${this.baseUrl}/students/search?query=${encodeURIComponent(query)}`
+      : `${this.baseUrl}/students/search`;
 
-    let status: ContestStatus;
-    if (nowDate < start)      status = 'upcoming';
-    else if (nowDate > end)   status = 'ended';
-    else                      status = 'live';
-
-    const created: Contest = {
-      id: `c${Date.now()}`,
-      title: payload.title.trim(),
-      description: payload.description.trim(),
-      createdByInstructorId: 'instructor-1',
-      problemIds: payload.problemIds,
-      assignedStudentIds: payload.assignedStudentIds,
-      startAt: payload.startAt,
-      endAt: payload.endAt,
-      status,
-    };
-
-    this.contests.unshift(created);
-    return created;
+    return this.http
+      .get<ApiEnvelope<{ id: string; name: string; email: string }[]>>(url, {
+        headers: this.headers()
+      })
+      .pipe(
+        map(r => r.data || []),
+        catchError(() => of([]))
+      );
   }
 }
+

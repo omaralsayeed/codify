@@ -89,4 +89,36 @@ public class ContestsController(IContestService contestService) : ControllerBase
         var history = await contestService.GetStudentContestHistoryAsync(studentId);
         return Ok(ApiResponse.Ok(history));
     }
+
+    /// <summary>
+    /// POST /api/contests/{id}/invitations/respond
+    /// Allows a student to accept or decline a contest invitation.
+    /// </summary>
+    [HttpPost("{id:guid}/invitations/respond")]
+    [Authorize(Roles = "Student")]
+    public async Task<IActionResult> RespondToInvitation(Guid id, [FromBody] RespondContestInvitationRequest request)
+    {
+        var studentId = User.GetUserId();
+        await contestService.RespondToInvitationAsync(id, studentId, request.Accept);
+        return Ok(ApiResponse.Ok(new
+        {
+            contestId = id,
+            accepted = request.Accept,
+            message = request.Accept ? "Contest invitation accepted successfully." : "Contest invitation declined."
+        }));
+    }
+
+    /// <summary>
+    /// GET /api/contests/students/search?query=...
+    /// Returns student candidates for contest invitations (accessible by Instructors and Admins).
+    /// </summary>
+    [HttpGet("students/search")]
+    [Authorize(Roles = "Instructor,Admin")]
+    public async Task<IActionResult> SearchStudents([FromQuery] string? query = null)
+    {
+        var instructorId = User.GetUserId();
+        var students = await contestService.SearchStudentCandidatesAsync(instructorId, query);
+        return Ok(ApiResponse.Ok(students));
+    }
 }
+

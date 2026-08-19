@@ -1,0 +1,246 @@
+<div class="arena-page">
+  <div class="arena-container">
+
+    <!-- Loading State -->
+    @if (isLoading()) {
+      <div class="arena-loading">
+        <div class="spinner"></div>
+        <p>Loading contest details and problem lineup…</p>
+      </div>
+    }
+
+    <!-- Not Found State -->
+    @if (notFound()) {
+      <div class="arena-not-found">
+        <div class="nf-icon">⚠️</div>
+        <h2>Contest Not Found</h2>
+        <p>This contest does not exist or you do not have permission to view it.</p>
+        <a routerLink="/contests" class="btn-back-link">← Return to Contests</a>
+      </div>
+    }
+
+    <!-- Contest Loaded -->
+    @if (contest(); as c) {
+
+      <!-- Top Navigation & Back -->
+      <nav class="arena-nav">
+        <a routerLink="/contests" class="nav-back">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+          <span>Back to Contests Arena</span>
+        </a>
+      </nav>
+
+      <!-- Contest Header Banner -->
+      <header class="arena-hero">
+        <div class="hero-main">
+          <div class="status-badge-row">
+            @if (c.status === 'live') {
+              <span class="badge badge--live">
+                <span class="live-pulse"></span> LIVE ARENA
+              </span>
+            } @else if (c.status === 'upcoming') {
+              <span class="badge badge--upcoming">UPCOMING</span>
+            } @else {
+              <span class="badge badge--ended">CONTEST ENDED</span>
+            }
+
+            <span class="timer-pill" [class.timer-pill--live]="c.status === 'live'">
+              <span class="timer-icon">⏱️</span>
+              <span class="timer-val">{{ timeRemaining() }}</span>
+            </span>
+          </div>
+
+          <h1 class="contest-title">{{ c.title }}</h1>
+          @if (c.description) {
+            <p class="contest-description">{{ c.description }}</p>
+          }
+
+          <div class="contest-instructor-meta">
+            <span class="inst-avatar">{{ (c.instructorName || 'I').charAt(0).toUpperCase() }}</span>
+            <span class="inst-info">
+              <span class="inst-label">Assigned by</span>
+              <span class="inst-name">{{ c.instructorName || 'Instructor' }}</span>
+            </span>
+            <span class="meta-separator">•</span>
+            <span class="window-info">
+              📅 {{ formatDate(c.startAt) }} – {{ formatDate(c.endAt) }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Quick Summary Stats Card -->
+        <div class="hero-stats-card">
+          <div class="stat-col">
+            <span class="stat-val">{{ c.problems?.length || c.problemIds.length }}</span>
+            <span class="stat-lbl">Problems</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-col">
+            <span class="stat-val">{{ totalPoints() }}</span>
+            <span class="stat-lbl">Total Points</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-col">
+            <span class="stat-val">{{ c.participants?.length || c.assignedStudentIds.length }}</span>
+            <span class="stat-lbl">Participants</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Arena Tabs Navigation -->
+      <div class="arena-tabs">
+        <button
+          type="button"
+          class="tab-btn"
+          [class.tab-btn--active]="activeTab() === 'problems'"
+          (click)="setTab('problems')"
+        >
+          <span class="tab-icon">🧩</span>
+          <span>Problems ({{ c.problems?.length || c.problemIds.length }})</span>
+        </button>
+        <button
+          type="button"
+          class="tab-btn"
+          [class.tab-btn--active]="activeTab() === 'standings'"
+          (click)="setTab('standings')"
+        >
+          <span class="tab-icon">🏆</span>
+          <span>Live Standings</span>
+        </button>
+      </div>
+
+      <!-- ── TAB 1: PROBLEMS LINEUP ──────────────────────────────────── -->
+      @if (activeTab() === 'problems') {
+        <section class="problems-section">
+          <div class="section-instruction-box">
+            <div class="instruction-icon">💡</div>
+            <div class="instruction-text">
+              <strong>Choose a problem below to begin solving in the code editor.</strong>
+              <p>You can solve problems in any order and switch between them at any time while the contest is active.</p>
+            </div>
+          </div>
+
+          <div class="problems-grid">
+            @if (c.problems && c.problems.length > 0) {
+              @for (p of c.problems; track p.id; let i = $index) {
+                <div class="problem-card">
+                  <div class="prob-card-header">
+                    <div class="prob-index-badge">Problem {{ p.order || (i + 1) }}</div>
+                    <div class="prob-diff-badge" [class]="'diff--' + p.difficulty.toLowerCase()">
+                      {{ p.difficulty }}
+                    </div>
+                  </div>
+
+                  <h2 class="prob-card-title">{{ p.title }}</h2>
+
+                  <div class="prob-card-meta">
+                    <div class="points-pill">
+                      <span class="pts-icon">★</span>
+                      <span class="pts-txt">{{ p.points || 100 }} Points</span>
+                    </div>
+                    <span class="prob-status-indicator">Ready to Solve</span>
+                  </div>
+
+                  <div class="prob-card-footer">
+                    <button
+                      type="button"
+                      class="btn-solve-now"
+                      (click)="startProblem(p)"
+                    >
+                      <span>Solve Problem</span>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                        <polyline points="12 5 19 12 12 19"></polyline>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              }
+            } @else {
+              <!-- Fallback if only problemIds array exists -->
+              @for (probId of c.problemIds; track probId; let i = $index) {
+                <div class="problem-card">
+                  <div class="prob-card-header">
+                    <div class="prob-index-badge">Problem {{ i + 1 }}</div>
+                    <div class="prob-diff-badge diff--medium">Medium</div>
+                  </div>
+                  <h2 class="prob-card-title">Contest Challenge {{ i + 1 }}</h2>
+                  <div class="prob-card-meta">
+                    <div class="points-pill">
+                      <span class="pts-icon">★</span>
+                      <span class="pts-txt">100 Points</span>
+                    </div>
+                  </div>
+                  <div class="prob-card-footer">
+                    <a [routerLink]="['/problems', probId]" [queryParams]="{ contestId: c.id }" class="btn-solve-now">
+                      <span>Solve Problem</span>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                        <polyline points="12 5 19 12 12 19"></polyline>
+                      </svg>
+                    </a>
+                  </div>
+                </div>
+              }
+            }
+          </div>
+        </section>
+      }
+
+      <!-- ── TAB 2: STANDINGS / LEADERBOARD ───────────────────────────── -->
+      @if (activeTab() === 'standings') {
+        <section class="standings-section">
+          @if (results().length === 0) {
+            <div class="standings-empty">
+              <div class="empty-icon">📊</div>
+              <h3>No Submissions Yet</h3>
+              <p>Be the first to submit a solution and top the contest leaderboard!</p>
+            </div>
+          } @else {
+            <div class="table-responsive">
+              <table class="standings-table">
+                <thead>
+                  <tr>
+                    <th class="th-rank">Rank</th>
+                    <th class="th-student">Student</th>
+                    <th class="th-solved">Solved</th>
+                    <th class="th-accuracy">Accuracy</th>
+                    <th class="th-score">Score</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (r of results(); track r.studentId) {
+                    <tr class="standings-row" [class.row-top-1]="r.rank === 1" [class.row-top-2]="r.rank === 2" [class.row-top-3]="r.rank === 3">
+                      <td class="td-rank">
+                        @if (r.rank === 1) { <span class="rank-medal">🥇 1</span> }
+                        @else if (r.rank === 2) { <span class="rank-medal">🥈 2</span> }
+                        @else if (r.rank === 3) { <span class="rank-medal">🥉 3</span> }
+                        @else { <span class="rank-num">#{{ r.rank }}</span> }
+                      </td>
+                      <td class="td-student">
+                        <div class="student-cell">
+                          <span class="student-avatar">{{ r.studentName.charAt(0).toUpperCase() }}</span>
+                          <span class="student-name">{{ r.studentName }}</span>
+                        </div>
+                      </td>
+                      <td class="td-solved">{{ r.problemsSolved }} / {{ c.problems?.length || c.problemIds.length }}</td>
+                      <td class="td-accuracy">{{ r.accuracy }}%</td>
+                      <td class="td-score">
+                        <span class="score-badge">{{ r.score }} pts</span>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </section>
+      }
+
+    }
+
+  </div>
+</div>

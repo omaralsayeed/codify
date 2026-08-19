@@ -528,3 +528,222 @@
     }
   }
 }
+
+// ── Action Feedback Banner ───────────────────────────────────────────────────
+
+.action-feedback-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1.25rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  animation: fadeIn 0.25s ease-out;
+
+  &--success {
+    background: rgba(46, 160, 67, 0.15);
+    border: 1px solid rgba(46, 160, 67, 0.4);
+    color: #3fb950;
+  }
+
+  &--error {
+    background: rgba(248, 81, 73, 0.15);
+    border: 1px solid rgba(248, 81, 73, 0.4);
+    color: #f85149;
+  }
+
+  .btn-dismiss {
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 0 0.25rem;
+    opacity: 0.7;
+    &:hover { opacity: 1; }
+  }
+}
+
+// ── Invitations Section & Cards ──────────────────────────────────────────────
+
+.invitations-section {
+  background: rgba(210, 153, 34, 0.04);
+  border: 1px solid rgba(210, 153, 34, 0.2);
+  border-radius: 12px;
+  padding: 1.5rem;
+
+  .invite-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+  }
+
+  .section-count--gold {
+    background: rgba(210, 153, 34, 0.15);
+    color: #d29922;
+    border: 1px solid rgba(210, 153, 34, 0.3);
+  }
+}
+
+.invitations-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.25rem;
+}
+
+.invitation-card {
+  background: #161b22;
+  border: 1px solid rgba(210, 153, 34, 0.3);
+  border-radius: 10px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    border-color: #d29922;
+  }
+
+  .invitation-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .invitation-badge-tag {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    background: rgba(210, 153, 34, 0.18);
+    color: #d29922;
+    border: 1px solid rgba(210, 153, 34, 0.35);
+  }
+
+  .invitation-date {
+    font-size: 0.75rem;
+    color: #8b949e;
+  }
+
+  .invitation-title {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #f0f6fc;
+    margin: 0;
+  }
+
+  .invitation-desc {
+    font-size: 0.85rem;
+    color: #8b949e;
+    margin: 0;
+    line-height: 1.4;
+  }
+
+  .invitation-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding: 0.75rem;
+    background: #0d1117;
+    border-radius: 6px;
+    font-size: 0.82rem;
+
+    .meta-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #c9d1d9;
+
+      strong { color: #58a6ff; }
+    }
+
+    .meta-icon {
+      font-size: 0.85rem;
+      opacity: 0.8;
+    }
+  }
+
+  .invitation-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: auto;
+    padding-top: 0.5rem;
+
+    .btn-accept {
+      flex: 2;
+      background: #238636;
+      color: #ffffff;
+      border: 1px solid rgba(240, 246, 252, 0.1);
+      border-radius: 6px;
+      padding: 0.55rem 0.85rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      transition: background 0.15s ease, transform 0.15s ease;
+
+      &:hover:not(:disabled) {
+        background: #2ea043;
+        transform: translateY(-1px);
+      }
+
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+    }
+
+    .btn-decline {
+      flex: 1;
+      background: transparent;
+      color: #8b949e;
+      border: 1px solid rgba(240, 246, 252, 0.15);
+      border-radius: 6px;
+      padding: 0.55rem 0.85rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+
+      &:hover:not(:disabled) {
+        background: rgba(248, 81, 73, 0.1);
+        border-color: #f85149;
+        color: #f85149;
+      }
+
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+    }
+  }
+}
+
+.btn-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+

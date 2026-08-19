@@ -24,6 +24,18 @@ public interface IUserRepository
     /// <summary>Returns all active students with their submissions and performance profiles.</summary>
     Task<IReadOnlyList<User>> GetAllStudentsWithSubmissionsAsync();
 
+    /// <summary>Returns students taught by/enrolled with the given instructor.</summary>
+    Task<IReadOnlyList<User>> GetStudentsForInstructorAsync(Guid instructorId);
+
+    /// <summary>Finds students by their email addresses.</summary>
+    Task<IReadOnlyList<User>> GetStudentsByEmailsAsync(IEnumerable<string> emails);
+
+    /// <summary>Checks if a student is taught by/enrolled with the given instructor.</summary>
+    Task<bool> IsStudentEnrolledWithInstructorAsync(Guid instructorId, Guid studentId);
+
+    /// <summary>Ensures an InstructorStudent relationship is recorded.</summary>
+    Task EnsureInstructorStudentEnrolledAsync(Guid instructorId, Guid studentId);
+
     /// <summary>Finds a user by ID, username, email, or fullname slug with all submissions and problems.</summary>
     Task<User?> GetUserWithProfileDataAsync(string identifier);
 

@@ -14,7 +14,7 @@ public class ContestService(
     public async Task<List<ContestDto>> GetInstructorContestsAsync(Guid instructorId)
     {
         var contests = await contestRepo.GetAllForInstructorAsync(instructorId);
-        return contests.Select(MapToContestDto).ToList();
+        return contests.Select(c => MapToContestDto(c)).ToList();
     }
 
     public async Task<ContestDto> GetContestByIdAsync(Guid contestId)
@@ -32,12 +32,6 @@ public class ContestService(
 
         if (request.EndAt <= request.StartAt)
             throw new ValidationException("End date must be after start date.");
-
-        if (request.AssignedStudentIds.Count == 0)
-        {
-            var allUsers = await userRepo.GetAllUsersAsync();
-            request.AssignedStudentIds = allUsers.Where(u => u.Role == UserRole.Student).Select(u => u.Id).ToList();
-        }
 
         var instructor = await userRepo.GetByIdAsync(instructorId)
             ?? throw new NotFoundException($"Instructor {instructorId} not found.");
@@ -70,13 +64,57 @@ public class ContestService(
             });
         }
 
-        // Add assigned participants
-        foreach (var studentId in request.AssignedStudentIds.Distinct())
+        // Collect student participants by emails or student IDs
+        var assignedStudents = new List<User>();
+
+        if (request.StudentEmails.Count > 0)
+        {
+            var matchedStudents = await userRepo.GetStudentsByEmailsAsync(request.StudentEmails);
+            assignedStudents.AddRange(matchedStudents);
+
+            // If some emails are not found in the DB, we can still record them or warn if needed
+            var matchedEmails = matchedStudents.Select(s => s.Email.ToLower()).ToHashSet();
+            var missingEmails = request.StudentEmails
+                .Where(e => !string.IsNullOrWhiteSpace(e) && !matchedEmails.Contains(e.Trim().ToLower()))
+                .ToList();
+
+            if (missingEmails.Count > 0 && assignedStudents.Count == 0)
+            {
+                throw new ValidationException($"No registered student accounts found for: {string.Join(", ", missingEmails)}");
+            }
+        }
+
+        if (request.AssignedStudentIds.Count > 0)
+        {
+            foreach (var sid in request.AssignedStudentIds.Distinct())
+            {
+                if (assignedStudents.All(s => s.Id != sid))
+                {
+                    var user = await userRepo.GetByIdAsync(sid);
+                    if (user != null && user.Role == UserRole.Student)
+                    {
+                        assignedStudents.Add(user);
+                    }
+                }
+            }
+        }
+
+        // If no students assigned explicitly, assign existing students of this instructor
+        if (assignedStudents.Count == 0 && request.StudentEmails.Count == 0 && request.AssignedStudentIds.Count == 0)
+        {
+            var instructorStudents = await userRepo.GetStudentsForInstructorAsync(instructorId);
+            assignedStudents.AddRange(instructorStudents);
+        }
+
+        // Add participants with Pending invitation status
+        foreach (var student in assignedStudents.DistinctBy(s => s.Id))
         {
             contest.ContestParticipants.Add(new ContestParticipant
             {
                 ContestId = contest.Id,
-                StudentId = studentId,
+                StudentId = student.Id,
+                InvitedEmail = student.Email,
+                InvitationStatus = InvitationStatus.Pending,
                 Score = 0,
                 ProblemsSolved = 0,
                 Accuracy = 0,
@@ -93,6 +131,22 @@ public class ContestService(
         return MapToContestDto(created ?? contest);
     }
 
+    public async Task RespondToInvitationAsync(Guid contestId, Guid studentId, bool accept)
+    {
+        var participant = await contestRepo.GetParticipantAsync(contestId, studentId)
+            ?? throw new NotFoundException($"Contest invitation for student {studentId} not found.");
+
+        participant.InvitationStatus = accept ? InvitationStatus.Accepted : InvitationStatus.Declined;
+        participant.RespondedAt = DateTime.UtcNow;
+
+        if (accept && participant.Contest != null)
+        {
+            await userRepo.EnsureInstructorStudentEnrolledAsync(participant.Contest.CreatedByInstructorId, studentId);
+        }
+
+        await contestRepo.SaveChangesAsync();
+    }
+
     public async Task<List<ContestResultDto>> GetContestResultsAsync(Guid contestId)
     {
         var participants = await contestRepo.GetParticipantsByContestIdAsync(contestId);
@@ -102,7 +156,10 @@ public class ContestService(
         var results = new List<ContestResultDto>();
         int rank = 1;
 
-        foreach (var p in participants)
+        // Only accepted participants appear in ranked results
+        var accepted = participants.Where(p => p.InvitationStatus == InvitationStatus.Accepted).ToList();
+
+        foreach (var p in accepted)
         {
             results.Add(new ContestResultDto
             {
@@ -127,7 +184,7 @@ public class ContestService(
         var history = await contestRepo.GetStudentContestHistoryAsync(studentId);
         var results = new List<ContestResultDto>();
 
-        foreach (var p in history)
+        foreach (var p in history.Where(x => x.InvitationStatus == InvitationStatus.Accepted))
         {
             int totalProblems = p.Contest?.ContestProblems.Count ?? 0;
             results.Add(new ContestResultDto
@@ -152,16 +209,35 @@ public class ContestService(
     {
         var studentContests = await contestRepo.GetAllForStudentAsync(studentId);
 
+        var pending = new List<ContestDto>();
         var live = new List<ContestDto>();
         var upcoming = new List<ContestDto>();
         var past = new List<StudentPastContestDto>();
 
         foreach (var c in studentContests)
         {
-            var status = c.CalculateCurrentStatus();
-            var dto = MapToContestDto(c);
-            dto.Status = status;
+            var participant = c.ContestParticipants.FirstOrDefault(cp => cp.StudentId == studentId);
+            if (participant == null) continue;
 
+            var status = c.CalculateCurrentStatus();
+            var dto = MapToContestDto(c, studentId);
+            dto.Status = status;
+            dto.MyInvitationStatus = participant.InvitationStatus;
+
+            // 1. Pending Invitation
+            if (participant.InvitationStatus == InvitationStatus.Pending)
+            {
+                pending.Add(dto);
+                continue;
+            }
+
+            // 2. Declined Invitation -> skip from active list
+            if (participant.InvitationStatus == InvitationStatus.Declined)
+            {
+                continue;
+            }
+
+            // 3. Accepted: Live, Upcoming, or Ended
             if (status == ContestStatus.Live)
             {
                 live.Add(dto);
@@ -172,7 +248,6 @@ public class ContestService(
             }
             else if (status == ContestStatus.Ended)
             {
-                var participant = c.ContestParticipants.FirstOrDefault(cp => cp.StudentId == studentId);
                 past.Add(new StudentPastContestDto
                 {
                     ContestId = c.Id,
@@ -182,11 +257,11 @@ public class ContestService(
                     StartAt = c.StartAt,
                     EndAt = c.EndAt,
                     TotalProblems = c.ContestProblems.Count,
-                    ProblemsSolved = participant?.ProblemsSolved ?? 0,
-                    Score = participant?.Score ?? 0,
-                    Rank = participant?.Rank ?? 1,
-                    Accuracy = participant?.Accuracy ?? 0,
-                    FinishedAt = participant?.FinishedAt,
+                    ProblemsSolved = participant.ProblemsSolved,
+                    Score = participant.Score,
+                    Rank = participant.Rank > 0 ? participant.Rank : 1,
+                    Accuracy = participant.Accuracy,
+                    FinishedAt = participant.FinishedAt,
                     Problems = dto.Problems
                 });
             }
@@ -194,17 +269,20 @@ public class ContestService(
 
         return new StudentContestsOverviewDto
         {
-            HasActiveContestNotification = live.Count > 0,
+            HasActiveContestNotification = live.Count > 0 || pending.Count > 0,
             ActiveContestsCount = live.Count,
+            PendingInvitations = pending,
             LiveContests = live,
             UpcomingContests = upcoming,
             PastContests = past
         };
     }
 
-    private static ContestDto MapToContestDto(Contest c)
+    private static ContestDto MapToContestDto(Contest c, Guid? studentId = null)
     {
         var status = c.CalculateCurrentStatus();
+        var myParticipant = studentId.HasValue ? c.ContestParticipants.FirstOrDefault(cp => cp.StudentId == studentId.Value) : null;
+
         return new ContestDto
         {
             Id = c.Id,
@@ -224,10 +302,49 @@ public class ContestService(
                     Order = cp.Order
                 }).ToList(),
             AssignedStudentIds = c.ContestParticipants.Select(cp => cp.StudentId).ToList(),
+            Participants = c.ContestParticipants
+                .Select(cp => new ContestParticipantSummaryDto
+                {
+                    StudentId = cp.StudentId,
+                    StudentName = cp.Student?.FullName ?? cp.InvitedEmail ?? "Student",
+                    StudentEmail = cp.Student?.Email ?? cp.InvitedEmail ?? string.Empty,
+                    InvitationStatus = cp.InvitationStatus,
+                    RespondedAt = cp.RespondedAt,
+                    Score = cp.Score,
+                    ProblemsSolved = cp.ProblemsSolved,
+                    Accuracy = cp.Accuracy,
+                    Rank = cp.Rank
+                }).ToList(),
+            MyInvitationStatus = myParticipant?.InvitationStatus,
             StartAt = c.StartAt,
             EndAt = c.EndAt,
             Status = status,
             CreatedAt = c.CreatedAt
         };
     }
+
+    public async Task<List<StudentCandidateDto>> SearchStudentCandidatesAsync(Guid instructorId, string? query)
+    {
+        var allStudents = await userRepo.GetAllStudentsWithSubmissionsAsync();
+        var q = query?.Trim().ToLowerInvariant();
+
+        var queryable = allStudents.AsEnumerable();
+        if (!string.IsNullOrWhiteSpace(q))
+        {
+            queryable = queryable.Where(s =>
+                s.FullName.ToLowerInvariant().Contains(q) ||
+                s.Email.ToLowerInvariant().Contains(q));
+        }
+
+        return queryable
+            .Take(25)
+            .Select(s => new StudentCandidateDto
+            {
+                Id = s.Id,
+                Name = s.FullName,
+                Email = s.Email
+            })
+            .ToList();
+    }
 }
+
