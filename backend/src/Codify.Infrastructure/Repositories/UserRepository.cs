@@ -53,6 +53,82 @@ public class UserRepository(CodifyDbContext db) : IUserRepository
             .OrderBy(u => u.FullName)
             .ToListAsync();
 
+    public async Task<IReadOnlyList<User>> GetStudentsForInstructorAsync(Guid instructorId)
+    {
+        // 1. Explicitly enrolled students
+        var enrolledIds = await db.InstructorStudents
+            .Where(x => x.InstructorId == instructorId)
+            .Select(x => x.StudentId)
+            .ToListAsync();
+
+        // 2. Contest participants from contests created by this instructor
+        var contestStudentIds = await db.Contests
+            .Where(c => c.CreatedByInstructorId == instructorId)
+            .SelectMany(c => c.ContestParticipants.Select(cp => cp.StudentId))
+            .ToListAsync();
+
+        // 3. Students who submitted to problems authored by this instructor
+        var submitterIds = await db.Problems
+            .Where(p => p.AuthorId == instructorId)
+            .SelectMany(p => p.Submissions.Select(s => s.UserId))
+            .ToListAsync();
+
+        var allTargetIds = enrolledIds
+            .Concat(contestStudentIds)
+            .Concat(submitterIds)
+            .Distinct()
+            .ToList();
+
+        if (allTargetIds.Count == 0)
+            return [];
+
+        return await db.Users
+            .Where(u => allTargetIds.Contains(u.Id) && u.Role == Domain.Enums.UserRole.Student && !u.IsDeleted)
+            .Include(u => u.Submissions)
+            .Include(u => u.PerformanceProfile)
+            .AsSplitQuery()
+            .OrderBy(u => u.FullName)
+            .ToListAsync();
+    }
+
+    public async Task<IReadOnlyList<User>> GetStudentsByEmailsAsync(IEnumerable<string> emails)
+    {
+        var normalized = emails.Select(e => e.Trim().ToLower()).Distinct().ToList();
+        if (normalized.Count == 0) return [];
+
+        return await db.Users
+            .Where(u => normalized.Contains(u.Email.ToLower()) && u.Role == Domain.Enums.UserRole.Student && !u.IsDeleted)
+            .ToListAsync();
+    }
+
+    public async Task<bool> IsStudentEnrolledWithInstructorAsync(Guid instructorId, Guid studentId)
+    {
+        if (await db.InstructorStudents.AnyAsync(x => x.InstructorId == instructorId && x.StudentId == studentId))
+            return true;
+
+        if (await db.Contests.AnyAsync(c => c.CreatedByInstructorId == instructorId && c.ContestParticipants.Any(cp => cp.StudentId == studentId)))
+            return true;
+
+        if (await db.Problems.AnyAsync(p => p.AuthorId == instructorId && p.Submissions.Any(s => s.UserId == studentId)))
+            return true;
+
+        return false;
+    }
+
+    public async Task EnsureInstructorStudentEnrolledAsync(Guid instructorId, Guid studentId)
+    {
+        if (!await db.InstructorStudents.AnyAsync(x => x.InstructorId == instructorId && x.StudentId == studentId))
+        {
+            await db.InstructorStudents.AddAsync(new InstructorStudent
+            {
+                InstructorId = instructorId,
+                StudentId = studentId,
+                EnrolledAt = DateTime.UtcNow
+            });
+            await db.SaveChangesAsync();
+        }
+    }
+
     public async Task<User?> GetUserWithProfileDataAsync(string identifier)
     {
         if (string.IsNullOrWhiteSpace(identifier)) return null;

@@ -42,7 +42,7 @@ public class AnalyticsController(IAnalyticsService analyticsService) : Controlle
         if (!isInstructor && requesterId != id)
             return Forbid();
 
-        var result = await analyticsService.GetStudentAnalyticsAsync(id);
+        var result = await analyticsService.GetStudentAnalyticsAsync(id, isInstructor ? requesterId : null);
         return Ok(ApiResponse.Ok(result));
     }
 
@@ -69,7 +69,8 @@ public class AnalyticsController(IAnalyticsService analyticsService) : Controlle
     [Authorize(Roles = "Instructor")]
     public async Task<IActionResult> GetIntegrityFlags()
     {
-        var result = await analyticsService.GetIntegrityFlagsAsync();
+        var instructorId = User.GetUserId();
+        var result = await analyticsService.GetIntegrityFlagsAsync(instructorId);
         return Ok(ApiResponse.Ok(result));
     }
 

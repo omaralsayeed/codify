@@ -15,6 +15,7 @@ public class CreateContestRequest
     public List<Guid> ProblemIds { get; set; } = [];
 
     public List<Guid> AssignedStudentIds { get; set; } = [];
+    public List<string> StudentEmails { get; set; } = [];
 
     [Required]
     public DateTime StartAt { get; set; }

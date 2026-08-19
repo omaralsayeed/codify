@@ -4,6 +4,7 @@ public class StudentContestsOverviewDto
 {
     public bool HasActiveContestNotification { get; set; }
     public int ActiveContestsCount { get; set; }
+    public List<ContestDto> PendingInvitations { get; set; } = [];
     public List<ContestDto> LiveContests { get; set; } = [];
     public List<ContestDto> UpcomingContests { get; set; } = [];
     public List<StudentPastContestDto> PastContests { get; set; } = [];

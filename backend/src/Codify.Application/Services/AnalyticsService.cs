@@ -15,8 +15,15 @@ public class AnalyticsService(
     // Student analytics
     // ─────────────────────────────────────────────────────────────────────────
 
-    public async Task<StudentAnalyticsResponse> GetStudentAnalyticsAsync(Guid targetUserId)
+    public async Task<StudentAnalyticsResponse> GetStudentAnalyticsAsync(Guid targetUserId, Guid? requestingInstructorId = null)
     {
+        if (requestingInstructorId.HasValue)
+        {
+            var isEnrolled = await userRepo.IsStudentEnrolledWithInstructorAsync(requestingInstructorId.Value, targetUserId);
+            if (!isEnrolled)
+                throw new ForbiddenException("You can only view analytics for your enrolled students.");
+        }
+
         var user = await userRepo.GetWithAnalyticsDataAsync(targetUserId)
             ?? throw new NotFoundException($"User {targetUserId} not found.");
 
@@ -119,12 +126,15 @@ public class AnalyticsService(
             ?? throw new NotFoundException($"Instructor {instructorId} not found.");
 
         var authoredProblems = instructor.AuthoredProblems.ToList();
-        var allStudents = await userRepo.GetAllStudentsWithSubmissionsAsync();
+        var instructorStudents = await userRepo.GetStudentsForInstructorAsync(instructorId);
         var allActiveProblems = await problemRepo.GetAllActiveWithTagsAsync();
         var aiFlags = await feedbackRepo.GetAiGeneratedFlagsAsync();
 
-        // Build per-student summary for all registered students in the database
-        var students = allStudents.Select(student =>
+        var instructorStudentIds = instructorStudents.Select(s => s.Id).ToHashSet();
+        var cohortAiFlags = aiFlags.Where(f => f.Submission?.UserId != null && instructorStudentIds.Contains(f.Submission.UserId)).ToList();
+
+        // Build per-student summary ONLY for students taught by this instructor
+        var students = instructorStudents.Select(student =>
         {
             var studentSubs = student.Submissions.ToList();
             int stuTotal = studentSubs.Count;
@@ -156,8 +166,8 @@ public class AnalyticsService(
         .ThenBy(s => s.FullName)
         .ToList();
 
-        // All submissions across the platform
-        var allSubmissionsList = allStudents.SelectMany(s => s.Submissions).ToList();
+        // Submissions for this instructor's student cohort
+        var allSubmissionsList = instructorStudents.SelectMany(s => s.Submissions).ToList();
 
         // Calculate overview stats
         var allAuthoredSubmissions = authoredProblems.SelectMany(p => p.Submissions).ToList();
@@ -229,11 +239,11 @@ public class AnalyticsService(
             FullName                   = instructor.FullName,
             Email                      = instructor.Email,
             TotalProblemsAuthored      = authoredProblems.Count,
-            TotalStudentsReached       = allStudents.Count,
-            TotalSubmissionsReceived   = totalReceived > 0 ? totalReceived : allStudents.Sum(s => s.Submissions.Count),
+            TotalStudentsReached       = instructorStudents.Count,
+            TotalSubmissionsReceived   = totalReceived > 0 ? totalReceived : instructorStudents.Sum(s => s.Submissions.Count),
             OverallAcceptRatePercent   = acceptRate,
             TotalAssignedProblems      = allActiveProblems.Count,
-            IntegrityFlagsCount        = aiFlags.Count,
+            IntegrityFlagsCount        = cohortAiFlags.Count,
             DailyActivity              = dailyActivity,
             TopicPerformance           = topicMasteryList,
             Students                   = students
@@ -244,9 +254,16 @@ public class AnalyticsService(
     // Integrity flags (AI-generated code detection)
     // ─────────────────────────────────────────────────────────────────────────
 
-    public async Task<List<IntegrityFlagResponse>> GetIntegrityFlagsAsync()
+    public async Task<List<IntegrityFlagResponse>> GetIntegrityFlagsAsync(Guid? instructorId = null)
     {
         var flags = await feedbackRepo.GetAiGeneratedFlagsAsync();
+
+        if (instructorId.HasValue)
+        {
+            var instructorStudents = await userRepo.GetStudentsForInstructorAsync(instructorId.Value);
+            var allowedStudentIds = instructorStudents.Select(s => s.Id).ToHashSet();
+            flags = flags.Where(f => f.Submission?.UserId != null && allowedStudentIds.Contains(f.Submission.UserId)).ToList();
+        }
 
         return flags.Select(f => new IntegrityFlagResponse
         {
