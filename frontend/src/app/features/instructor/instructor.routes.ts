@@ -47,5 +47,11 @@ export const INSTRUCTOR_ROUTES: Routes = [
       },
     ],
   },
+  {
+    path: 'profile',
+    loadComponent: () =>
+      import('./instructor-profile/instructor-profile.component').then(m => m.InstructorProfileComponent),
+    canActivate: [authGuard, instructorGuard],
+  },
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
 ];

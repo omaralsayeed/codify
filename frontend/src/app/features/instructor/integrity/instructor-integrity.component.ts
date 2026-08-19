@@ -1,4 +1,4 @@
-import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { InstructorService } from '../../../core/services/instructor.service';
@@ -15,18 +15,36 @@ const SEVERITY_ORDER: Record<string, number> = { high: 0, medium: 1, low: 2 };
   templateUrl: './instructor-integrity.component.html',
   styleUrl: './instructor-integrity.component.scss',
 })
-export class InstructorIntegrityComponent {
+export class InstructorIntegrityComponent implements OnInit {
   private readonly instructorSvc = inject(InstructorService);
 
-  /** Flags sorted: highest severity first, then most recent within the same severity. */
-  readonly flags: IntegrityFlag[] = this.instructorSvc
-    .getIntegrityFlags()
-    .slice()
-    .sort((a, b) => {
-      const sevDiff = (SEVERITY_ORDER[a.severity] ?? 3) - (SEVERITY_ORDER[b.severity] ?? 3);
-      if (sevDiff !== 0) return sevDiff;
-      return new Date(b.detectedAt).getTime() - new Date(a.detectedAt).getTime();
+  private readonly _flags = signal<IntegrityFlag[]>(
+    this.instructorSvc
+      .getIntegrityFlags()
+      .slice()
+      .sort((a, b) => {
+        const sevDiff = (SEVERITY_ORDER[a.severity] ?? 3) - (SEVERITY_ORDER[b.severity] ?? 3);
+        if (sevDiff !== 0) return sevDiff;
+        return new Date(b.detectedAt).getTime() - new Date(a.detectedAt).getTime();
+      })
+  );
+
+  get flags(): IntegrityFlag[] {
+    return this._flags();
+  }
+
+  ngOnInit(): void {
+    this.instructorSvc.getIntegrityFlags$().subscribe(flags => {
+      if (flags && flags.length > 0) {
+        const sorted = flags.slice().sort((a, b) => {
+          const sevDiff = (SEVERITY_ORDER[a.severity] ?? 3) - (SEVERITY_ORDER[b.severity] ?? 3);
+          if (sevDiff !== 0) return sevDiff;
+          return new Date(b.detectedAt).getTime() - new Date(a.detectedAt).getTime();
+        });
+        this._flags.set(sorted);
+      }
     });
+  }
 
   // ── Badge helpers ─────────────────────────────────────────────────────────
 

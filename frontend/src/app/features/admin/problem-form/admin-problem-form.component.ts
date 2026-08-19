@@ -4,7 +4,10 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { AdminProblemRow } from '../problems/admin-problems.component';
+import {
+  AdminService, CreateProblemBody,
+} from '../../../core/services/admin.service';
+import { difficultyToNumber, Difficulty } from '../../../core/utils/enum-mappers';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -25,30 +28,6 @@ interface ProblemFormData {
   memoryLimitMb: number;
 }
 
-// ── Mock problem data for edit mode (same source as problems list) ─────────────
-
-const MOCK_PROBLEMS: Record<string, AdminProblemRow & { statement: string; constraints: string; testCases: TestCase[] }> = {
-  p01: {
-    id: 'p01', title: 'Two Sum', difficulty: 'easy', tags: ['Arrays', 'Hash Map'],
-    solvedCount: 36045, totalSubmissions: 48200, isActive: true, createdAt: '2026-04-01T10:00:00Z',
-    statement: 'Given an array of integers `nums` and an integer `target`, return indices of the two numbers such that they add up to `target`.\n\nYou may assume that each input would have exactly one solution, and you may not use the same element twice.',
-    constraints: '2 <= nums.length <= 10^4\n-10^9 <= nums[i] <= 10^9\n-10^9 <= target <= 10^9\nOnly one valid answer exists.',
-    testCases: [
-      { input: 'nums = [2,7,11,15], target = 9', expectedOutput: '[0,1]' },
-      { input: 'nums = [3,2,4], target = 6',     expectedOutput: '[1,2]' },
-    ],
-  },
-  p06: {
-    id: 'p06', title: 'Merge Intervals', difficulty: 'medium', tags: ['Sorting', 'Intervals'],
-    solvedCount: 16884, totalSubmissions: 24000, isActive: true, createdAt: '2026-04-11T10:00:00Z',
-    statement: 'Given an array of intervals where intervals[i] = [starti, endi], merge all overlapping intervals, and return an array of the non-overlapping intervals that cover all the intervals in the input.',
-    constraints: '1 <= intervals.length <= 10^4\nintervals[i].length == 2\n0 <= starti <= endi <= 10^4',
-    testCases: [
-      { input: 'intervals = [[1,3],[2,6],[8,10],[15,18]]', expectedOutput: '[[1,6],[8,10],[15,18]]' },
-    ],
-  },
-};
-
 const ALL_AVAILABLE_TAGS = [
   'Arrays', 'Hash Map', 'Graphs', 'BFS', 'DFS',
   'Dynamic Programming', 'Recursion', 'Greedy',
@@ -67,54 +46,62 @@ const ALL_AVAILABLE_TAGS = [
   styleUrl:    './admin-problem-form.component.scss',
 })
 export class AdminProblemFormComponent implements OnInit {
-  private readonly route  = inject(ActivatedRoute);
-  private readonly router = inject(Router);
+  private readonly route    = inject(ActivatedRoute);
+  private readonly router   = inject(Router);
+  private readonly adminSvc = inject(AdminService);
 
   readonly availableTags = ALL_AVAILABLE_TAGS;
 
   // ── Mode ───────────────────────────────────────────────────────────────────
-  readonly isEditMode = signal(false);
-  readonly problemId  = signal<string | null>(null);
-  readonly pageTitle  = computed(() => this.isEditMode() ? 'Edit Problem' : 'Add Problem');
-  readonly submitLabel = computed(() => this.isEditMode() ? 'Save Changes' : 'Create Problem');
+  readonly isEditMode   = signal(false);
+  readonly problemId    = signal<string | null>(null);
+  readonly pageTitle    = computed(() => this.isEditMode() ? 'Edit Problem' : 'Add Problem');
+  readonly submitLabel  = computed(() => this.isEditMode() ? 'Save Changes' : 'Create Problem');
+
+  // ── Loading state (edit mode only) ─────────────────────────────────────────
+  readonly isLoadingProblem = signal(false);
+  readonly loadError        = signal<string | null>(null);
 
   // ── Form state ─────────────────────────────────────────────────────────────
   readonly form = signal<ProblemFormData>({
-    title:        '',
-    difficulty:   '',
-    tags:         [],
-    statement:    '',
-    constraints:  '',
-    testCases:    [{ input: '', expectedOutput: '' }],
-    isActive:     true,
-    timeLimitMs:  2000,
+    title:         '',
+    difficulty:    '',
+    tags:          [],
+    statement:     '',
+    constraints:   '',
+    testCases:     [{ input: '', expectedOutput: '' }],
+    isActive:      true,
+    timeLimitMs:   2000,
     memoryLimitMb: 256,
   });
 
-  // ── Validation ─────────────────────────────────────────────────────────────
-  readonly touched      = signal(false);
-  readonly isSubmitting = signal(false);
+  // ── Submit state ───────────────────────────────────────────────────────────
+  readonly touched       = signal(false);
+  readonly isSubmitting  = signal(false);
   readonly submitSuccess = signal(false);
+  readonly formError     = signal<string | null>(null);
 
+  // ── Validation ─────────────────────────────────────────────────────────────
   readonly errors = computed(() => {
     if (!this.touched()) return {} as Record<string, string>;
     const f = this.form();
     const e: Record<string, string> = {};
 
-    if (!f.title.trim())                        e['title']      = 'Title is required.';
-    else if (f.title.trim().length < 3)         e['title']      = 'Title must be at least 3 characters.';
-    if (!f.difficulty)                          e['difficulty'] = 'Difficulty is required.';
-    if (f.tags.length === 0)                    e['tags']       = 'At least one tag is required.';
-    if (!f.statement.trim())                    e['statement']  = 'Problem statement is required.';
-    else if (f.statement.trim().length < 50)    e['statement']  = 'Statement must be at least 50 characters.';
-    if (f.testCases.length === 0)               e['testCases']  = 'At least one test case is required.';
+    if (!f.title.trim())                     e['title']      = 'Title is required.';
+    else if (f.title.trim().length < 3)      e['title']      = 'Title must be at least 3 characters.';
+    if (!f.difficulty)                       e['difficulty'] = 'Difficulty is required.';
+    if (f.tags.length === 0)                 e['tags']       = 'At least one tag is required.';
+    if (!f.statement.trim())                 e['statement']  = 'Problem statement is required.';
+    else if (f.statement.trim().length < 50) e['statement']  = 'Statement must be at least 50 characters.';
+    if (f.testCases.length === 0)            e['testCases']  = 'At least one test case is required.';
     else if (f.testCases.some(tc => !tc.input.trim() || !tc.expectedOutput.trim()))
-                                                e['testCases']  = 'All test cases must have input and expected output.';
-
+                                             e['testCases']  = 'All test cases must have input and expected output.';
     return e;
   });
 
-  readonly isValid = computed(() => Object.keys(this.errors()).length === 0 && this.touched());
+  readonly isValid = computed(() =>
+    Object.keys(this.errors()).length === 0 && this.touched()
+  );
 
   // ── Init ───────────────────────────────────────────────────────────────────
   ngOnInit(): void {
@@ -127,18 +114,38 @@ export class AdminProblemFormComponent implements OnInit {
   }
 
   private loadProblem(id: string): void {
-    const found = MOCK_PROBLEMS[id];
-    if (!found) return;
-    this.form.set({
-      title:         found.title,
-      difficulty:    found.difficulty,
-      tags:          [...found.tags],
-      statement:     found.statement,
-      constraints:   found.constraints,
-      testCases:     found.testCases.map(tc => ({ ...tc })),
-      isActive:      found.isActive,
-      timeLimitMs:   2000,
-      memoryLimitMb: 256,
+    this.isLoadingProblem.set(true);
+    this.loadError.set(null);
+
+    this.adminSvc.getProblemById(id).subscribe({
+      next: raw => {
+        // Map backend detail shape → form data
+        this.form.set({
+          title:         raw.title ?? '',
+          difficulty:    raw.difficulty ?? '',   // already mapped by AdminService
+          tags:          raw.tags ?? [],
+          statement:     raw.statement ?? raw.description ?? '',
+          constraints:   Array.isArray(raw.constraints)
+                           ? raw.constraints.join('\n')
+                           : (raw.constraints ?? ''),
+          testCases:     (raw.sampleTestCases ?? raw.examples ?? []).map((tc: any) => ({
+            input:          tc.input ?? '',
+            expectedOutput: tc.expectedOutput ?? tc.output ?? '',
+          })),
+          isActive:      raw.isActive ?? true,
+          timeLimitMs:   raw.timeLimitMs ?? 2000,
+          memoryLimitMb: raw.memoryLimitMb ?? 256,
+        });
+        this.isLoadingProblem.set(false);
+      },
+      error: err => {
+        this.loadError.set(
+          err.status === 404
+            ? 'Problem not found.'
+            : 'Failed to load problem. Make sure the backend is running.'
+        );
+        this.isLoadingProblem.set(false);
+      },
     });
   }
 
@@ -188,21 +195,58 @@ export class AdminProblemFormComponent implements OnInit {
   // ── Submit ─────────────────────────────────────────────────────────────────
   onSubmit(): void {
     this.touched.set(true);
+    this.formError.set(null);
     if (!this.isValid()) return;
+
+    const f = this.form();
+    const body: CreateProblemBody = {
+      title:           f.title.trim(),
+      difficulty:      difficultyToNumber(f.difficulty as Difficulty),
+      tags:            f.tags,
+      statement:       f.statement.trim(),
+      constraints:     f.constraints.trim(),
+      sampleTestCases: f.testCases,
+      isActive:        f.isActive,
+      timeLimitMs:     f.timeLimitMs,
+      memoryLimitMb:   f.memoryLimitMb,
+    };
 
     this.isSubmitting.set(true);
 
-    // Simulate API call — replace with real HTTP POST/PATCH when backend ready
-    setTimeout(() => {
-      this.isSubmitting.set(false);
-      this.submitSuccess.set(true);
-      // Navigate back to problems list after short delay
-      setTimeout(() => this.router.navigate(['../../../problems'], { relativeTo: this.route }), 1200);
-    }, 800);
+    const call$ = this.isEditMode()
+      ? this.adminSvc.updateProblem(this.problemId()!, body)
+      : this.adminSvc.createProblem(body);
+
+    call$.subscribe({
+      next: () => {
+        this.isSubmitting.set(false);
+        this.submitSuccess.set(true);
+        setTimeout(() => this.navigateToList(), 1200);
+      },
+      error: err => {
+        this.isSubmitting.set(false);
+        const code = err?.error?.errorCode;
+        if (code === 'CONFLICT') {
+          this.formError.set('A problem with this title already exists.');
+        } else if (err.status === 400) {
+          this.formError.set(err.error?.message || 'Validation error. Check your fields.');
+        } else {
+          this.formError.set('Something went wrong. Please try again.');
+        }
+      },
+    });
   }
 
   onCancel(): void {
-    this.router.navigate(['../../../problems'], { relativeTo: this.route });
+    this.navigateToList();
+  }
+
+  private navigateToList(): void {
+    // From /admin/problems/new or /admin/problems/:id/edit → go up to /admin/problems
+    const segments = this.isEditMode()
+      ? ['../../problems']   // from problems/:id/edit — go up 2 levels
+      : ['../problems'];     // from problems/new — go up 1 level
+    this.router.navigate(segments, { relativeTo: this.route });
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────

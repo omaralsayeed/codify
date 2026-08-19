@@ -1,10 +1,9 @@
-import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { InstructorService } from '../../../core/services/instructor.service';
-import { ProgressService } from '../../../core/services/progress.service';
 import { ContestService } from '../../../core/services/contest.service';
-import { ClassProgress, DailyActivity } from '../../../core/models/progress.model';
+import { DailyActivity } from '../../../core/models/progress.model';
 
 interface TrendPoint {
   x: number;
@@ -30,73 +29,77 @@ interface ContestSummaryRow {
   templateUrl: './instructor-overview.component.html',
   styleUrl: './instructor-overview.component.scss',
 })
-export class InstructorOverviewComponent {
+export class InstructorOverviewComponent implements OnInit {
   private readonly instructorSvc = inject(InstructorService);
-  private readonly progressSvc   = inject(ProgressService);
   private readonly contestSvc    = inject(ContestService);
-
-  readonly progress: ClassProgress = this.instructorSvc.getClassProgress();
 
   // ── Metric cards ──────────────────────────────────────────────────────────
 
-  readonly metrics = [
+  private readonly _metrics = signal([
     {
       label: 'Active Students',
-      value: this.progress.activeStudents,
-      sub: `of ${this.progress.enrolledStudents} enrolled`,
+      value: 0,
+      sub: 'in platform',
       colorClass: 'card--teal',
       icon: '👥',
     },
     {
       label: 'Class Avg Score',
-      value: this.progress.classAvgScore,
+      value: 0,
       sub: 'out of 100',
       colorClass: 'card--blue',
       icon: '📊',
     },
     {
       label: 'Integrity Flags',
-      value: this.progress.integrityFlags,
+      value: 0,
       sub: 'need review',
-      colorClass: this.progress.integrityFlags > 0 ? 'card--red' : 'card--teal',
+      colorClass: 'card--teal',
       icon: '⚑',
     },
     {
       label: 'Assigned Problems',
-      value: this.progress.assignedProblems,
+      value: 0,
       sub: 'total problems',
       colorClass: 'card--gold',
       icon: '🗂️',
     },
-  ];
+  ]);
 
-  // ── Activity trend chart ──────────────────────────────────────────────────
+  get metrics() {
+    return this._metrics();
+  }
 
-  readonly trendW    = 520;
-  readonly trendH    = 80;
-  readonly padY      = 6;
-  private  readonly padX = 0;
+  // ── Activity trend chart (reactive) ───────────────────────────────────────
 
-  readonly activityDays: DailyActivity[] = this.progressSvc.getClassActivityTrend();
+  readonly trendW = 520;
+  readonly trendH = 80;
+  readonly padY   = 6;
 
-  readonly trendPoints: TrendPoint[] = (() => {
-    const days = this.activityDays;
-    const max  = Math.max(...days.map(d => d.submissions), 1);
+  readonly activityDays = signal<DailyActivity[]>([]);
+
+  private readonly _trendMax = computed(() => Math.max(...this.activityDays().map(d => d.submissions), 1));
+  private readonly _trendTotal = computed(() => this.activityDays().reduce((s, d) => s + d.submissions, 0));
+
+  private readonly _trendPoints = computed<TrendPoint[]>(() => {
+    const days = this.activityDays();
+    const max  = this._trendMax();
     const W    = this.trendW;
     const H    = this.trendH;
     const pY   = this.padY;
 
+    if (days.length === 0) return [];
+
     return days.map((d, i) => ({
-      x:           (i / (days.length - 1)) * W,
+      x:           days.length > 1 ? (i / (days.length - 1)) * W : 0,
       y:           H - pY - (d.submissions / max) * (H - pY * 2),
       submissions: d.submissions,
       dayLabel:    d.dayLabel,
     }));
-  })();
+  });
 
-  /** Smooth bezier path through trend points */
-  readonly trendPath: string = (() => {
-    const pts = this.trendPoints;
+  private readonly _trendPath = computed<string>(() => {
+    const pts = this._trendPoints();
     if (pts.length < 2) return '';
     let d = `M ${pts[0].x} ${pts[0].y}`;
     for (let i = 1; i < pts.length; i++) {
@@ -106,11 +109,10 @@ export class InstructorOverviewComponent {
       d += ` C ${cpX} ${p.y}, ${cpX} ${c.y}, ${c.x} ${c.y}`;
     }
     return d;
-  })();
+  });
 
-  /** Closed fill path (area under curve) */
-  readonly trendArea: string = (() => {
-    const pts = this.trendPoints;
+  private readonly _trendArea = computed<string>(() => {
+    const pts = this._trendPoints();
     const H   = this.trendH;
     if (pts.length < 2) return '';
     let d = `M ${pts[0].x} ${H} L ${pts[0].x} ${pts[0].y}`;
@@ -122,19 +124,21 @@ export class InstructorOverviewComponent {
     }
     d += ` L ${pts[pts.length - 1].x} ${H} Z`;
     return d;
-  })();
+  });
 
-  readonly trendMax = Math.max(...this.activityDays.map(d => d.submissions), 1);
-  readonly trendTotal = this.activityDays.reduce((s, d) => s + d.submissions, 0);
+  get trendMax(): number { return this._trendMax(); }
+  get trendTotal(): number { return this._trendTotal(); }
+  get trendPoints(): TrendPoint[] { return this._trendPoints(); }
+  get trendPath(): string { return this._trendPath(); }
+  get trendArea(): string { return this._trendArea(); }
 
-  // Show every other label on x-axis to avoid crowding
-  showLabel(i: number): boolean { return i % 2 === 0; }
+  // ── Topic mastery (reactive) ───────────────────────────────────────────────
 
-  // ── Topic mastery ─────────────────────────────────────────────────────────
+  private readonly _sortedTopics = signal<{ topic: string; percentage: number }[]>([]);
 
-  /** Topics sorted descending by mastery percentage */
-  readonly sortedTopics = [...this.progress.topicMastery]
-    .sort((a, b) => b.percentage - a.percentage);
+  get sortedTopics() {
+    return this._sortedTopics();
+  }
 
   readonly masteryGridLines = [25, 50, 75, 100];
 
@@ -146,33 +150,109 @@ export class InstructorOverviewComponent {
   }
 
   // ── Contest summary (ended only, most recent 6) ───────────────────────────
-
-  /** Max 6 most recent ended contests, newest first */
   readonly MAX_CONTESTS = 6;
+  private readonly _contestSummaries = signal<ContestSummaryRow[]>([]);
+  get contestSummaries(): ContestSummaryRow[] { return this._contestSummaries(); }
+  readonly totalEndedContests = computed(() => this._contestSummaries().length);
+  get hasMoreContests(): boolean { return this.totalEndedContests() > this.MAX_CONTESTS; }
 
-  readonly contestSummaries: ContestSummaryRow[] = (() => {
-    const ended = this.contestSvc.getContests()
-      .filter(c => c.status === 'ended')
-      .sort((a, b) => new Date(b.endAt).getTime() - new Date(a.endAt).getTime())
-      .slice(0, this.MAX_CONTESTS);
+  // ── OnInit data loader ────────────────────────────────────────────────────
 
-    return ended.map(c => {
-      const results         = this.contestSvc.getContestResults(c.id);
-      const participantCount = results.length;
-      const assignedCount    = c.assignedStudentIds.length;
-      const participationRate = assignedCount > 0
-        ? Math.round((participantCount / assignedCount) * 100)
-        : 0;
-      const avgScore = participantCount > 0
-        ? Math.round(results.reduce((s, r) => s + r.score, 0) / participantCount)
-        : 0;
+  ngOnInit(): void {
+    this.instructorSvc.getOverview$().subscribe(data => {
+      if (data) {
+        // 1. Update Metrics Cards
+        this._metrics.set([
+          {
+            label: 'Active Students',
+            value: data.totalStudentsReached,
+            sub: `${data.totalStudentsReached} active students`,
+            colorClass: 'card--teal',
+            icon: '👥',
+          },
+          {
+            label: 'Class Avg Score',
+            value: Math.round(data.overallAcceptRatePercent),
+            sub: 'out of 100',
+            colorClass: 'card--blue',
+            icon: '📊',
+          },
+          {
+            label: 'Integrity Flags',
+            value: data.integrityFlagsCount ?? 0,
+            sub: 'need review',
+            colorClass: (data.integrityFlagsCount ?? 0) > 0 ? 'card--red' : 'card--teal',
+            icon: '⚑',
+          },
+          {
+            label: 'Assigned Problems',
+            value: data.totalAssignedProblems || data.totalProblemsAuthored || 0,
+            sub: 'total problems',
+            colorClass: 'card--gold',
+            icon: '🗂️',
+          },
+        ]);
 
-      return { id: c.id, title: c.title, participationRate, participantCount, assignedCount, avgScore };
+        // 2. Update Submission Activity Trend
+        if (data.dailyActivity && data.dailyActivity.length > 0) {
+          this.activityDays.set(
+            data.dailyActivity.map(d => ({
+              date: d.date,
+              dayLabel: d.dayLabel,
+              submissions: d.submissions,
+            }))
+          );
+        }
+
+        // 3. Update Topic Mastery Bars
+        if (data.topicPerformance && data.topicPerformance.length > 0) {
+          this._sortedTopics.set(
+            [...data.topicPerformance].sort((a, b) => b.percentage - a.percentage)
+          );
+        }
+      }
     });
-  })();
 
-  readonly totalEndedContests = this.contestSvc.getContests()
-    .filter(c => c.status === 'ended').length;
+    this.instructorSvc.getIntegrityFlags$().subscribe(flags => {
+      if (flags) {
+        this._metrics.update(m => [
+          m[0],
+          m[1],
+          {
+            ...m[2],
+            value: flags.length,
+            colorClass: flags.length > 0 ? 'card--red' : 'card--teal',
+          },
+          m[3],
+        ]);
+      }
+    });
 
-  readonly hasMoreContests = this.totalEndedContests > this.MAX_CONTESTS;
+    this.contestSvc.getContests$().subscribe(contests => {
+      if (contests) {
+        const ended = contests
+          .filter(c => c.status === 'ended')
+          .sort((a, b) => new Date(b.endAt).getTime() - new Date(a.endAt).getTime())
+          .slice(0, this.MAX_CONTESTS);
+
+        const rows: ContestSummaryRow[] = ended.map(c => {
+          const results = this.contestSvc.getContestResults(c.id);
+          const participantCount = results.length;
+          const assignedCount = c.assignedStudentIds.length;
+          const participationRate = assignedCount > 0
+            ? Math.round((participantCount / assignedCount) * 100)
+            : 0;
+          const avgScore = participantCount > 0
+            ? Math.round(results.reduce((s, r) => s + r.score, 0) / participantCount)
+            : 0;
+
+          return { id: c.id, title: c.title, participationRate, participantCount, assignedCount, avgScore };
+        });
+
+        this._contestSummaries.set(rows);
+      }
+    });
+  }
+
+  showLabel(i: number): boolean { return i % 2 === 0; }
 }

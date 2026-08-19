@@ -1,7 +1,10 @@
-import { Component, OnInit, OnDestroy, inject, HostListener, signal, ElementRef, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, HostListener, signal, ElementRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
+import { MonacoEditorModule } from 'ngx-monaco-editor-v2';
+import { registerCustomCompletions } from '../../core/monaco/custom-completions';
 import { AuthService } from '../../core/services/auth.service';
 import { SubmissionService } from '../../core/services/submission.service';
 import { HintService } from '../../core/services/hint.service';
@@ -55,7 +58,7 @@ export interface HintHistoryItem {
 @Component({
   selector: 'app-problem-page',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, FormsModule, MonacoEditorModule],
   templateUrl: './problem-page.component.html',
   styleUrl: './problem-page.component.scss',
 })
@@ -67,9 +70,19 @@ export class ProblemPageComponent implements OnInit, OnDestroy {
   private  readonly route          = inject(ActivatedRoute);
   private  readonly elRef          = inject(ElementRef);
   private  readonly router         = inject(Router);
+  private  readonly zone           = inject(NgZone);
 
-  /** Direct reference to the code textarea for imperative value sync after hint apply */
-  @ViewChild('editorTextarea') private editorTextareaRef?: ElementRef<HTMLTextAreaElement>;
+  /** Monaco editor instance — set via (onInit) binding */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private monacoEditor: any = null;
+
+  /**
+   * Passed to [model] on <ngx-monaco-editor>.
+   * Drives both the displayed code AND the active syntax language.
+   * We rebuild this object whenever the code or language changes so
+   * Monaco's ControlValueAccessor picks up the new value.
+   */
+  editorModel: { value: string; language: string } = { value: '', language: 'python' };
 
   // ── Problem data ──────────────────────────────────────────────────────────
   problemId: string = '';
@@ -148,10 +161,12 @@ public:
 
   // ── Test cases ────────────────────────────────────────────────────────────
   testCases = [
-    { id: 1, label: 'Case 1', nums: '[2,7,11,15]', target: '9',  expected: '[0,1]' },
-    { id: 2, label: 'Case 2', nums: '[3,2,4]',     target: '6',  expected: '[1,2]' },
-    { id: 3, label: 'Case 3', nums: '[3,3]',        target: '6',  expected: '[0,1]' },
+    { id: 1, label: 'Case 1', nums: '[2,7,11,15]', target: '9',  expected: '[0,1]', isCustom: false },
+    { id: 2, label: 'Case 2', nums: '[3,2,4]',     target: '6',  expected: '[1,2]', isCustom: false },
+    { id: 3, label: 'Case 3', nums: '[3,3]',        target: '6',  expected: '[0,1]', isCustom: false },
   ];
+  
+  private nextCustomTestId = 1000; // Start custom IDs at 1000 to avoid conflicts
 
   // ── Run state ─────────────────────────────────────────────────────────────
   runPhase: RunPhase = 'idle';
@@ -159,11 +174,23 @@ public:
   runError:  ServiceError    | null = null;
 
   get currentActualOutput(): string {
+    // First check if we have submission results (from Submit button)
+    if (this.submitResult?.testCaseResults?.length) {
+      const testCase = this.submitResult.testCaseResults[this.activeTestCase];
+      return testCase?.actualOutput ?? '';
+    }
+    // Fall back to run results (from Run button)
     if (!this.runResult?.testResults?.length) return '';
     return this.runResult.testResults[this.activeTestCase]?.actualOutput ?? '';
   }
 
   get currentConsoleOutput(): string {
+    // First check if we have submission results (from Submit button)
+    if (this.submitResult?.testCaseResults?.length) {
+      const testCase = this.submitResult.testCaseResults[this.activeTestCase];
+      return testCase?.stderr ?? '';
+    }
+    // Fall back to run results (from Run button)
     if (!this.runResult) return '';
     return this.runResult.stderr || this.runResult.stdout || '';
   }
@@ -310,7 +337,120 @@ public:
   private hintOverlayIntervalId: ReturnType<typeof setInterval> | null = null;
 
   // ── Editor highlight state (Chunk 8) ─────────────────────────────────────
-  editorHighlighting: boolean = false;  // drives .editor-textarea--highlight class
+  editorHighlighting: boolean = false;  // drives .monaco-editor-host--highlight class
+
+  // ── Theme state ───────────────────────────────────────────────────────────
+  isDarkTheme = true;  // default dark; toggled by the sun/moon button
+
+  /** File extension shown in the editor filename pill */
+  get fileExtension(): string {
+    const map: Record<string, string> = {
+      python: 'py', csharp: 'cs', javascript: 'js', java: 'java', cpp: 'cpp',
+    };
+    return map[this.selectedLanguage] ?? 'txt';
+  }
+
+  // ── Monaco editor options ─────────────────────────────────────────────────
+
+  /** Maps our language values to Monaco language IDs */
+  private monacoLanguage(lang: string): string {
+    const map: Record<string, string> = {
+      python:     'python',
+      csharp:     'csharp',
+      javascript: 'javascript',
+      java:       'java',
+      cpp:        'cpp',
+    };
+    return map[lang] ?? 'plaintext';
+  }
+
+  /** Options object passed to <ngx-monaco-editor [options]> — language NOT included here, handled via [model] */
+  /** IMPORTANT: plain property not a getter — a getter returns a new object every CD cycle
+   *  which triggers the library's effect() → reinit() → editor wiped loop. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  readonly editorOptions: any = {
+    theme:                      'vs-dark',
+    fontSize:                   13,
+    fontFamily:                 'Consolas, "Courier New", monospace',
+    lineHeight:                 20,
+    minimap:                    { enabled: false },
+    scrollBeyondLastLine:       false,
+    automaticLayout:            true,
+    tabSize:                    4,
+    wordWrap:                   'off',
+    quickSuggestions:           true,
+    suggestOnTriggerCharacters: true,
+    showFoldingControls:        'never',   // hide gutter fold arrows; folding still works via keyboard
+    scrollbar: {
+      verticalScrollbarSize:    10,
+      horizontalScrollbarSize:  10,
+    },
+  };
+
+  /** Called by (onInit) once Monaco is ready — stores the editor instance */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onMonacoInit(editor: any): void {
+    this.monacoEditor = editor;
+
+    // Register custom snippet completions once — global to the Monaco instance.
+    // window.monaco is guaranteed to exist at this point because initMonaco() ran.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    registerCustomCompletions((window as any).monaco);
+
+    // Register brand-tinted light + dark themes once
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    this.registerCustomThemes((window as any).monaco);
+
+    // Keep currentCode in sync when the user types
+    editor.onDidChangeModelContent(() => {
+      this.zone.run(() => {
+        this.currentCode = editor.getValue();
+      });
+    });
+
+    // Keep cursorLine / cursorColumn in sync using Monaco's native event
+    editor.onDidChangeCursorPosition((e: { position: { lineNumber: number; column: number } }) => {
+      this.zone.run(() => {
+        this.cursorLine   = e.position.lineNumber;
+        this.cursorColumn = e.position.column;
+      });
+    });
+  }
+
+  /** Defines codify-dark and codify-light themes. Safe to call multiple times. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private registerCustomThemes(monacoGlobal: any): void {
+    monacoGlobal.editor.defineTheme('codify-dark', {
+      base: 'vs-dark',
+      inherit: true,
+      rules: [],
+      colors: {},   // keep existing dark appearance as-is
+    });
+
+    monacoGlobal.editor.defineTheme('codify-light', {
+      base: 'vs',
+      inherit: true,
+      rules: [],
+      colors: {
+        'editor.background':                 '#F9FCFD',
+        'editor.lineHighlightBackground':    '#EAF3F7',
+        'editorLineNumber.foreground':       '#9CC0D0',
+        'editorLineNumber.activeForeground': '#3291b9',
+        'editorCursor.foreground':           '#3291b9',
+        'editor.selectionBackground':        '#D3E9F1',
+      },
+    });
+
+    // Apply the correct theme for the current state right away
+    monacoGlobal.editor.setTheme(this.isDarkTheme ? 'codify-dark' : 'codify-light');
+  }
+
+  /** Switches between codify-dark and codify-light — called by the toolbar button */
+  toggleTheme(): void {
+    this.isDarkTheme = !this.isDarkTheme;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).monaco?.editor?.setTheme(this.isDarkTheme ? 'codify-dark' : 'codify-light');
+  }
 
   private get previousHintTexts(): string[] {
     return this.hintHistory.map(h => h.explanation);
@@ -355,6 +495,7 @@ public:
     const python = this.languages.find(l => l.value === 'python')!;
     this.currentCode         = python.starterCode;
     this.originalStarterCode = python.starterCode;
+    this.editorModel = { value: python.starterCode, language: 'python' };
   }
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -389,6 +530,8 @@ public:
             lang.starterCode = problem.starterCode[this.selectedLanguage];
             this.currentCode = lang.starterCode;
             this.originalStarterCode = lang.starterCode;
+            // Sync the Monaco model binding with the freshly loaded starter code
+            this.editorModel = { value: lang.starterCode, language: this.monacoLanguage(this.selectedLanguage) };
           }
         }
         
@@ -516,6 +659,60 @@ public:
     navigator.clipboard.writeText(this.currentCode).catch(() => {/* clipboard unavailable */});
   }
 
+  // ── Custom Test Cases ─────────────────────────────────────────────────────
+
+  /**
+   * Adds a new custom test case with empty inputs.
+   * Custom test cases are editable and deletable by the user.
+   */
+  onAddTestCase(): void {
+    const newId = this.nextCustomTestId++;
+    const newCase = {
+      id: newId,
+      label: `Case ${this.testCases.length + 1}`,
+      nums: '[]',
+      target: '0',
+      expected: '[]',
+      isCustom: true
+    };
+    this.testCases.push(newCase);
+    // Switch to the new test case
+    this.activeTestCase = this.testCases.length - 1;
+    this.activeBottomTab = 'testcases';
+    if (!this.isBottomPanelOpen) this.isBottomPanelOpen = true;
+  }
+
+  /**
+   * Deletes a custom test case.
+   * Only custom test cases can be deleted (not sample ones).
+   */
+  onDeleteTestCase(index: number): void {
+    const testCase = this.testCases[index];
+    if (!testCase || !testCase.isCustom) return; // Can't delete sample test cases
+    
+    this.testCases.splice(index, 1);
+    
+    // Update labels for remaining test cases
+    this.testCases.forEach((tc, i) => {
+      tc.label = `Case ${i + 1}`;
+    });
+    
+    // Adjust active test case if needed
+    if (this.activeTestCase >= this.testCases.length) {
+      this.activeTestCase = Math.max(0, this.testCases.length - 1);
+    }
+  }
+
+  /**
+   * Updates a custom test case input field.
+   */
+  onUpdateTestCase(index: number, field: 'nums' | 'target' | 'expected', value: string): void {
+    const testCase = this.testCases[index];
+    if (!testCase || !testCase.isCustom) return; // Can't edit sample test cases
+    
+    testCase[field] = value;
+  }
+
   // ── AI Feedback fetch (Chunk 3) ───────────────────────────────────────────
 
   /**
@@ -621,6 +818,14 @@ public:
       error: (err: ServiceError) => {
         this.hintError.set(err);
         this.isHintLoading = false;
+        
+        // Show user-friendly error message
+        if (err.message && err.message.includes('already used all')) {
+          this.showToast('You have used all 3 hints for this problem. Time to solve it yourself!', 5000);
+        } else {
+          this.showToast(err.message || 'Could not fetch hint. Please try again.', 4000);
+        }
+        
         console.error('[HintService ✗]', err);
       },
     });
@@ -687,16 +892,13 @@ public:
       lines.splice(start - 1, deleteCount, ...replacementLines);
     }
 
-    // ── Step 4: Commit to component state AND textarea DOM ────────────────────
+    // ── Step 4: Commit to component state AND Monaco editor ──────────────────
     const updatedCode = lines.join('\n');
     this.currentCode  = updatedCode;
 
-    // [value]="currentCode" is a one-way binding — Angular won't re-render the
-    // textarea's DOM value until the next change-detection cycle that it detects
-    // as a real change. Setting the native value directly gives instant feedback.
-    if (this.editorTextareaRef?.nativeElement) {
-      this.editorTextareaRef.nativeElement.value = updatedCode;
-    }
+    // Rebuild editorModel so Monaco reflects the new code via its [model] binding.
+    // We preserve the current language so syntax highlighting is unchanged.
+    this.editorModel = { value: updatedCode, language: this.monacoLanguage(this.selectedLanguage) };
 
     // ── Step 5: Surface the explanation ──────────────────────────────────────
     // Use the first change's explanation (most contextually relevant).
@@ -723,7 +925,7 @@ public:
    *    If called while the overlay is already visible it updates in-place.
    */
   private triggerHintAppliedAnimation(): void {
-    // ── Editor textarea highlight ─────────────────────────────────────────
+    // ── Monaco editor container highlight ────────────────────────────────
     if (!this.prefersReducedMotion()) {
       this.editorHighlighting = true;
       setTimeout(() => { this.editorHighlighting = false; }, 800);
@@ -882,37 +1084,26 @@ public:
    * switch to the editor view first so the scroll lands on screen.
    */
   jumpToLine(lineNumber: number): void {
-    if (!this.editorTextareaRef?.nativeElement) return;
-
     // On mobile the editor panel may be hidden — switch to it first
     if (this.activeView !== 'editor') {
       this.activeView = 'editor';
     }
 
-    const textarea = this.editorTextareaRef.nativeElement;
-    const lines    = textarea.value.split('\n');
+    if (this.monacoEditor) {
+      const lineCount = this.monacoEditor.getModel()?.getLineCount() ?? 1;
+      const target    = Math.max(1, Math.min(lineNumber, lineCount));
+      this.monacoEditor.revealLineInCenter(target);
+      this.monacoEditor.setPosition({ lineNumber: target, column: 1 });
+      this.monacoEditor.focus();
+    }
 
-    // Clamp to valid range
-    const targetLine  = Math.max(1, Math.min(lineNumber, lines.length));
-    // Character offset = sum of lengths of all lines before the target + newline chars
-    const charOffset  = lines.slice(0, targetLine - 1).reduce((sum, l) => sum + l.length + 1, 0);
-
-    // Move cursor to the line and scroll it into view
-    textarea.focus();
-    textarea.setSelectionRange(charOffset, charOffset);
-
-    // scrollTop: approximate line height is 20px (matches .editor-textarea line-height)
-    const LINE_HEIGHT_PX = 20;
-    const visibleLines   = Math.floor(textarea.clientHeight / LINE_HEIGHT_PX);
-    textarea.scrollTop   = Math.max(0, (targetLine - Math.floor(visibleLines / 2)) * LINE_HEIGHT_PX);
-
-    // Reuse the existing green highlight animation from the hint system
+    // Reuse the green highlight animation from the hint system
     if (!this.prefersReducedMotion()) {
       this.editorHighlighting = true;
       setTimeout(() => { this.editorHighlighting = false; }, 800);
     }
 
-    console.log('[jumpToLine] scrolled to line', targetLine);
+    console.log('[jumpToLine] scrolled to line', lineNumber);
   }
 
   // ── Problem actions ───────────────────────────────────────────────────────
@@ -935,37 +1126,29 @@ public:
 
     this.selectedLanguage = newLanguage;
     const lang = this.languages.find(l => l.value === newLanguage);
-    if (lang) {
-      this.currentCode         = lang.starterCode;
-      this.originalStarterCode = lang.starterCode;
+    const starterCode = lang?.starterCode ?? '';
+
+    this.currentCode         = starterCode;
+    this.originalStarterCode = starterCode;
+
+    // Rebuild editorModel — new object reference forces Monaco to update both
+    // the displayed code and the syntax highlighting language in one shot.
+    this.editorModel = { value: starterCode, language: this.monacoLanguage(newLanguage) };
+  }
+
+  toggleAutocomplete(): void {
+    this.isAutocompleteEnabled = !this.isAutocompleteEnabled;
+    if (this.monacoEditor) {
+      this.monacoEditor.updateOptions({
+        quickSuggestions:           this.isAutocompleteEnabled,
+        suggestOnTriggerCharacters: this.isAutocompleteEnabled,
+      });
     }
-  }
-
-  toggleAutocomplete(): void { this.isAutocompleteEnabled = !this.isAutocompleteEnabled; }
-  toggleFullscreen():   void { this.isEditorFullscreen    = !this.isEditorFullscreen;    }
-
-  onEditorInput(event: Event): void {
-    const target = event.target as HTMLTextAreaElement;
-    this.currentCode = target.value;
-    this.updateCursorPosition(target);
-  }
-
-  private updateCursorPosition(textarea: HTMLTextAreaElement): void {
-    const text  = textarea.value.substring(0, textarea.selectionStart);
-    const lines = text.split('\n');
-    this.cursorLine   = lines.length;
-    this.cursorColumn = lines[lines.length - 1].length + 1;
-  }
+  }  toggleFullscreen():   void { this.isEditorFullscreen    = !this.isEditorFullscreen;    }
 
   // ── Bottom panel ──────────────────────────────────────────────────────────
   toggleBottomPanel():            void { this.isBottomPanelOpen = !this.isBottomPanelOpen; }
   setActiveTestCase(i: number):   void { this.activeTestCase = i; }
-
-  addTestCase(): void {
-    const newId = this.testCases.length + 1;
-    this.testCases.push({ id: newId, label: `Case ${newId}`, nums: '[]', target: '0', expected: '[]' });
-    this.activeTestCase = this.testCases.length - 1;
-  }
 
   get currentTestCase() { return this.testCases[this.activeTestCase]; }
 

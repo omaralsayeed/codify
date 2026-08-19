@@ -1,6 +1,8 @@
-import { Component, inject, HostListener } from '@angular/core';
+import { Component, inject, HostListener, OnInit } from '@angular/core';
 import { RouterLink, Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { ContestService } from '../../../core/services/contest.service';
+import { StudentContestsOverview } from '../../../core/models/contest.model';
 
 /** Converts a display name to a URL-safe username slug. */
 function toSlug(name: string): string {
@@ -14,14 +16,25 @@ function toSlug(name: string): string {
   templateUrl: './navbar.component.html',
   styleUrl: './navbar.component.scss'
 })
-export class NavbarComponent {
+export class NavbarComponent implements OnInit {
   auth = inject(AuthService);
+  private readonly contestSvc = inject(ContestService);
   readonly router = inject(Router);
 
   isNotifOpen      = false;
   isProfileOpen    = false;
   isMobileMenuOpen = false;
   streakDays       = 1;
+
+  studentContests: StudentContestsOverview | null = null;
+
+  ngOnInit(): void {
+    if (this.auth.isLoggedIn() && !this.isAdmin && !this.isInstructor) {
+      this.contestSvc.getMyContests$().subscribe(overview => {
+        this.studentContests = overview;
+      });
+    }
+  }
 
   /** URL to the current user's public profile page. */
   get profileUrl(): string {

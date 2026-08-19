@@ -1,0 +1,87 @@
+<div class="ep-backdrop" role="dialog" aria-modal="true" aria-labelledby="ep-title"
+     (click)="onBackdropClick($event)" (keydown)="onKeydown($event)" tabindex="-1">
+
+  <div class="ep-modal">
+
+    <!-- Header -->
+    <div class="ep-header">
+      <h2 class="ep-title" id="ep-title">Edit Profile</h2>
+      <button class="ep-close" type="button" aria-label="Close" (click)="onCancel()">✕</button>
+    </div>
+
+    <!-- Form -->
+    <form class="ep-form" (ngSubmit)="onSubmit()" novalidate>
+
+      @if (error()) {
+        <div class="ep-error" role="alert">{{ error() }}</div>
+      }
+      @if (success()) {
+        <div class="ep-success" role="status">✓ Profile saved!</div>
+      }
+
+      <!-- Basic Info -->
+      <div class="ep-section">
+        <h3 class="ep-section-title">Basic Info</h3>
+
+        <div class="ep-field">
+          <label class="ep-label" for="ep-name">Full Name <span class="ep-req">*</span></label>
+          <input id="ep-name" class="ep-input" type="text" [(ngModel)]="form.fullName"
+                 name="fullName" maxlength="80" autocomplete="name" required
+                 placeholder="Your full name" />
+        </div>
+
+        <div class="ep-field">
+          <label class="ep-label" for="ep-headline">Headline</label>
+          <input id="ep-headline" class="ep-input" type="text" [(ngModel)]="form.headline"
+                 name="headline" maxlength="120"
+                 placeholder="e.g. Software Engineering Instructor @ Cairo University" />
+        </div>
+
+        <div class="ep-field">
+          <label class="ep-label" for="ep-bio">Bio</label>
+          <textarea id="ep-bio" class="ep-input ep-textarea" [(ngModel)]="form.bio"
+                    name="bio" rows="4" maxlength="400"
+                    placeholder="A short description about yourself…"></textarea>
+          <span class="ep-char">{{ form.bio?.length ?? 0 }}/400</span>
+        </div>
+
+        <div class="ep-field">
+          <label class="ep-label" for="ep-org">Organization</label>
+          <input id="ep-org" class="ep-input" type="text" [(ngModel)]="form.organization"
+                 name="organization" maxlength="80"
+                 placeholder="e.g. Cairo University" />
+        </div>
+      </div>
+
+      <!-- Social Links -->
+      <div class="ep-section">
+        <h3 class="ep-section-title">Social Links</h3>
+
+        <div class="ep-field ep-field--row">
+          <span class="ep-social-icon">in</span>
+          <input class="ep-input ep-input--flex" type="url" [(ngModel)]="form.social!.linkedin"
+                 name="linkedin" placeholder="https://linkedin.com/in/yourname" />
+        </div>
+        <div class="ep-field ep-field--row">
+          <span class="ep-social-icon">gh</span>
+          <input class="ep-input ep-input--flex" type="url" [(ngModel)]="form.social!.github"
+                 name="github" placeholder="https://github.com/yourname" />
+        </div>
+        <div class="ep-field ep-field--row">
+          <span class="ep-social-icon">𝕏</span>
+          <input class="ep-input ep-input--flex" type="url" [(ngModel)]="form.social!.twitter"
+                 name="twitter" placeholder="https://x.com/yourhandle" />
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="ep-actions">
+        <button type="button" class="ep-btn ep-btn--cancel" (click)="onCancel()">Cancel</button>
+        <button type="submit" class="ep-btn ep-btn--save" [disabled]="saving()">
+          {{ saving() ? 'Saving…' : 'Save Changes' }}
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>

@@ -532,25 +532,24 @@
           </button>
         }
 
-        <!-- Collapse button (top-left corner of right panel) -->
-        <button 
-          class="panel-collapse-btn panel-collapse-btn--right"
-          (click)="toggleRightPanel()"
-          type="button"
-          aria-label="Hide code editor">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-               fill="none" stroke="currentColor" stroke-width="2"
-               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <polyline points="9 18 15 12 9 6"></polyline>
-          </svg>
-        </button>
-
         <!-- Right panel content -->
+        <div class="editor-wrapper" [class.editor-wrapper--light]="!isDarkTheme">
         <div class="right-panel-content" [class.right-panel-content--fullscreen]="isEditorFullscreen">
 
           <!-- Editor Header -->
           <header class="editor-header">
             <div class="editor-header-left">
+
+              <!-- macOS-style window dots (decorative) -->
+              <div class="editor-window-dots" aria-hidden="true">
+                <span class="dot dot-red"></span>
+                <span class="dot dot-yellow"></span>
+                <span class="dot dot-green"></span>
+              </div>
+
+              <!-- Filename pill -->
+              <span class="editor-filename">Solution.{{ fileExtension }}</span>
+
               <!-- Language Selector -->
               <label class="language-selector">
                 <span class="language-label">Language:</span>
@@ -564,66 +563,102 @@
                   }
                 </select>
               </label>
-
-              <!-- Autocomplete Toggle -->
-              <label class="autocomplete-toggle">
-                <input 
-                  type="checkbox"
-                  [checked]="isAutocompleteEnabled"
-                  (change)="toggleAutocomplete()"
-                  aria-label="Toggle autocomplete" />
-                <span>Autocomplete</span>
-              </label>
             </div>
 
             <div class="editor-header-right">
-              <!-- Fullscreen Toggle -->
-              <button 
-                class="editor-icon-btn"
-                (click)="toggleFullscreen()"
-                type="button"
-                [attr.aria-label]="isEditorFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'">
-                @if (isEditorFullscreen) {
-                  <!-- Minimize icon -->
+              <!-- Icon-only toolbar actions: Autocomplete | Theme | Fullscreen -->
+              <div class="editor-toolbar-actions">
+
+                <!-- Autocomplete toggle — wand icon, highlighted when ON -->
+                <button
+                  type="button"
+                  class="icon-toggle-btn"
+                  [class.icon-toggle-btn--active]="isAutocompleteEnabled"
+                  (click)="toggleAutocomplete()"
+                  [attr.aria-label]="isAutocompleteEnabled ? 'Disable autocomplete' : 'Enable autocomplete'"
+                  title="Toggle autocomplete">
+                  <!-- Wand / magic-suggestion icon -->
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
                        fill="none" stroke="currentColor" stroke-width="2"
                        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path>
+                    <path d="M15 4V2"></path>
+                    <path d="M15 16v-2"></path>
+                    <path d="M8 9h2"></path>
+                    <path d="M20 9h2"></path>
+                    <path d="M17.8 11.8 19 13"></path>
+                    <path d="M15 9h.01"></path>
+                    <path d="M17.8 6.2 19 5"></path>
+                    <path d="m3 21 9-9"></path>
+                    <path d="M12.2 6.2 11 5"></path>
                   </svg>
-                } @else {
-                  <!-- Maximize icon -->
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-                       fill="none" stroke="currentColor" stroke-width="2"
-                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
-                  </svg>
-                }
-              </button>
+                </button>
+
+                <!-- Theme toggle — sun = currently dark (click to go light), moon = currently light (click to go dark) -->
+                <button
+                  type="button"
+                  class="icon-toggle-btn"
+                  (click)="toggleTheme()"
+                  [attr.aria-label]="isDarkTheme ? 'Switch to light theme' : 'Switch to dark theme'"
+                  title="Toggle editor theme">
+                  @if (isDarkTheme) {
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                         fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <circle cx="12" cy="12" r="5"></circle>
+                      <line x1="12" y1="1" x2="12" y2="3"></line>
+                      <line x1="12" y1="21" x2="12" y2="23"></line>
+                      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                      <line x1="1" y1="12" x2="3" y2="12"></line>
+                      <line x1="21" y1="12" x2="23" y2="12"></line>
+                      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                  } @else {
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                         fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                  }
+                </button>
+
+                <!-- Fullscreen toggle -->
+                <button
+                  type="button"
+                  class="icon-toggle-btn"
+                  (click)="toggleFullscreen()"
+                  [attr.aria-label]="isEditorFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'"
+                  title="Toggle fullscreen">
+                  @if (isEditorFullscreen) {
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                         fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path>
+                    </svg>
+                  } @else {
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                         fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+                    </svg>
+                  }
+                </button>
+
+              </div>
             </div>
           </header>
 
           <!-- Editor Body -->
           <div class="editor-body" [class.editor-body--glow]="editorGlowing">
-            <!-- Line Numbers -->
-            <div class="editor-line-numbers" aria-hidden="true">
-              @for (line of currentCode.split('\n'); track $index) {
-                <div class="line-number">{{ $index + 1 }}</div>
-              }
-            </div>
-
-            <!-- Code Textarea -->
-            <textarea
-              #editorTextarea
-              class="editor-textarea"
-              [class.editor-textarea--highlight]="editorHighlighting"
-              [value]="currentCode"
-              (input)="onEditorInput($event)"
-              spellcheck="false"
-              autocomplete="off"
-              autocorrect="off"
-              autocapitalize="off"
-              aria-label="Code editor"
-              placeholder="Write your code here..."></textarea>
+            <!-- Monaco Editor -->
+            <ngx-monaco-editor
+              class="monaco-editor-host"
+              [class.monaco-editor-host--highlight]="editorHighlighting"
+              [options]="editorOptions"
+              [model]="editorModel"
+              (onInit)="onMonacoInit($event)">
+            </ngx-monaco-editor>
           </div>
 
           <!-- ── Hint Explanation Overlay Card ─────────────────────────── -->
@@ -706,6 +741,8 @@
           </footer>
 
         </div>
+
+        </div><!-- /.editor-wrapper -->
 
       </main>
     }
@@ -860,6 +897,7 @@
               <button
                 class="test-case-tab"
                 [class.test-case-tab--active]="activeTestCase === i && activeBottomTab === 'testcases'"
+                [class.test-case-tab--custom]="testCase.isCustom"
                 (click)="setBottomTab('testcases'); setActiveTestCase(i)"
                 type="button"
                 role="tab"
@@ -875,11 +913,28 @@
                   </span>
                 }
                 {{ testCase.label }}
+                <!-- Delete icon for custom test cases -->
+                @if (testCase.isCustom) {
+                  <span
+                    class="test-case-delete"
+                    (click)="onDeleteTestCase(i); $event.stopPropagation()"
+                    role="button"
+                    tabindex="0"
+                    aria-label="Delete test case"
+                    title="Delete test case">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                         fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  </span>
+                }
               </button>
             }
             <button
               class="test-case-tab test-case-tab--add"
-              (click)="setBottomTab('testcases'); addTestCase()"
+              (click)="setBottomTab('testcases'); onAddTestCase()"
               type="button"
               aria-label="Add test case">
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
@@ -953,7 +1008,8 @@
                   type="text"
                   class="input-box"
                   [value]="currentTestCase.nums"
-                  readonly
+                  [readonly]="!currentTestCase.isCustom"
+                  (input)="currentTestCase.isCustom && onUpdateTestCase(activeTestCase, 'nums', $any($event.target).value)"
                   placeholder="[2,7,11,15]" />
               </div>
 
@@ -964,7 +1020,8 @@
                   type="text"
                   class="input-box"
                   [value]="currentTestCase.target"
-                  readonly
+                  [readonly]="!currentTestCase.isCustom"
+                  (input)="currentTestCase.isCustom && onUpdateTestCase(activeTestCase, 'target', $any($event.target).value)"
                   placeholder="9" />
               </div>
             </div>
@@ -983,14 +1040,14 @@
               <!-- Actual Output -->
               <div class="output-section">
                 <h3 class="test-section-heading">Actual Output</h3>
-                @if (runPhase === 'running') {
+                @if (runPhase === 'running' || submitPhase === 'submitting') {
                   <div class="output-box output-box--empty">
                     <span class="output-placeholder">Running…</span>
                   </div>
-                } @else if (runPhase === 'done' && currentActualOutput) {
+                } @else if ((runPhase === 'done' || submitPhase === 'done') && currentActualOutput) {
                   <div class="output-box"
-                       [class.output-box--pass]="runResult?.testResults?.[activeTestCase]?.passed"
-                       [class.output-box--fail]="!runResult?.testResults?.[activeTestCase]?.passed">
+                       [class.output-box--pass]="runResult?.testResults?.[activeTestCase]?.passed || submitResult?.testCaseResults?.[activeTestCase]?.verdict === 'Accepted'"
+                       [class.output-box--fail]="!runResult?.testResults?.[activeTestCase]?.passed && submitResult?.testCaseResults?.[activeTestCase]?.verdict !== 'Accepted'">
                     <code>{{ currentActualOutput }}</code>
                   </div>
                 } @else {
@@ -1003,11 +1060,11 @@
               <!-- Console -->
               <div class="output-section">
                 <h3 class="test-section-heading">Console</h3>
-                @if (runPhase === 'running') {
+                @if (runPhase === 'running' || submitPhase === 'submitting') {
                   <div class="output-box output-box--empty">
                     <span class="output-placeholder">Running…</span>
                   </div>
-                } @else if (runPhase === 'done') {
+                } @else if (runPhase === 'done' || submitPhase === 'done') {
                   <div class="output-box">
                     <code>{{ currentConsoleOutput || '(no output)' }}</code>
                   </div>

@@ -4,9 +4,30 @@ export interface User {
   email: string;
   role: 'student' | 'instructor' | 'admin';
   avatarInitials: string;
-  avatarUrl?: string;  // Cloudinary URL set after profile image upload
+  avatarUrl?: string;
   streak?: number;
-  username?: string;   // URL-safe slug derived from name, e.g. "test_student"
-  joinedAt?: string;   // ISO date string
-  password?: string;   // Optional, for mock data only
+  username?: string;
+  joinedAt?: string;
+  password?: string;
+  // Extended profile fields
+  headline?: string;
+  bio?: string;
+  organization?: string;
+  social?: {
+    linkedin?: string;
+    github?: string;
+    twitter?: string;
+  };
+}
+
+export interface UpdateProfileDto {
+  fullName: string;
+  headline?: string;
+  bio?: string;
+  organization?: string;
+  social?: {
+    linkedin?: string;
+    github?: string;
+    twitter?: string;
+  };
 }

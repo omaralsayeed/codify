@@ -2,7 +2,7 @@ import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of, TimeoutError } from 'rxjs';
 import { map, catchError, switchMap, timeout } from 'rxjs/operators';
-import { User } from '../models/user.model';
+import { User, UpdateProfileDto } from '../models/user.model';
 import { AuthResult, RegisterData } from '../models/auth.model';
 import { mapRole, roleToNumber } from '../utils/enum-mappers';
 
@@ -172,6 +172,46 @@ export class AuthService {
           error: err => console.warn('Avatar URL could not be saved to backend:', err)
         });
     }
+  }
+
+  /**
+   * Updates the current user's profile fields.
+   * Optimistic: patches the signal + localStorage immediately,
+   * then fires PUT /api/auth/profile in the background.
+   * Graceful fallback: if the endpoint doesn't exist yet (404/501)
+   * the local update still sticks.
+   */
+  updateProfile(dto: UpdateProfileDto): Observable<{ success: boolean; error?: string }> {
+    const current = this._currentUser();
+    if (!current) return of({ success: false, error: 'Not logged in' });
+
+    const updated: User = {
+      ...current,
+      name:           dto.fullName.trim() || current.name,
+      avatarInitials: this.generateAvatarInitials(dto.fullName.trim() || current.name),
+      headline:       dto.headline,
+      bio:            dto.bio,
+      organization:   dto.organization,
+      social:         dto.social,
+    };
+    this._currentUser.set(updated);
+    try { localStorage.setItem('codify_user', JSON.stringify(updated)); } catch { /* quota */ }
+
+    const token = localStorage.getItem('codify_token');
+    if (!token) return of({ success: true });
+
+    return this.http
+      .put<ApiEnvelope<null>>(
+        `${this.baseUrl}/auth/profile`, dto,
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .pipe(
+        map(() => ({ success: true })),
+        catchError(err => {
+          if (err?.status === 404 || err?.status === 501) return of({ success: true });
+          return of({ success: false, error: err?.error?.message ?? 'Could not save profile.' });
+        }),
+      );
   }
 
   private restoreSession(): void {

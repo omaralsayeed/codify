@@ -14,6 +14,19 @@ namespace Codify.API.Controllers;
 public class AnalyticsController(IAnalyticsService analyticsService) : ControllerBase
 {
     /// <summary>
+    /// GET /api/analytics/me
+    /// Convenience endpoint: returns the authenticated student's analytics profile.
+    /// </summary>
+    [HttpGet("me")]
+    [Authorize(Roles = "Student")]
+    public async Task<IActionResult> GetMyAnalytics()
+    {
+        var studentId = User.GetUserId();
+        var result = await analyticsService.GetStudentAnalyticsAsync(studentId);
+        return Ok(ApiResponse.Ok(result));
+    }
+
+    /// <summary>
     /// GET /api/analytics/students/{id}
     /// Returns the full performance breakdown for a student.
     /// Students can only view their own data.
@@ -57,6 +70,32 @@ public class AnalyticsController(IAnalyticsService analyticsService) : Controlle
     public async Task<IActionResult> GetIntegrityFlags()
     {
         var result = await analyticsService.GetIntegrityFlagsAsync();
+        return Ok(ApiResponse.Ok(result));
+    }
+
+    /// <summary>
+    /// GET /api/analytics/profile/{identifier}
+    /// Public endpoint: Returns the full public profile, heatmap activity grid,
+    /// problem stats, and submission history for any user by username or ID.
+    /// </summary>
+    [HttpGet("profile/{identifier}")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetPublicProfile(string identifier)
+    {
+        var result = await analyticsService.GetPublicProfileAsync(identifier);
+        return Ok(ApiResponse.Ok(result));
+    }
+
+    /// <summary>
+    /// GET /api/analytics/profile
+    /// Returns the public profile for the currently authenticated user.
+    /// </summary>
+    [HttpGet("profile")]
+    [Authorize]
+    public async Task<IActionResult> GetMyPublicProfile()
+    {
+        var userId = User.GetUserId();
+        var result = await analyticsService.GetPublicProfileAsync(userId.ToString());
         return Ok(ApiResponse.Ok(result));
     }
 }

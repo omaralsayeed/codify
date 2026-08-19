@@ -1,20 +1,17 @@
-import { Component, ChangeDetectionStrategy, signal, computed } from '@angular/core';
+import {
+  Component, ChangeDetectionStrategy, OnInit, inject,
+  signal, computed, effect,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import {
+  AdminService, AdminProblemRow,
+} from '../../../core/services/admin.service';
+import { difficultyToNumber, Difficulty } from '../../../core/utils/enum-mappers';
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-export interface AdminProblemRow {
-  id: string;
-  title: string;
-  difficulty: 'easy' | 'medium' | 'hard';
-  tags: string[];
-  solvedCount: number;
-  totalSubmissions: number;
-  isActive: boolean;
-  createdAt: string;
-}
+// Re-export so problem-form can import the type
+export type { AdminProblemRow };
 
 type DifficultyFilter = 'all' | 'easy' | 'medium' | 'hard';
 type StatusFilter     = 'all' | 'active' | 'inactive';
@@ -28,27 +25,6 @@ const ALL_TAGS = [
   'Linked List', 'Stack', 'Two Pointers',
 ];
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
-
-const MOCK_PROBLEMS: AdminProblemRow[] = [
-  { id: 'p01', title: 'Two Sum',                  difficulty: 'easy',   tags: ['Arrays', 'Hash Map'],          solvedCount: 36045, totalSubmissions: 48200, isActive: true,  createdAt: '2026-04-01T10:00:00Z' },
-  { id: 'p02', title: 'Climbing Stairs',           difficulty: 'easy',   tags: ['Recursion', 'Dynamic Programming'], solvedCount: 22104, totalSubmissions: 29000, isActive: true,  createdAt: '2026-04-03T10:00:00Z' },
-  { id: 'p03', title: 'Binary Search',             difficulty: 'easy',   tags: ['Binary Search'],               solvedCount: 28791, totalSubmissions: 34500, isActive: true,  createdAt: '2026-04-05T10:00:00Z' },
-  { id: 'p04', title: 'Reverse String',            difficulty: 'easy',   tags: ['Two Pointers', 'Arrays'],      solvedCount: 31200, totalSubmissions: 38000, isActive: true,  createdAt: '2026-04-07T10:00:00Z' },
-  { id: 'p05', title: 'Valid Parentheses',         difficulty: 'easy',   tags: ['Stack'],                       solvedCount: 27400, totalSubmissions: 34000, isActive: true,  createdAt: '2026-04-09T10:00:00Z' },
-  { id: 'p06', title: 'Merge Intervals',           difficulty: 'medium', tags: ['Sorting', 'Intervals'],        solvedCount: 16884, totalSubmissions: 24000, isActive: true,  createdAt: '2026-04-11T10:00:00Z' },
-  { id: 'p07', title: 'Coin Change II',            difficulty: 'medium', tags: ['Dynamic Programming'],         solvedCount: 13210, totalSubmissions: 20000, isActive: true,  createdAt: '2026-04-13T10:00:00Z' },
-  { id: 'p08', title: 'Maximum Subarray',          difficulty: 'medium', tags: ['Greedy'],                      solvedCount: 19503, totalSubmissions: 26000, isActive: true,  createdAt: '2026-04-15T10:00:00Z' },
-  { id: 'p09', title: 'Course Schedule',           difficulty: 'medium', tags: ['Graphs', 'BFS'],               solvedCount: 11762, totalSubmissions: 19000, isActive: true,  createdAt: '2026-04-17T10:00:00Z' },
-  { id: 'p10', title: 'Linked List Cycle',         difficulty: 'medium', tags: ['Linked List', 'Two Pointers'], solvedCount: 18900, totalSubmissions: 25000, isActive: true,  createdAt: '2026-04-19T10:00:00Z' },
-  { id: 'p11', title: 'Number of Islands',         difficulty: 'hard',   tags: ['Graphs', 'BFS', 'DFS'],        solvedCount: 9210,  totalSubmissions: 17000, isActive: true,  createdAt: '2026-04-21T10:00:00Z' },
-  { id: 'p12', title: 'Lowest Common Ancestor',    difficulty: 'hard',   tags: ['Trees', 'DFS'],                solvedCount: 8540,  totalSubmissions: 15000, isActive: true,  createdAt: '2026-04-23T10:00:00Z' },
-  { id: 'p13', title: 'Word Break',                difficulty: 'hard',   tags: ['Dynamic Programming'],         solvedCount: 7800,  totalSubmissions: 14000, isActive: false, createdAt: '2026-04-25T10:00:00Z' },
-  { id: 'p14', title: 'Trapping Rain Water',       difficulty: 'hard',   tags: ['Two Pointers', 'Stack'],       solvedCount: 6900,  totalSubmissions: 13000, isActive: false, createdAt: '2026-04-27T10:00:00Z' },
-];
-
-// ── Component ─────────────────────────────────────────────────────────────────
-
 @Component({
   selector: 'app-admin-problems',
   standalone: true,
@@ -57,40 +33,60 @@ const MOCK_PROBLEMS: AdminProblemRow[] = [
   templateUrl: './admin-problems.component.html',
   styleUrl:    './admin-problems.component.scss',
 })
-export class AdminProblemsComponent {
+export class AdminProblemsComponent implements OnInit {
+  private readonly adminSvc = inject(AdminService);
 
   readonly allTags = ALL_TAGS;
 
-  // ── Filters & sort ─────────────────────────────────────────────────────────
-  readonly searchQuery       = signal('');
-  readonly difficultyFilter  = signal<DifficultyFilter>('all');
-  readonly tagFilter         = signal('all');
-  readonly statusFilter      = signal<StatusFilter>('all');
-  readonly sortField         = signal<SortField>('createdAt');
-  readonly sortDir           = signal<SortDir>('desc');
+  // ── Filter & sort state ────────────────────────────────────────────────────
+  readonly searchQuery      = signal('');
+  readonly difficultyFilter = signal<DifficultyFilter>('all');
+  readonly tagFilter        = signal('all');
+  readonly statusFilter     = signal<StatusFilter>('all');
+  readonly sortField        = signal<SortField>('createdAt');
+  readonly sortDir          = signal<SortDir>('desc');
 
-  // confirm deactivate/activate modal
+  // ── Data state ─────────────────────────────────────────────────────────────
+  readonly isLoading    = signal(true);
+  readonly error        = signal<string | null>(null);
+  readonly allProblems  = signal<AdminProblemRow[]>([]);
+  readonly serverTotal  = signal(0);
+
+  // ── Modal state ────────────────────────────────────────────────────────────
   readonly confirmProblem    = signal<AdminProblemRow | null>(null);
   readonly confirmToggleType = signal<'activate' | 'deactivate' | null>(null);
+  readonly isToggling        = signal(false);
+  readonly toggleError       = signal<string | null>(null);
 
-  private allProblems = signal<AdminProblemRow[]>(MOCK_PROBLEMS);
+  // ── Delete confirm ─────────────────────────────────────────────────────────
+  readonly confirmDeleteProblem = signal<AdminProblemRow | null>(null);
+  readonly isDeleting           = signal(false);
+  readonly deleteError          = signal<string | null>(null);
 
-  // ── Derived list ───────────────────────────────────────────────────────────
+  // ── Summary counts (from full loaded list) ─────────────────────────────────
+  readonly totalCount    = computed(() => this.serverTotal());
+  readonly activeCount   = computed(() => this.allProblems().filter(p => p.isActive).length);
+  readonly inactiveCount = computed(() => this.allProblems().filter(p => !p.isActive).length);
+  readonly easyCount     = computed(() => this.allProblems().filter(p => p.difficulty === 'easy').length);
+  readonly mediumCount   = computed(() => this.allProblems().filter(p => p.difficulty === 'medium').length);
+  readonly hardCount     = computed(() => this.allProblems().filter(p => p.difficulty === 'hard').length);
+
+  // ── Client-side filter on loaded data ─────────────────────────────────────
   readonly filteredProblems = computed(() => {
-    const q          = this.searchQuery().toLowerCase().trim();
-    const difficulty = this.difficultyFilter();
-    const tag        = this.tagFilter();
-    const status     = this.statusFilter();
-    const field      = this.sortField();
-    const dir        = this.sortDir();
+    const q    = this.searchQuery().toLowerCase().trim();
+    const diff = this.difficultyFilter();
+    const tag  = this.tagFilter();
+    const st   = this.statusFilter();
+    const field = this.sortField();
+    const dir   = this.sortDir();
 
     let list = this.allProblems();
 
-    if (q)                  list = list.filter(p => p.title.toLowerCase().includes(q));
-    if (difficulty !== 'all') list = list.filter(p => p.difficulty === difficulty);
-    if (tag !== 'all')        list = list.filter(p => p.tags.includes(tag));
-    if (status !== 'all')     list = list.filter(p =>
-      status === 'active' ? p.isActive : !p.isActive
+    if (q)          list = list.filter(p => p.title.toLowerCase().includes(q));
+    if (diff !== 'all') list = list.filter(p => p.difficulty === diff);
+    if (tag  !== 'all') list = list.filter(p => p.tags.includes(tag));
+    if (st   !== 'all') list = list.filter(p =>
+      st === 'active' ? p.isActive : !p.isActive
     );
 
     return [...list].sort((a, b) => {
@@ -100,19 +96,46 @@ export class AdminProblemsComponent {
         const order = { easy: 0, medium: 1, hard: 2 };
         cmp = order[a.difficulty] - order[b.difficulty];
       }
-      else if (field === 'solvedCount')  cmp = a.solvedCount - b.solvedCount;
-      else if (field === 'createdAt')    cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      else if (field === 'solvedCount') cmp = a.solvedCount - b.solvedCount;
+      else if (field === 'createdAt')   cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
       return dir === 'asc' ? cmp : -cmp;
     });
   });
 
-  // ── Summary counts ─────────────────────────────────────────────────────────
-  readonly totalCount    = computed(() => this.allProblems().length);
-  readonly activeCount   = computed(() => this.allProblems().filter(p => p.isActive).length);
-  readonly inactiveCount = computed(() => this.allProblems().filter(p => !p.isActive).length);
-  readonly easyCount     = computed(() => this.allProblems().filter(p => p.difficulty === 'easy').length);
-  readonly mediumCount   = computed(() => this.allProblems().filter(p => p.difficulty === 'medium').length);
-  readonly hardCount     = computed(() => this.allProblems().filter(p => p.difficulty === 'hard').length);
+  constructor() {
+    // Re-fetch from backend when sort changes
+    effect(() => {
+      this.sortField();
+      this.sortDir();
+      this.loadProblems();
+    });
+  }
+
+  ngOnInit(): void {
+    // Initial load handled by effect
+  }
+
+  // ── HTTP load ──────────────────────────────────────────────────────────────
+  loadProblems(): void {
+    this.isLoading.set(true);
+    this.error.set(null);
+
+    this.adminSvc.getProblems({
+      sortBy:   this.sortField(),
+      sortDir:  this.sortDir(),
+      pageSize: 100,
+    }).subscribe({
+      next: ({ problems, total }) => {
+        this.allProblems.set(problems);
+        this.serverTotal.set(total);
+        this.isLoading.set(false);
+      },
+      error: () => {
+        this.error.set('Failed to load problems. Make sure the backend is running.');
+        this.isLoading.set(false);
+      },
+    });
+  }
 
   // ── Sort ───────────────────────────────────────────────────────────────────
   sortBy(field: SortField): void {
@@ -129,22 +152,22 @@ export class AdminProblemsComponent {
     return this.sortDir() === 'asc' ? '↑' : '↓';
   }
 
-  // ── Difficulty badge ───────────────────────────────────────────────────────
+  // ── Badge helpers ──────────────────────────────────────────────────────────
   difficultyClass(d: string): string {
     if (d === 'easy')   return 'badge--easy';
     if (d === 'medium') return 'badge--medium';
     return 'badge--hard';
   }
 
-  // ── Accept rate ────────────────────────────────────────────────────────────
   acceptRate(p: AdminProblemRow): string {
     if (!p.totalSubmissions) return '—';
     return Math.round((p.solvedCount / p.totalSubmissions) * 100) + '%';
   }
 
-  // ── Toggle status with modal ───────────────────────────────────────────────
+  // ── Toggle status ──────────────────────────────────────────────────────────
   requestToggle(p: AdminProblemRow, event: Event): void {
     event.stopPropagation();
+    this.toggleError.set(null);
     this.confirmProblem.set(p);
     this.confirmToggleType.set(p.isActive ? 'deactivate' : 'activate');
   }
@@ -152,18 +175,62 @@ export class AdminProblemsComponent {
   confirmToggle(): void {
     const p = this.confirmProblem();
     if (!p) return;
-    this.allProblems.update(list =>
-      list.map(x => x.id === p.id ? { ...x, isActive: !x.isActive } : x)
-    );
-    this.closeModal();
+
+    this.isToggling.set(true);
+    this.adminSvc.updateProblemStatus(p.id, !p.isActive).subscribe({
+      next: ({ isActive }) => {
+        // Patch locally — no full re-fetch needed for a single field change
+        this.allProblems.update(list =>
+          list.map(x => x.id === p.id ? { ...x, isActive } : x)
+        );
+        this.isToggling.set(false);
+        this.closeModal();
+      },
+      error: () => {
+        this.isToggling.set(false);
+        this.toggleError.set('Failed to update problem status. Please try again.');
+      },
+    });
+  }
+
+  // ── Delete ─────────────────────────────────────────────────────────────────
+  requestDelete(p: AdminProblemRow, event: Event): void {
+    event.stopPropagation();
+    this.deleteError.set(null);
+    this.confirmDeleteProblem.set(p);
+  }
+
+  confirmDelete(): void {
+    const p = this.confirmDeleteProblem();
+    if (!p) return;
+
+    this.isDeleting.set(true);
+    this.adminSvc.deleteProblem(p.id).subscribe({
+      next: () => {
+        this.allProblems.update(list => list.filter(x => x.id !== p.id));
+        this.serverTotal.update(t => t - 1);
+        this.isDeleting.set(false);
+        this.closeDeleteModal();
+      },
+      error: () => {
+        this.isDeleting.set(false);
+        this.deleteError.set('Failed to delete problem. Please try again.');
+      },
+    });
   }
 
   closeModal(): void {
     this.confirmProblem.set(null);
     this.confirmToggleType.set(null);
+    this.toggleError.set(null);
   }
 
-  // ── Filters reset ──────────────────────────────────────────────────────────
+  closeDeleteModal(): void {
+    this.confirmDeleteProblem.set(null);
+    this.deleteError.set(null);
+  }
+
+  // ── Filters ────────────────────────────────────────────────────────────────
   clearFilters(): void {
     this.searchQuery.set('');
     this.difficultyFilter.set('all');
@@ -178,7 +245,6 @@ export class AdminProblemsComponent {
            this.statusFilter() !== 'all';
   }
 
-  // ── Date ───────────────────────────────────────────────────────────────────
   formatDate(iso: string): string {
     return new Date(iso).toLocaleDateString('en-GB', {
       day: 'numeric', month: 'short', year: 'numeric',

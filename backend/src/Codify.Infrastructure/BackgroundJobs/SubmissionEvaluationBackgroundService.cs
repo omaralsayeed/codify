@@ -24,34 +24,43 @@ public class SubmissionEvaluationBackgroundService(
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        logger.LogInformation("Submission evaluation background worker started.");
+        logger.LogInformation("🚀 [WORKER] Submission evaluation background worker STARTED and waiting for submissions...");
 
         while (!stoppingToken.IsCancellationRequested)
         {
             Guid submissionId;
             try
             {
+                logger.LogInformation("⏳ [WORKER] Waiting for next submission in queue...");
                 submissionId = await queue.DequeueAsync(stoppingToken);
+                logger.LogInformation("📥 [WORKER] Dequeued submission {SubmissionId} from queue", submissionId);
             }
             catch (OperationCanceledException)
             {
+                logger.LogInformation("🛑 [WORKER] Background worker cancelled (application shutting down)");
                 break; // app shutting down
             }
 
             try
             {
+                logger.LogInformation("🔧 [WORKER] Creating scope for submission {SubmissionId}...", submissionId);
                 using var scope = scopeFactory.CreateScope();
                 var evaluationService = scope.ServiceProvider.GetRequiredService<IJudgeEvaluationService>();
+                
+                logger.LogInformation("▶️  [WORKER] Starting evaluation for submission {SubmissionId}...", submissionId);
                 await evaluationService.EvaluateSubmissionAsync(submissionId, stoppingToken);
+                
+                logger.LogInformation("✅ [WORKER] Submission {SubmissionId} evaluation completed successfully", submissionId);
             }
             catch (Exception ex)
             {
                 logger.LogError(ex,
-                    "Judge0 evaluation failed for submission {SubmissionId}. The submission will remain in its last saved status.",
-                    submissionId);
+                    "🔴 [WORKER] Judge0 evaluation FAILED for submission {SubmissionId}. ErrorType={ErrorType}, Message={Message}. " +
+                    "The submission will remain in its last saved status.",
+                    submissionId, ex.GetType().Name, ex.Message);
             }
         }
 
-        logger.LogInformation("Submission evaluation background worker stopped.");
+        logger.LogInformation("🛑 [WORKER] Submission evaluation background worker STOPPED.");
     }
 }

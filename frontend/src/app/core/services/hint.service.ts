@@ -72,31 +72,4 @@ export class HintService {
       .post<ApiEnvelope<HintResponse>>(`${this.API}/ai/hints`, req, { headers: this.headers() })
       .pipe(map(r => r.data), catchError(e => this.handleError(e)));
   }
-
-  // ── Mock implementation ────────────────────────────────────────────────────
-
-  private mockHint(level: number): Observable<HintResponse> {
-    const hints: HintResponse[] = [
-      {
-        hintText:        'Think about what data structure lets you look up a value in O(1) time. For each number you visit, you want to quickly check whether its complement (target − number) has already been seen.',
-        hintLevel:       1,
-        followUpQuestion: 'What would you store as the key and value in that structure as you iterate?',
-        hasMoreHints:    true,
-      },
-      {
-        hintText:        'Use a hash map (dictionary) where the key is a number you\'ve seen and the value is its index. For each element nums[i], check if (target − nums[i]) is already in the map before inserting nums[i].',
-        hintLevel:       2,
-        followUpQuestion: 'Why do we check before inserting rather than after?',
-        hasMoreHints:    true,
-      },
-      {
-        hintText:        'Here\'s the pattern:\n\n  seen = {}\n  for i, n in enumerate(nums):\n      complement = target - n\n      if complement in seen:\n          return [seen[complement], i]\n      seen[n] = i\n\nThis runs in O(n) time and O(n) space — single pass.',
-        hintLevel:       3,
-        followUpQuestion: undefined,
-        hasMoreHints:    false,
-      },
-    ];
-    const idx = Math.min(level - 1, hints.length - 1);
-    return of(hints[idx]).pipe(delay(1200));
-  }
 }

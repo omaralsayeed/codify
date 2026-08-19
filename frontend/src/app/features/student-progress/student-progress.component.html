@@ -49,6 +49,16 @@
           </p>
         </div>
 
+        @if (contestOverview?.hasActiveContestNotification) {
+          <div class="contest-alert-banner">
+            <div class="alert-content">
+              <span class="alert-badge">🔴 LIVE CONTEST</span>
+              <span class="alert-text">You have an assigned contest in progress: <strong>{{ contestOverview?.liveContests?.[0]?.title }}</strong></span>
+            </div>
+            <a routerLink="/contests" class="btn-alert-action">Enter Contest Arena →</a>
+          </div>
+        }
+
         <!-- Divider -->
         <hr class="hero-divider" aria-hidden="true" />
 

@@ -20,8 +20,33 @@ public class InstructorAnalyticsResponse
     /// <summary>Accept rate across all submissions on authored problems.</summary>
     public double OverallAcceptRatePercent { get; set; }
 
+    /// <summary>Total active problems on the platform.</summary>
+    public int TotalAssignedProblems { get; set; }
+
+    /// <summary>Total AI integrity flags in the database.</summary>
+    public int IntegrityFlagsCount { get; set; }
+
+    // ── Activity trend (last 14 days) ────────────────────────────
+    public List<DailySubmissionCountDto> DailyActivity { get; set; } = [];
+
+    // ── Topic mastery ─────────────────────────────────────────────
+    public List<TopicMasteryDto> TopicPerformance { get; set; } = [];
+
     // ── Per-student summary ───────────────────────────────────────
     public List<StudentSummaryItem> Students { get; set; } = [];
+}
+
+public class DailySubmissionCountDto
+{
+    public string Date { get; set; } = string.Empty;
+    public string DayLabel { get; set; } = string.Empty;
+    public int Submissions { get; set; }
+}
+
+public class TopicMasteryDto
+{
+    public string Topic { get; set; } = string.Empty;
+    public int Percentage { get; set; }
 }
 
 /// <summary>

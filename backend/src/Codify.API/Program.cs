@@ -137,10 +137,35 @@ builder.Services.AddControllers()
         };
     })
     .AddJsonOptions(opts =>
+    {
         opts.JsonSerializerOptions.PropertyNamingPolicy =
-            System.Text.Json.JsonNamingPolicy.CamelCase);
+            System.Text.Json.JsonNamingPolicy.CamelCase;
+        opts.JsonSerializerOptions.Converters.Add(
+            new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new Microsoft.OpenApi.OpenApiInfo
+    {
+        Title   = "Codify API",
+        Version = "v1"
+    });
+
+    // JWT Bearer "Authorize" button in Swagger UI
+    options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.OpenApiSecurityScheme
+    {
+        Name         = "Authorization",
+        Type         = Microsoft.OpenApi.SecuritySchemeType.Http,
+        Scheme       = "bearer",
+        BearerFormat = "JWT",
+        In           = Microsoft.OpenApi.ParameterLocation.Header,
+        Description  = "Enter your JWT token. It will be sent as: Authorization: Bearer <token>"
+    });
+
+    // Apply the security scheme to every endpoint so Swagger sends the Authorization header
+    options.OperationFilter<Codify.API.Common.BearerSecurityOperationFilter>();
+});
 
 // CORS for Angular dev server
 builder.Services.AddCors(options =>
@@ -158,6 +183,8 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate();
     await ConceptTagSeed.SeedAsync(db);
     await ProblemSeed.SeedAsync(db);
+    await ContestSeed.SeedAsync(db);
+    await AdminSeed.SeedAsync(db);
 }
 
 // Auto-ingest concept tags into Chroma Cloud on startup (fire-and-forget).

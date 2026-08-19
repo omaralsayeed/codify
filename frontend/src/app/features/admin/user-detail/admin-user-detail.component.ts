@@ -1,116 +1,11 @@
-import { Component, inject, OnInit, ChangeDetectionStrategy, signal } from '@angular/core';
+import {
+  Component, inject, OnInit, ChangeDetectionStrategy, signal,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { AdminUserRow } from '../users/admin-users.component';
-
-// ── Extended detail type ──────────────────────────────────────────────────────
-
-interface AdminUserDetail extends AdminUserRow {
-  streak?: number;
-  avgScore?: number;
-  totalSubmissions?: number;
-  recentSubmissions?: {
-    problemTitle: string;
-    status: string;
-    submittedAt: string;
-  }[];
-}
-
-// ── Mock detail data (keyed by user id) ───────────────────────────────────────
-
-const MOCK_DETAILS: Record<string, AdminUserDetail> = {
-  u1: {
-    id: 'u1', name: 'Karim Ahmed', initials: 'KA', email: 'karim@example.com',
-    role: 'student', status: 'active', registeredAt: '2026-06-01T10:00:00Z',
-    lastActiveAt: '2026-08-13T14:22:00Z', problemsSolved: 38,
-    streak: 14, avgScore: 92, totalSubmissions: 61,
-    recentSubmissions: [
-      { problemTitle: 'Two Sum',           status: 'Accepted',    submittedAt: '2026-08-13T10:45:00Z' },
-      { problemTitle: 'Valid Parentheses', status: 'WrongAnswer', submittedAt: '2026-08-12T16:20:00Z' },
-      { problemTitle: 'Binary Search',     status: 'Accepted',    submittedAt: '2026-08-11T09:00:00Z' },
-      { problemTitle: 'Merge Intervals',   status: 'RuntimeError', submittedAt: '2026-08-10T14:30:00Z' },
-      { problemTitle: 'Max Subarray',      status: 'Accepted',    submittedAt: '2026-08-09T11:10:00Z' },
-    ],
-  },
-  u2: {
-    id: 'u2', name: 'Layla Mostafa', initials: 'LM', email: 'layla@example.com',
-    role: 'student', status: 'active', registeredAt: '2026-06-03T09:00:00Z',
-    lastActiveAt: '2026-08-12T11:00:00Z', problemsSolved: 34,
-    streak: 7, avgScore: 88, totalSubmissions: 52,
-    recentSubmissions: [
-      { problemTitle: 'Climbing Stairs',   status: 'Accepted',    submittedAt: '2026-08-12T10:00:00Z' },
-      { problemTitle: 'Two Sum',           status: 'Accepted',    submittedAt: '2026-08-11T15:00:00Z' },
-    ],
-  },
-  u3: {
-    id: 'u3', name: 'Omar Sherif', initials: 'OS', email: 'omar@example.com',
-    role: 'student', status: 'active', registeredAt: '2026-06-05T08:30:00Z',
-    lastActiveAt: '2026-08-11T16:45:00Z', problemsSolved: 31,
-    streak: 5, avgScore: 85, totalSubmissions: 48,
-    recentSubmissions: [
-      { problemTitle: 'Linked List Cycle', status: 'Accepted',    submittedAt: '2026-08-11T14:00:00Z' },
-    ],
-  },
-  u4: {
-    id: 'u4', name: 'Sara Mahmoud', initials: 'SM', email: 'sara@example.com',
-    role: 'student', status: 'active', registeredAt: '2026-06-07T11:00:00Z',
-    lastActiveAt: '2026-08-10T09:30:00Z', problemsSolved: 29,
-    streak: 3, avgScore: 81, totalSubmissions: 44,
-    recentSubmissions: [
-      { problemTitle: 'Reverse String',    status: 'Accepted',    submittedAt: '2026-08-10T09:00:00Z' },
-    ],
-  },
-  u5: {
-    id: 'u5', name: 'Ahmed Hassan', initials: 'AH', email: 'ahmed@example.com',
-    role: 'student', status: 'active', registeredAt: '2026-06-10T14:00:00Z',
-    lastActiveAt: '2026-08-09T13:00:00Z', problemsSolved: 21,
-    streak: 2, avgScore: 74, totalSubmissions: 35, recentSubmissions: [],
-  },
-  u6: {
-    id: 'u6', name: 'Nour Ibrahim', initials: 'NI', email: 'nour@example.com',
-    role: 'student', status: 'active', registeredAt: '2026-06-12T10:30:00Z',
-    lastActiveAt: '2026-08-08T10:00:00Z', problemsSolved: 18,
-    streak: 1, avgScore: 70, totalSubmissions: 28, recentSubmissions: [],
-  },
-  i1: {
-    id: 'i1', name: 'Dr. Hana Saad', initials: 'HS', email: 'hana@university.edu',
-    role: 'instructor', status: 'active', registeredAt: '2026-05-15T09:00:00Z',
-    lastActiveAt: '2026-08-13T08:00:00Z', organization: 'Cairo University',
-    totalSubmissions: 0, recentSubmissions: [],
-  },
-  i2: {
-    id: 'i2', name: 'Prof. Tarek Ali', initials: 'TA', email: 'tarek@university.edu',
-    role: 'instructor', status: 'active', registeredAt: '2026-05-20T10:00:00Z',
-    lastActiveAt: '2026-08-12T09:00:00Z', organization: 'AUC',
-    totalSubmissions: 0, recentSubmissions: [],
-  },
-  i3: {
-    id: 'i3', name: 'Mona Fawzy', initials: 'MF', email: 'mona@institute.org',
-    role: 'instructor', status: 'active', registeredAt: '2026-05-25T11:00:00Z',
-    lastActiveAt: '2026-08-10T15:00:00Z', organization: 'AAST',
-    totalSubmissions: 0, recentSubmissions: [],
-  },
-  i4: {
-    id: 'i4', name: 'Youssef Nabil', initials: 'YN', email: 'youssef@tech.edu',
-    role: 'instructor', status: 'pending', registeredAt: '2026-08-10T12:00:00Z',
-    lastActiveAt: null, organization: 'GUC',
-    totalSubmissions: 0, recentSubmissions: [],
-  },
-  i5: {
-    id: 'i5', name: 'Rania Khalil', initials: 'RK', email: 'rania@college.edu',
-    role: 'instructor', status: 'pending', registeredAt: '2026-08-11T14:00:00Z',
-    lastActiveAt: null, organization: 'MTI',
-    totalSubmissions: 0, recentSubmissions: [],
-  },
-  i6: {
-    id: 'i6', name: 'Sameh Gamal', initials: 'SG', email: 'sameh@edu.com',
-    role: 'instructor', status: 'pending', registeredAt: '2026-08-12T09:30:00Z',
-    lastActiveAt: null, organization: 'Ain Shams',
-    totalSubmissions: 0, recentSubmissions: [],
-  },
-};
-
-// ── Component ─────────────────────────────────────────────────────────────────
+import {
+  AdminService, AdminUserDetail,
+} from '../../../core/services/admin.service';
 
 @Component({
   selector: 'app-admin-user-detail',
@@ -121,41 +16,85 @@ const MOCK_DETAILS: Record<string, AdminUserDetail> = {
   styleUrl:    './admin-user-detail.component.scss',
 })
 export class AdminUserDetailComponent implements OnInit {
-  private readonly route = inject(ActivatedRoute);
+  private readonly route    = inject(ActivatedRoute);
+  private readonly adminSvc = inject(AdminService);
 
+  // ── State ──────────────────────────────────────────────────────────────────
   readonly user          = signal<AdminUserDetail | 'not-found' | null>(null);
-  readonly confirmAction = signal<'activate' | 'set-pending' | null>(null);
+  readonly isLoading     = signal(true);
+  readonly error         = signal<string | null>(null);
 
+  // ── Modal state ────────────────────────────────────────────────────────────
+  readonly confirmAction = signal<'activate' | 'set-pending' | null>(null);
+  readonly isToggling    = signal(false);
+  readonly toggleError   = signal<string | null>(null);
+
+  // ── Init ───────────────────────────────────────────────────────────────────
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id') ?? '';
-    const found = MOCK_DETAILS[id];
-    this.user.set(found ?? 'not-found');
+    this.loadUser(id);
+  }
+
+  private loadUser(id: string): void {
+    this.isLoading.set(true);
+    this.error.set(null);
+
+    this.adminSvc.getUserById(id).subscribe({
+      next: user => {
+        this.user.set(user);
+        this.isLoading.set(false);
+      },
+      error: err => {
+        if (err.status === 404) {
+          this.user.set('not-found');
+        } else {
+          this.error.set('Failed to load user. Make sure the backend is running.');
+        }
+        this.isLoading.set(false);
+      },
+    });
   }
 
   // ── Status toggle ──────────────────────────────────────────────────────────
   requestStatusChange(action: 'activate' | 'set-pending'): void {
+    this.toggleError.set(null);
     this.confirmAction.set(action);
   }
 
   confirmChange(): void {
-    const action = this.confirmAction();
-    if (!action) return;
+    const action  = this.confirmAction();
     const current = this.user();
-    if (!current || current === 'not-found') return;
+    if (!action || !current || current === 'not-found') return;
 
     const newStatus = action === 'activate' ? 'active' : 'pending';
-    this.user.set({ ...current, status: newStatus });
-    this.confirmAction.set(null);
+    this.isToggling.set(true);
+
+    this.adminSvc.updateUserStatus(current.id, newStatus).subscribe({
+      next: updated => {
+        this.user.set(updated);      // patch signal with fresh server response
+        this.isToggling.set(false);
+        this.closeModal();
+      },
+      error: err => {
+        this.isToggling.set(false);
+        const code = err?.error?.errorCode;
+        if (code === 'FORBIDDEN') {
+          this.toggleError.set('Cannot change status of an admin account.');
+        } else {
+          this.toggleError.set('Failed to update status. Please try again.');
+        }
+      },
+    });
   }
 
   closeModal(): void {
     this.confirmAction.set(null);
+    this.toggleError.set(null);
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   avatarBg(role: string): string {
-    if (role === 'instructor') return 'avatar--gold';
-    return 'avatar--blue';
+    return role === 'instructor' ? 'avatar--gold' : 'avatar--blue';
   }
 
   roleBadgeClass(role: string): string {

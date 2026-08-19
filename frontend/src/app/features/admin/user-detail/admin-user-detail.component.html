@@ -1,5 +1,34 @@
+<!-- ── Loading skeleton ───────────────────────────────────────────────────── -->
+@if (isLoading()) {
+  <div class="detail">
+    <div class="skeleton skeleton--back"></div>
+    <div class="skeleton-header">
+      <div class="skeleton skeleton--avatar"></div>
+      <div class="skeleton-header-body">
+        <div class="skeleton skeleton--title"></div>
+        <div class="skeleton skeleton--sub"></div>
+        <div class="skeleton skeleton--sub"></div>
+      </div>
+    </div>
+    <div class="skeleton-pills">
+      @for (i of [1,2,3,4]; track i) {
+        <div class="skeleton skeleton--pill"></div>
+      }
+    </div>
+    <div class="skeleton skeleton--card"></div>
+  </div>
+}
+
+<!-- ── Error state ────────────────────────────────────────────────────────── -->
+@if (!isLoading() && error()) {
+  <div class="error-banner" role="alert">
+    <span aria-hidden="true">⚠</span> {{ error() }}
+    <a class="back-link-inline" routerLink="../">← Back to users</a>
+  </div>
+}
+
 <!-- ── Not found ──────────────────────────────────────────────────────────── -->
-@if (user() === 'not-found') {
+@if (!isLoading() && user() === 'not-found') {
   <div class="not-found">
     <span class="not-found-icon" aria-hidden="true">🔍</span>
     <h2 class="not-found-title">User not found</h2>
@@ -9,12 +38,11 @@
 }
 
 <!-- ── Detail view ────────────────────────────────────────────────────────── -->
-@if (user() !== 'not-found' && user() !== null) {
+@if (!isLoading() && user() !== 'not-found' && user() !== null && !error()) {
   @let u = $any(user());
 
   <div class="detail">
 
-    <!-- Back link -->
     <a class="back-link" routerLink="../">← Back to users</a>
 
     <!-- ── Profile header ─────────────────────────────────────────────────── -->
@@ -43,7 +71,6 @@
         </span>
       </div>
 
-      <!-- Status action button (non-admin users only) -->
       @if (u.role !== 'admin') {
         <div class="header-action">
           @if (u.status === 'pending') {
@@ -74,7 +101,7 @@
         <div class="stat-pill">
           <span class="stat-icon" aria-hidden="true">📈</span>
           <div class="stat-body">
-            <span class="stat-value">{{ u.avgScore ?? '—' }}</span>
+            <span class="stat-value">{{ u.avgScore != null ? (u.avgScore | number:'1.0-1') : '—' }}</span>
             <span class="stat-label">Avg score</span>
           </div>
         </div>
@@ -176,12 +203,26 @@
           <strong>{{ u.name }}</strong> will lose access until reactivated by an admin.
         }
       </p>
+
+      @if (toggleError()) {
+        <p class="modal-error" role="alert">⚠ {{ toggleError() }}</p>
+      }
+
       <div class="modal-actions">
-        <button class="modal-btn modal-btn--cancel" (click)="closeModal()">Cancel</button>
+        <button class="modal-btn modal-btn--cancel"
+                (click)="closeModal()"
+                [disabled]="isToggling()">
+          Cancel
+        </button>
         <button class="modal-btn"
                 [ngClass]="confirmAction() === 'activate' ? 'modal-btn--confirm-activate' : 'modal-btn--confirm-suspend'"
-                (click)="confirmChange()">
-          {{ confirmAction() === 'activate' ? 'Yes, activate' : 'Yes, set pending' }}
+                (click)="confirmChange()"
+                [disabled]="isToggling()">
+          @if (isToggling()) {
+            <span class="spinner" aria-hidden="true"></span> Saving…
+          } @else {
+            {{ confirmAction() === 'activate' ? 'Yes, activate' : 'Yes, set pending' }}
+          }
         </button>
       </div>
     </div>

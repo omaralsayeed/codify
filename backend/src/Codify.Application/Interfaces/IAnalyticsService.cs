@@ -20,4 +20,9 @@ public interface IAnalyticsService
     /// Returns all AI-generated code flags for instructor review.
     /// </summary>
     Task<List<IntegrityFlagResponse>> GetIntegrityFlagsAsync();
+
+    /// <summary>
+    /// Returns the public profile for any user by username, email, ID, or slug.
+    /// </summary>
+    Task<PublicProfileResponse> GetPublicProfileAsync(string identifier);
 }

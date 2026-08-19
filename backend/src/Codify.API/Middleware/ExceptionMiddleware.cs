@@ -24,10 +24,12 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
     {
         var (statusCode, errorCode, message) = ex switch
         {
-            NotFoundException e => (HttpStatusCode.NotFound, "NOT_FOUND", e.Message),
-            ForbiddenException e => (HttpStatusCode.Forbidden, "FORBIDDEN", e.Message),
-            PendingApprovalException e => (HttpStatusCode.Forbidden, "ACCOUNT_PENDING", e.Message),
-            Domain.Exceptions.ValidationException e => (HttpStatusCode.BadRequest, "VALIDATION_ERROR", e.Message),
+            NotFoundException e         => (HttpStatusCode.NotFound,            "NOT_FOUND",       e.Message),
+            ConflictException e         => (HttpStatusCode.Conflict,            "CONFLICT",        e.Message),
+            ForbiddenException e        => (HttpStatusCode.Forbidden,           "FORBIDDEN",       e.Message),
+            PendingApprovalException e  => (HttpStatusCode.Forbidden,           "ACCOUNT_PENDING", e.Message),
+            Domain.Exceptions.ValidationException e
+                                        => (HttpStatusCode.BadRequest,          "VALIDATION_ERROR",e.Message),
             _ => (HttpStatusCode.InternalServerError, "INTERNAL_ERROR", "An unexpected error occurred.")
         };
 

@@ -310,9 +310,85 @@
 }
 
 .notif-header {
-  padding: 16px 16px 12px;
-  font-family: $ff-body; font-size: 16px; font-weight: 600; color: $navy;
+  padding: 14px 16px;
+  font-family: $ff-body; font-size: 15px; font-weight: 600; color: $navy;
   border-bottom: 1px solid $border;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.notif-badge-pill {
+  font-size: 11px;
+  font-weight: 600;
+  background: #f85149;
+  color: #ffffff;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.notif-badge-dot {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f85149;
+  box-shadow: 0 0 6px #f85149;
+}
+
+.nav-link--contests {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nav-contest-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #f85149;
+  box-shadow: 0 0 6px #f85149;
+}
+
+.notif-item--contest {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  background: rgba(248, 81, 73, 0.04);
+  border-bottom: 1px solid $border;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: rgba(248, 81, 73, 0.1);
+  }
+
+  .notif-item-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .notif-item-content {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+
+    .notif-item-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: $navy;
+    }
+
+    .notif-item-desc {
+      font-size: 12px;
+      color: $charcoal;
+      line-height: 1.35;
+    }
+  }
 }
 
 .notif-empty {

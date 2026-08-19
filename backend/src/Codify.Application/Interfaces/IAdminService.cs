@@ -9,4 +9,34 @@ public interface IAdminService
 
     /// <summary>Approves a pending instructor, enabling them to log in.</summary>
     Task<ApproveInstructorResponse> ApproveInstructorAsync(Guid instructorId, Guid adminId);
+
+    // ── Admin panel endpoints ─────────────────────────────────────────────────
+
+    /// <summary>Platform-wide statistics for the admin overview dashboard.</summary>
+    Task<AdminStatsResponse> GetStatsAsync();
+
+    /// <summary>Paginated, filterable list of all non-admin users.</summary>
+    Task<(IReadOnlyList<AdminUserRow> Users, int Total)> GetUsersAsync(AdminUserFilterRequest filter);
+
+    /// <summary>
+    /// Full detail for a single non-admin user including recent submissions.
+    /// Throws NotFoundException if the user doesn't exist or is an admin.
+    /// </summary>
+    Task<AdminUserDetailResponse> GetUserByIdAsync(Guid id);
+
+    /// <summary>
+    /// Sets a user's status to Active or Pending.
+    /// Throws ValidationException for invalid status strings.
+    /// Throws ForbiddenException if the target user is an admin.
+    /// Returns the updated user detail.
+    /// </summary>
+    Task<AdminUserDetailResponse> UpdateUserStatusAsync(Guid userId, string status, Guid adminId);
+
+    // ── Admin panel: problem management ──────────────────────────────────────
+
+    /// <summary>
+    /// Paginated, filterable list of ALL problems including inactive ones.
+    /// Soft-deleted problems are never returned.
+    /// </summary>
+    Task<(IReadOnlyList<AdminProblemRow> Problems, int Total)> GetAdminProblemsAsync(AdminProblemFilterRequest filter);
 }

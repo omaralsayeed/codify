@@ -36,7 +36,8 @@ public class TutorAgentService(
     {
         var stopwatch = Stopwatch.StartNew();
         var model = ChooseModel(input);
-        logger.LogInformation("Tutor agent using model {Model} for problem {ProblemId} (attempt={Attempt}, hintLevel={HintLevel})",
+        logger.LogInformation(
+            "🎯 Tutor agent starting: Model={Model}, ProblemId={ProblemId}, AttemptCount={Attempt}, HintLevel={HintLevel}",
             model, input.ProblemId, input.AttemptCount, input.HintLevel);
 
         var systemTemplate = await promptLoader.LoadAsync(PromptFileName, cancellationToken);
@@ -56,9 +57,13 @@ public class TutorAgentService(
 
         HintResponse? result = null;
 
+        logger.LogInformation("🔄 Starting agent loop (max {MaxIterations} iterations)...", MaxIterations);
+
         while (iterations < MaxIterations)
         {
             iterations++;
+            logger.LogInformation("🔄 Iteration {Iteration}/{Max}...", iterations, MaxIterations);
+            
             LlmResponse response;
 
             try
@@ -66,21 +71,31 @@ public class TutorAgentService(
                 response = await llmClient.CompleteWithToolsAsync(messages, toolDefs, model, cancellationToken);
                 lastModelUsed = response.ModelUsed ?? model;
                 totalTokensAccumulated += response.TotalTokens ?? 0;
+                
+                logger.LogInformation(
+                    "✅ LLM call successful. TokensThisCall={Tokens}, TotalSoFar={TotalTokens}",
+                    response.TotalTokens ?? 0, totalTokensAccumulated);
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Tutor agent LLM call failed for problem {ProblemId}.", input.ProblemId);
+                logger.LogError(ex, 
+                    "❌ Tutor agent LLM call failed at iteration {Iteration}. ProblemId={ProblemId}, Error: {ErrorType} - {ErrorMessage}", 
+                    iterations, input.ProblemId, ex.GetType().Name, ex.Message);
                 break;
             }
 
             if (response.HasToolCalls)
             {
+                logger.LogInformation("🔧 Agent requested {Count} tool(s): {Tools}", 
+                    response.ToolCalls.Count, 
+                    string.Join(", ", response.ToolCalls.Select(t => t.Name)));
+                
                 messages.Add(new LlmMessage { Role = "assistant", ToolCalls = response.ToolCalls });
 
                 foreach (var toolCall in response.ToolCalls)
                 {
                     toolsUsed.Add(toolCall.Name);
-                    logger.LogInformation("Tutor agent calling tool: {ToolName}", toolCall.Name);
+                    logger.LogInformation("⚙️  Executing tool: {ToolName}", toolCall.Name);
                     var resultJson = await ExecuteToolCallSafelyAsync(toolCall, input, cancellationToken);
                     messages.Add(new LlmMessage
                     {
@@ -88,10 +103,13 @@ public class TutorAgentService(
                         ToolCallId = toolCall.Id,
                         Content = resultJson
                     });
+                    logger.LogInformation("✅ Tool {ToolName} completed, result length: {Length}", 
+                        toolCall.Name, resultJson.Length);
                 }
             }
             else
             {
+                logger.LogInformation("🏁 Agent returned final response. Parsing JSON...");
                 result = ParseFinalResponse(response.FinalText ?? string.Empty, input.HintLevel, toolsUsed);
                 break;
             }
@@ -102,7 +120,8 @@ public class TutorAgentService(
 
         if (result is null)
         {
-            logger.LogWarning("Tutor agent hit max iterations ({Max}) for problem {ProblemId}. Tools used: {Tools}",
+            logger.LogWarning(
+                "⚠️  Tutor agent hit max iterations ({Max}) without final response. ProblemId={ProblemId}, Tools used: {Tools}",
                 MaxIterations, input.ProblemId, string.Join(", ", toolsUsed));
             result = CreateFallback(input.HintLevel, toolsUsed);
         }
@@ -111,8 +130,11 @@ public class TutorAgentService(
         result.TotalTokens = totalTokensAccumulated;
         result.LatencyMs = latencyMs;
 
-        logger.LogInformation("Tutor agent completed in {LatencyMs}ms using {Model} ({Iterations} iterations, {Tokens} tokens)",
-            latencyMs, lastModelUsed, iterations, totalTokensAccumulated);
+        logger.LogInformation(
+            "🎉 Tutor agent completed: LatencyMs={LatencyMs}, Model={Model}, Iterations={Iterations}, Tokens={Tokens}, " +
+            "HintLevel={HintLevel}, ToolsUsed={ToolsUsed}, IsFallback={IsFallback}",
+            latencyMs, lastModelUsed, iterations, totalTokensAccumulated, 
+            result.HintLevel, string.Join(", ", toolsUsed), result.ReasoningSummary?.Contains("Fallback") ?? false);
 
         return result;
     }

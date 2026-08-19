@@ -64,6 +64,105 @@ namespace Codify.Infrastructure.Persistence.Migrations
                     b.ToTable("ConceptTags");
                 });
 
+            modelBuilder.Entity("Codify.Domain.Entities.Contest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("CreatedByInstructorId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("EndAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<DateTime>("StartAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByInstructorId");
+
+                    b.ToTable("Contests");
+                });
+
+            modelBuilder.Entity("Codify.Domain.Entities.ContestParticipant", b =>
+                {
+                    b.Property<Guid>("ContestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<double>("Accuracy")
+                        .HasColumnType("float");
+
+                    b.Property<DateTime?>("FinishedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("JoinedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ProblemsSolved")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Rank")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Score")
+                        .HasColumnType("int");
+
+                    b.HasKey("ContestId", "StudentId");
+
+                    b.HasIndex("StudentId");
+
+                    b.ToTable("ContestParticipants");
+                });
+
+            modelBuilder.Entity("Codify.Domain.Entities.ContestProblem", b =>
+                {
+                    b.Property<Guid>("ContestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ProblemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Points")
+                        .HasColumnType("int");
+
+                    b.HasKey("ContestId", "ProblemId");
+
+                    b.HasIndex("ProblemId");
+
+                    b.ToTable("ContestProblems");
+                });
+
             modelBuilder.Entity("Codify.Domain.Entities.FeedbackRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -188,6 +287,9 @@ namespace Codify.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid?>("AuthorId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CodeTemplateJson")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Constraints")
                         .IsRequired()
@@ -547,6 +649,55 @@ namespace Codify.Infrastructure.Persistence.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("Codify.Domain.Entities.Contest", b =>
+                {
+                    b.HasOne("Codify.Domain.Entities.User", "CreatedByInstructor")
+                        .WithMany()
+                        .HasForeignKey("CreatedByInstructorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CreatedByInstructor");
+                });
+
+            modelBuilder.Entity("Codify.Domain.Entities.ContestParticipant", b =>
+                {
+                    b.HasOne("Codify.Domain.Entities.Contest", "Contest")
+                        .WithMany("ContestParticipants")
+                        .HasForeignKey("ContestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Codify.Domain.Entities.User", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Contest");
+
+                    b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("Codify.Domain.Entities.ContestProblem", b =>
+                {
+                    b.HasOne("Codify.Domain.Entities.Contest", "Contest")
+                        .WithMany("ContestProblems")
+                        .HasForeignKey("ContestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Codify.Domain.Entities.Problem", "Problem")
+                        .WithMany()
+                        .HasForeignKey("ProblemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Contest");
+
+                    b.Navigation("Problem");
+                });
+
             modelBuilder.Entity("Codify.Domain.Entities.FeedbackRecord", b =>
                 {
                     b.HasOne("Codify.Domain.Entities.Submission", "Submission")
@@ -680,6 +831,13 @@ namespace Codify.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Codify.Domain.Entities.ConceptTag", b =>
                 {
                     b.Navigation("ProblemTags");
+                });
+
+            modelBuilder.Entity("Codify.Domain.Entities.Contest", b =>
+                {
+                    b.Navigation("ContestParticipants");
+
+                    b.Navigation("ContestProblems");
                 });
 
             modelBuilder.Entity("Codify.Domain.Entities.Problem", b =>

@@ -347,3 +347,104 @@
   &.modal-btn--confirm-activate { background: $teal;   color: $white; border-color: $teal;   &:hover { opacity: 0.88; } }
   &.modal-btn--confirm-suspend  { background: $orange; color: $white; border-color: $orange; &:hover { opacity: 0.88; } }
 }
+
+// ── Loading skeletons ─────────────────────────────────────────────────────────
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+%sk {
+  background: linear-gradient(90deg, $ivory2 25%, darken($ivory2, 5%) 50%, $ivory2 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+  border-radius: $r;
+  display: block;
+}
+
+.skeleton {
+  @extend %sk;
+
+  &--back   { height: 18px; width: 120px; margin-bottom: 8px; }
+  &--avatar { width: 64px; height: 64px; border-radius: 50%; flex-shrink: 0; }
+  &--title  { height: 22px; width: 200px; margin-bottom: 8px; }
+  &--sub    { height: 14px; width: 160px; margin-bottom: 6px; }
+  &--pill   { height: 80px; border-radius: $r; }
+  &--card   { height: 160px; border-radius: $r; }
+}
+
+.skeleton-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  background: $white;
+  border: 1px solid $border;
+  border-radius: $r;
+  padding: 24px;
+}
+
+.skeleton-header-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 4px;
+}
+
+.skeleton-pills {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+
+  @media (max-width: $tablet) { grid-template-columns: repeat(2, 1fr); }
+}
+
+// ── Error banner ──────────────────────────────────────────────────────────────
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  background: $red-lt;
+  color: $red;
+  border: 1px solid rgba($red, 0.25);
+  border-radius: $r;
+  font-size: 14px;
+}
+
+.back-link-inline {
+  margin-left: auto;
+  font-size: 13px;
+  color: $red;
+  text-decoration: none;
+  &:hover { text-decoration: underline; }
+}
+
+// ── Modal error + spinner ─────────────────────────────────────────────────────
+.modal-error {
+  font-size: 13px;
+  color: $red;
+  background: $red-lt;
+  border: 1px solid rgba($red, 0.2);
+  border-radius: $r;
+  padding: 8px 12px;
+  margin: 0;
+  width: 100%;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.spinner {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

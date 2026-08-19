@@ -16,6 +16,9 @@ public class CodifyDbContext(DbContextOptions<CodifyDbContext> options) : DbCont
     public DbSet<PerformanceProfile> PerformanceProfiles => Set<PerformanceProfile>();
     public DbSet<FeedbackRecord> FeedbackRecords => Set<FeedbackRecord>();
     public DbSet<TestCaseResult> TestCaseResults => Set<TestCaseResult>();
+    public DbSet<Contest> Contests => Set<Contest>();
+    public DbSet<ContestProblem> ContestProblems => Set<ContestProblem>();
+    public DbSet<ContestParticipant> ContestParticipants => Set<ContestParticipant>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

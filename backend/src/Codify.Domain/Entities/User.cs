@@ -60,20 +60,31 @@ public class User
     public void RecordLogin() => LastLoginAt = DateTime.UtcNow;
 
     /// <summary>
-    /// Approves a pending instructor account. Call this from the admin approval flow.
+    /// General-purpose status setter for admin use.
+    /// Sets the user to Active or Pending and records the admin who made the change.
+    /// Use this for the admin panel "activate / set-pending" toggle.
     /// </summary>
-    public void Approve(Guid approvedByAdminId)
+    public void SetStatus(UserStatus status, Guid adminId)
     {
-        Status = UserStatus.Active;
-        ReviewedBy = approvedByAdminId;
+        Status = status;
+        ReviewedBy = adminId;
         ReviewedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void UpdateProfile(string? bio, string? avatarUrl)
+    /// <summary>
+    /// Approves a pending instructor account. Convenience wrapper around SetStatus(Active).
+    /// </summary>
+    public void Approve(Guid approvedByAdminId) => SetStatus(UserStatus.Active, approvedByAdminId);
+
+    public void UpdateProfile(string? fullName, string? bio, string? organization, string? avatarUrl = null)
     {
+        if (!string.IsNullOrWhiteSpace(fullName))
+            FullName = fullName.Trim();
         Bio = bio;
-        AvatarUrl = avatarUrl;
+        Organization = organization;
+        if (avatarUrl is not null)
+            AvatarUrl = avatarUrl;
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -86,6 +97,15 @@ public class User
     public void SoftDelete()
     {
         IsDeleted = true;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void ResetCredentials(string passwordHash, UserRole role, UserStatus status)
+    {
+        PasswordHash = passwordHash;
+        Role = role;
+        Status = status;
+        IsDeleted = false;
         UpdatedAt = DateTime.UtcNow;
     }
 }
