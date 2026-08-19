@@ -47,12 +47,29 @@ public static class ContestSeed
             });
         }
 
+        // Seed Instructor-Student relationships
+        foreach (var student in students)
+        {
+            if (!await db.InstructorStudents.AnyAsync(x => x.InstructorId == instructor.Id && x.StudentId == student.Id))
+            {
+                await db.InstructorStudents.AddAsync(new InstructorStudent
+                {
+                    InstructorId = instructor.Id,
+                    StudentId = student.Id,
+                    EnrolledAt = now.AddDays(-14)
+                });
+            }
+        }
+
         foreach (var student in students)
         {
             liveContest.ContestParticipants.Add(new ContestParticipant
             {
                 ContestId = liveContest.Id,
                 StudentId = student.Id,
+                InvitedEmail = student.Email,
+                InvitationStatus = InvitationStatus.Accepted,
+                RespondedAt = now.AddHours(-1),
                 Score = 0,
                 ProblemsSolved = 0,
                 Accuracy = 0,
@@ -93,6 +110,9 @@ public static class ContestSeed
             {
                 ContestId = endedContest.Id,
                 StudentId = student.Id,
+                InvitedEmail = student.Email,
+                InvitationStatus = InvitationStatus.Accepted,
+                RespondedAt = now.AddDays(-7),
                 Score = baseScore,
                 ProblemsSolved = baseScore == 300 ? 3 : (baseScore == 200 ? 2 : 1),
                 Accuracy = baseScore == 300 ? 100 : (baseScore == 200 ? 75 : 50),
@@ -127,18 +147,24 @@ public static class ContestSeed
             });
         }
 
+        // Add 1 student as Pending invite and others as Accepted for demonstration
+        bool isFirst = true;
         foreach (var student in students)
         {
             upcomingContest.ContestParticipants.Add(new ContestParticipant
             {
                 ContestId = upcomingContest.Id,
                 StudentId = student.Id,
+                InvitedEmail = student.Email,
+                InvitationStatus = isFirst ? InvitationStatus.Pending : InvitationStatus.Accepted,
+                RespondedAt = isFirst ? null : now,
                 Score = 0,
                 ProblemsSolved = 0,
                 Accuracy = 0,
                 Rank = 0,
                 JoinedAt = now
             });
+            isFirst = false;
         }
 
         await db.Contests.AddRangeAsync(liveContest, endedContest, upcomingContest);

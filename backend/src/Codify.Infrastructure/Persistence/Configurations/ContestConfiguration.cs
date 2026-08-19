@@ -55,6 +55,10 @@ public class ContestParticipantConfiguration : IEntityTypeConfiguration<ContestP
     {
         builder.HasKey(cp => new { cp.ContestId, cp.StudentId });
 
+        builder.Property(cp => cp.InvitationStatus).HasConversion<int>().IsRequired();
+        builder.Property(cp => cp.InvitedEmail).HasMaxLength(320);
+        builder.Property(cp => cp.RespondedAt);
+
         builder.HasOne(cp => cp.Student)
             .WithMany()
             .HasForeignKey(cp => cp.StudentId)
