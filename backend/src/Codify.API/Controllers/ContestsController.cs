@@ -107,4 +107,18 @@ public class ContestsController(IContestService contestService) : ControllerBase
             message = request.Accept ? "Contest invitation accepted successfully." : "Contest invitation declined."
         }));
     }
+
+    /// <summary>
+    /// GET /api/contests/students/search?query=...
+    /// Returns student candidates for contest invitations (accessible by Instructors and Admins).
+    /// </summary>
+    [HttpGet("students/search")]
+    [Authorize(Roles = "Instructor,Admin")]
+    public async Task<IActionResult> SearchStudents([FromQuery] string? query = null)
+    {
+        var instructorId = User.GetUserId();
+        var students = await contestService.SearchStudentCandidatesAsync(instructorId, query);
+        return Ok(ApiResponse.Ok(students));
+    }
 }
+

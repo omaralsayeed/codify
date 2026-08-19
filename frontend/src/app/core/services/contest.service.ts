@@ -208,4 +208,20 @@ export class ContestService {
         }))
       );
   }
+
+  searchStudents$(query: string = ''): Observable<{ id: string; name: string; email: string }[]> {
+    const url = query
+      ? `${this.baseUrl}/students/search?query=${encodeURIComponent(query)}`
+      : `${this.baseUrl}/students/search`;
+
+    return this.http
+      .get<ApiEnvelope<{ id: string; name: string; email: string }[]>>(url, {
+        headers: this.headers()
+      })
+      .pipe(
+        map(r => r.data || []),
+        catchError(() => of([]))
+      );
+  }
 }
+

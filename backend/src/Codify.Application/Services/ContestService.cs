@@ -325,4 +325,29 @@ public class ContestService(
             CreatedAt = c.CreatedAt
         };
     }
+
+    public async Task<List<StudentCandidateDto>> SearchStudentCandidatesAsync(Guid instructorId, string? query)
+    {
+        var allStudents = await userRepo.GetAllStudentsWithSubmissionsAsync();
+        var q = query?.Trim().ToLowerInvariant();
+
+        var queryable = allStudents.AsEnumerable();
+        if (!string.IsNullOrWhiteSpace(q))
+        {
+            queryable = queryable.Where(s =>
+                s.FullName.ToLowerInvariant().Contains(q) ||
+                s.Email.ToLowerInvariant().Contains(q));
+        }
+
+        return queryable
+            .Take(25)
+            .Select(s => new StudentCandidateDto
+            {
+                Id = s.Id,
+                Name = s.FullName,
+                Email = s.Email
+            })
+            .ToList();
+    }
 }
+

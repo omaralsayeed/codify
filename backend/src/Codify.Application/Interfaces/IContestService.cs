@@ -11,4 +11,5 @@ public interface IContestService
     Task<List<ContestResultDto>> GetStudentContestHistoryAsync(Guid studentId);
     Task<StudentContestsOverviewDto> GetStudentContestsOverviewAsync(Guid studentId);
     Task RespondToInvitationAsync(Guid contestId, Guid studentId, bool accept);
+    Task<List<StudentCandidateDto>> SearchStudentCandidatesAsync(Guid instructorId, string? query);
 }

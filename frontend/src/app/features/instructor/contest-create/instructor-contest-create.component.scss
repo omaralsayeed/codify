@@ -51,7 +51,7 @@
   box-shadow: $shadow;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: visible;
 }
 
 // ── Validation errors ─────────────────────────────────────────────────────────
@@ -282,6 +282,84 @@
     opacity: 0.5;
     cursor: not-allowed;
   }
+}
+
+// ── Email suggestions autocomplete ────────────────────────────────────────────
+
+.email-input-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.email-suggest-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 200;
+  margin: 0;
+  padding: 6px 0;
+  list-style: none;
+  background: $white;
+  border: 1px solid $border;
+  border-radius: $r;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.email-suggest-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  cursor: pointer;
+  transition: background 0.1s;
+
+  &:hover,
+  &--active {
+    background: #edf6f9;
+  }
+}
+
+.suggest-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2e86ab 0%, #1a5c7a 100%);
+  color: $white;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.suggest-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.suggest-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: $navy;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.suggest-email {
+  font-size: 12px;
+  color: $muted;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 // ── Standard Fields ──────────────────────────────────────────────────────────

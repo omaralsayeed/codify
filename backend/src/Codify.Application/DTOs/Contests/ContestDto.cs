@@ -50,3 +50,11 @@ public class ContestParticipantSummaryDto
     public double Accuracy { get; set; }
     public int Rank { get; set; }
 }
+
+public class StudentCandidateDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+}
+

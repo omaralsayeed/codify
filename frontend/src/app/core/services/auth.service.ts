@@ -13,7 +13,7 @@ interface LoginApiResponse {
   user: {
     userId: string;
     fullName: string;
-    role: number;
+    role: number | string;
     avatarUrl?: string; // returned by backend once column is added
   };
 }
@@ -21,8 +21,8 @@ interface LoginApiResponse {
 interface RegisterApiResponse {
   userId: string;
   email: string;
-  role: number;
-  status?: string; // 'active' | 'pending' — present once backend adds it
+  role: number | string;
+  status?: string; // 'active' | 'pending' | 'Pending' — present once backend adds it
 }
 
 interface ApiEnvelope<T> {
@@ -109,8 +109,10 @@ export class AuthService {
         timeout(10000),
         switchMap(response => {
           const data = response.data;
+          const roleStr = String(data.role).toLowerCase();
+          const statusStr = String(data.status ?? '').toLowerCase();
           // Instructor registered — backend sets status='Pending' (PascalCase from C# enum)
-          if (data.role === 1 && data.status === 'Pending') {
+          if ((roleStr === '1' || roleStr === 'instructor') && statusStr === 'pending') {
             return of({ success: true, pendingApproval: true } as AuthResult);
           }
           // Student registered — auto-login immediately
