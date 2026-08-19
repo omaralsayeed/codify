@@ -39,14 +39,16 @@ export class InstructorContestCreateComponent implements OnInit {
     endAt:       '',
   };
 
-  // ── Selected items (SelectItem shape for the shared component) ────────────
+  // ── Selected items ────────────────────────────────────────────────────────
 
   readonly selectedProblems  = signal<SelectItem[]>([]);
   readonly selectedStudents  = signal<SelectItem[]>([]);
+  readonly selectedEmails    = signal<string[]>([]);
+  readonly emailInput        = signal<string>('');
 
   // ── Available items from Database ─────────────────────────────────────────
   private readonly allProblems = signal<SelectItem[]>([]);
-  private readonly allStudents = signal<SelectItem[]>([]);
+  readonly availableStudents   = signal<{ id: string; name: string; email: string }[]>([]);
 
   // ── UI state ──────────────────────────────────────────────────────────────
 
@@ -69,36 +71,28 @@ export class InstructorContestCreateComponent implements OnInit {
       },
     });
 
-    // 2. Fetch real students from DB
+    // 2. Fetch enrolled students taught by this instructor
     this.instructorSvc.getOverview$().subscribe({
       next: (overview) => {
         if (!overview || !overview.students) return;
-        this.allStudents.set(
+        this.availableStudents.set(
           overview.students.map(s => ({
-            id:         s.studentId,
-            label:      s.fullName || s.email,
-            badge:      (s.fullName || 'ST').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase(),
-            badgeClass: 'avatar-badge',
+            id: s.studentId,
+            name: s.fullName,
+            email: s.email,
           }))
         );
       },
     });
   }
 
-  // ── Search functions (passed to SearchSelectComponent via @Input) ─────────
+  // ── Search functions ──────────────────────────────────────────────────────
 
   readonly searchProblems = (query: string): SelectItem[] => {
     const q = query.toLowerCase().trim();
     const list = this.allProblems();
     if (!q) return list.slice(0, 10);
     return list.filter(p => p.label.toLowerCase().includes(q));
-  };
-
-  readonly searchStudents = (query: string): SelectItem[] => {
-    const q = query.toLowerCase().trim();
-    const list = this.allStudents();
-    if (!q) return list.slice(0, 10);
-    return list.filter(s => s.label.toLowerCase().includes(q));
   };
 
   // ── Selection handlers ────────────────────────────────────────────────────
@@ -113,14 +107,52 @@ export class InstructorContestCreateComponent implements OnInit {
     this.selectedProblems.update(list => list.filter(x => x.id !== item.id));
   }
 
-  addStudent(item: SelectItem): void {
-    this.selectedStudents.update(list =>
-      list.find(x => x.id === item.id) ? list : [...list, item]
-    );
+  // ── Email chip handlers ───────────────────────────────────────────────────
+
+  addEmailChip(emailStr: string): void {
+    const raw = emailStr.trim().toLowerCase();
+    if (!raw) return;
+
+    // Handle comma or space separated emails
+    const emails = raw.split(/[\s,]+/).filter(e => e.length > 0);
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    this.selectedEmails.update(current => {
+      const next = [...current];
+      for (const e of emails) {
+        if (emailRegex.test(e) && !next.includes(e)) {
+          next.push(e);
+        }
+      }
+      return next;
+    });
+
+    this.emailInput.set('');
   }
 
-  removeStudent(item: SelectItem): void {
-    this.selectedStudents.update(list => list.filter(x => x.id !== item.id));
+  onEmailKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Enter' || event.key === ',') {
+      event.preventDefault();
+      this.addEmailChip(this.emailInput());
+    }
+  }
+
+  removeEmail(email: string): void {
+    this.selectedEmails.update(list => list.filter(e => e !== email));
+  }
+
+  quickAddStudent(student: { id: string; name: string; email: string }): void {
+    if (student.email) {
+      this.addEmailChip(student.email);
+    }
+  }
+
+  addAllTaughtStudents(): void {
+    const all = this.availableStudents().map(s => s.email).filter(Boolean);
+    this.selectedEmails.update(current => {
+      const set = new Set([...current, ...all]);
+      return Array.from(set);
+    });
   }
 
   // ── Validation ────────────────────────────────────────────────────────────
@@ -129,6 +161,7 @@ export class InstructorContestCreateComponent implements OnInit {
     const errs: string[] = [];
     if (!this.form.title.trim())                    errs.push('Title is required.');
     if (this.selectedProblems().length === 0)       errs.push('Select at least one problem.');
+    if (this.selectedEmails().length === 0)         errs.push('Assign at least one student email for invitation.');
     if (!this.form.startAt)                         errs.push('Start date/time is required.');
     if (!this.form.endAt)                           errs.push('End date/time is required.');
     if (this.form.startAt && this.form.endAt &&
@@ -141,6 +174,11 @@ export class InstructorContestCreateComponent implements OnInit {
   // ── Submit ────────────────────────────────────────────────────────────────
 
   onSubmit(): void {
+    // Also include any leftover text in email input
+    if (this.emailInput().trim()) {
+      this.addEmailChip(this.emailInput());
+    }
+
     const errs = this.validate();
     if (errs.length > 0) {
       this.errors.set(errs);
@@ -154,7 +192,7 @@ export class InstructorContestCreateComponent implements OnInit {
       title:              this.form.title.trim(),
       description:        this.form.description.trim(),
       problemIds:         this.selectedProblems().map(p => p.id),
-      assignedStudentIds: this.selectedStudents().map(s => s.id),
+      studentEmails:      this.selectedEmails(),
       startAt:            new Date(this.form.startAt).toISOString(),
       endAt:              new Date(this.form.endAt).toISOString(),
     };

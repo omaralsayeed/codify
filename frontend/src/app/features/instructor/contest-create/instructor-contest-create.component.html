@@ -4,7 +4,7 @@
   <div class="page-header">
     <a class="back-link" routerLink="../">← Back to Contests</a>
     <h1 class="page-title">New Contest</h1>
-    <p class="page-sub">Fill in the details, pick problems and assign students.</p>
+    <p class="page-sub">Fill in the details, pick problems and invite students via email.</p>
   </div>
 
   <form class="form-card" (ngSubmit)="onSubmit()" novalidate>
@@ -103,21 +103,90 @@
 
     <div class="form-divider" aria-hidden="true"></div>
 
-    <!-- ── Section 3: Students ────────────────────────────────────────── -->
+    <!-- ── Section 3: Invite Students via Email ──────────────────────── -->
     <div class="form-section">
-      <h2 class="section-heading">
-        Assign Students <span class="required" aria-hidden="true">*</span>
-      </h2>
-      <p class="section-hint">Search by name. Select at least one student.</p>
+      <div class="section-header-row">
+        <div>
+          <h2 class="section-heading">
+            Assign Students by Email <span class="required" aria-hidden="true">*</span>
+          </h2>
+          <p class="section-hint">
+            Enter student emails to send contest invitations. Students will accept or decline the invite.
+          </p>
+        </div>
+        @if (availableStudents().length > 0) {
+          <button type="button" class="btn-text" (click)="addAllTaughtStudents()">
+            + Invite all my students ({{ availableStudents().length }})
+          </button>
+        }
+      </div>
 
-      <app-search-select
-        label="Students"
-        placeholder="Search students…"
-        [searchFn]="searchStudents"
-        [selected]="selectedStudents()"
-        (selectItem)="addStudent($event)"
-        (deselectItem)="removeStudent($event)"
-      />
+      <!-- Quick add from enrolled students -->
+      @if (availableStudents().length > 0) {
+        <div class="quick-students-wrap">
+          <span class="quick-label">Your Students:</span>
+          <div class="quick-chips">
+            @for (s of availableStudents(); track s.id) {
+              <button
+                type="button"
+                class="quick-student-chip"
+                [class.quick-student-chip--added]="selectedEmails().includes(s.email)"
+                (click)="quickAddStudent(s)"
+              >
+                {{ s.name || s.email }}
+                @if (selectedEmails().includes(s.email)) {
+                  ✓
+                } @else {
+                  +
+                }
+              </button>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Email Input and Chips Container -->
+      <div class="email-input-container">
+        <div class="email-chips-box">
+          @for (email of selectedEmails(); track email) {
+            <span class="email-chip">
+              <span class="email-icon">✉</span>
+              <span class="email-text">{{ email }}</span>
+              <button
+                type="button"
+                class="chip-remove"
+                (click)="removeEmail(email)"
+                aria-label="Remove email"
+              >✕</button>
+            </span>
+          }
+
+          <input
+            id="student-emails-input"
+            class="email-inline-input"
+            type="email"
+            placeholder="Type email and press Enter or Comma…"
+            [ngModel]="emailInput()"
+            (ngModelChange)="emailInput.set($event)"
+            (keydown)="onEmailKeydown($event)"
+            (blur)="addEmailChip(emailInput())"
+            name="emailInput"
+            autocomplete="off"
+          />
+        </div>
+        <button
+          type="button"
+          class="btn-add-email"
+          (click)="addEmailChip(emailInput())"
+          [disabled]="!emailInput().trim()"
+        >
+          Add
+        </button>
+      </div>
+
+      <p class="field-subtext">
+        💡 Tip: You can paste multiple comma-separated emails at once (e.g. <code>student1@codify.com, student2@codify.com</code>).
+      </p>
     </div>
 
     <div class="form-divider" aria-hidden="true"></div>
@@ -126,7 +195,7 @@
     <div class="form-actions">
       <a class="btn-secondary" routerLink="../">Cancel</a>
       <button class="btn-primary" type="submit" [disabled]="submitting()">
-        {{ submitting() ? 'Creating…' : 'Create Contest' }}
+        {{ submitting() ? 'Creating…' : 'Create Contest & Send Invites' }}
       </button>
     </div>
 

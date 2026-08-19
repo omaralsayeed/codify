@@ -14,13 +14,89 @@
       </div>
     </header>
 
+    <!-- Feedback Message Banner -->
+    @if (actionMessage(); as msg) {
+      <div class="action-feedback-banner" [class.action-feedback-banner--success]="msg.type === 'success'" [class.action-feedback-banner--error]="msg.type === 'error'">
+        <span>{{ msg.text }}</span>
+        <button type="button" class="btn-dismiss" (click)="actionMessage.set(null)">✕</button>
+      </div>
+    }
+
     @if (isLoading()) {
       <div class="loading-state">
         <div class="spinner"></div>
         <p>Loading your assigned contests...</p>
       </div>
     } @else {
-      <!-- 1. LIVE CONTESTS SECTION -->
+
+      <!-- ── SECTION 0: PENDING CONTEST INVITATIONS ──────────────────────── -->
+      @if (overview()?.pendingInvitations && overview()!.pendingInvitations.length > 0) {
+        <section class="section-block invitations-section">
+          <div class="section-header">
+            <div class="section-title-wrap">
+              <span class="invite-indicator">✉</span>
+              <h2 class="section-title">Contest Invitations</h2>
+            </div>
+            <span class="section-count section-count--gold">{{ overview()?.pendingInvitations?.length }} Pending</span>
+          </div>
+
+          <div class="invitations-grid">
+            @for (contest of overview()?.pendingInvitations; track contest.id) {
+              <div class="invitation-card">
+                <div class="invitation-header">
+                  <div class="invitation-badge-tag">Contest Invitation</div>
+                  <span class="invitation-date">{{ formatDate(contest.startAt) }}</span>
+                </div>
+
+                <h3 class="invitation-title">{{ contest.title }}</h3>
+                @if (contest.description) {
+                  <p class="invitation-desc">{{ contest.description }}</p>
+                }
+
+                <div class="invitation-meta">
+                  <div class="meta-row">
+                    <span class="meta-icon">👤</span>
+                    <span class="meta-txt">Instructor: <strong>{{ contest.instructorName || 'Instructor' }}</strong></span>
+                  </div>
+                  <div class="meta-row">
+                    <span class="meta-icon">🗂️</span>
+                    <span class="meta-txt">{{ contest.problems?.length || contest.problemIds.length }} Problems Included</span>
+                  </div>
+                  <div class="meta-row">
+                    <span class="meta-icon">⏰</span>
+                    <span class="meta-txt">{{ formatDate(contest.startAt) }} – {{ formatDate(contest.endAt) }}</span>
+                  </div>
+                </div>
+
+                <div class="invitation-actions">
+                  <button
+                    type="button"
+                    class="btn-accept"
+                    [disabled]="respondingContestId() === contest.id"
+                    (click)="respondToInvitation(contest.id, true)"
+                  >
+                    @if (respondingContestId() === contest.id) {
+                      <span class="btn-spinner"></span> Accepting…
+                    } @else {
+                      ✓ Accept Invitation
+                    }
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-decline"
+                    [disabled]="respondingContestId() === contest.id"
+                    (click)="respondToInvitation(contest.id, false)"
+                  >
+                    Decline
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+      }
+
+      <!-- ── SECTION 1: LIVE CONTESTS ──────────────────────────────────── -->
       <section class="section-block">
         <div class="section-header">
           <div class="section-title-wrap">
@@ -106,7 +182,7 @@
         }
       </section>
 
-      <!-- 2. UPCOMING CONTESTS SECTION -->
+      <!-- ── SECTION 2: UPCOMING CONTESTS ──────────────────────────────── -->
       @if (overview()?.upcomingContests && overview()!.upcomingContests.length > 0) {
         <section class="section-block">
           <div class="section-header">
@@ -144,7 +220,7 @@
         </section>
       }
 
-      <!-- 3. HISTORICAL & SOLVED CONTESTS -->
+      <!-- ── SECTION 3: HISTORICAL & SOLVED CONTESTS ────────────────────── -->
       <section class="section-block">
         <div class="section-header">
           <div class="section-title-wrap">

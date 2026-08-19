@@ -1,11 +1,5 @@
 @use '../../../styles/variables' as *;
 
-// ── Centered page container ───────────────────────────────────────────────────
-//
-// The shell's .inst-main already has 24px padding on all sides, which acts as
-// a minimum gutter. Inside that, .create-contest centers itself with a max-width
-// and auto margins — matching the GitHub / Stripe / Vercel pattern.
-
 .create-contest {
   width: 100%;
   display: flex;
@@ -13,13 +7,13 @@
   gap: 0;
 }
 
-// ── Page header (back link + title) ──────────────────────────────────────────
+// ── Page header ──────────────────────────────────────────────────────────────
 
 .page-header {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  margin-bottom: 16px;  // tight attachment to the card below
+  margin-bottom: 16px;
 }
 
 .back-link {
@@ -53,7 +47,7 @@
   background: $white;
   border: 1px solid $border;
   border-radius: $r;
-  padding: 0;           // sections own their padding
+  padding: 0;
   box-shadow: $shadow;
   display: flex;
   flex-direction: column;
@@ -83,6 +77,14 @@
   gap: 18px;
 }
 
+.section-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
 .form-divider {
   height: 1px;
   background: $border;
@@ -100,10 +102,189 @@
 .section-hint {
   font-size: 13px;
   color: $muted;
-  margin: -10px 0 0;
+  margin: 4px 0 0;
 }
 
-// ── Fields ────────────────────────────────────────────────────────────────────
+.field-subtext {
+  font-size: 12px;
+  color: $muted;
+  margin: -6px 0 0;
+
+  code {
+    background: $ivory2;
+    padding: 2px 5px;
+    border-radius: 4px;
+    font-size: 11px;
+    color: $charcoal;
+  }
+}
+
+.btn-text {
+  background: none;
+  border: none;
+  color: $blue;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  transition: opacity 0.15s;
+
+  &:hover { text-decoration: underline; }
+}
+
+// ── Quick Student Chips ───────────────────────────────────────────────────────
+
+.quick-students-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border: 1px dashed $border;
+  border-radius: $r;
+}
+
+.quick-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: $muted;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.quick-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.quick-student-chip {
+  padding: 4px 10px;
+  background: $white;
+  border: 1px solid $border;
+  border-radius: 16px;
+  font-size: 12px;
+  color: $charcoal;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    border-color: $blue;
+    color: $blue;
+    background: #f0f7fa;
+  }
+
+  &--added {
+    background: rgba(46, 134, 171, 0.12);
+    border-color: $blue;
+    color: $blue;
+    font-weight: 600;
+  }
+}
+
+// ── Email Input & Chips Container ────────────────────────────────────────────
+
+.email-input-container {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.email-chips-box {
+  flex: 1;
+  min-height: 46px;
+  padding: 6px 10px;
+  border: 1px solid $border;
+  border-radius: $r;
+  background: $white;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  transition: border-color 0.15s, box-shadow 0.15s;
+
+  &:focus-within {
+    border-color: $blue;
+    box-shadow: 0 0 0 3px rgba(46, 134, 171, 0.12);
+  }
+}
+
+.email-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #edf6f9;
+  border: 1px solid rgba(46, 134, 171, 0.25);
+  color: $navy;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.email-icon {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.chip-remove {
+  background: none;
+  border: none;
+  color: $muted;
+  cursor: pointer;
+  padding: 0;
+  font-size: 11px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s;
+
+  &:hover {
+    color: $red;
+  }
+}
+
+.email-inline-input {
+  flex: 1;
+  min-width: 220px;
+  height: 32px;
+  border: none;
+  outline: none;
+  font-family: $ff-body;
+  font-size: 14px;
+  color: $charcoal;
+  background: transparent;
+
+  &::placeholder { color: $muted; }
+}
+
+.btn-add-email {
+  height: 46px;
+  padding: 0 18px;
+  background: #edf6f9;
+  border: 1px solid $border;
+  border-radius: $r;
+  color: $navy;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover:not(:disabled) {
+    background: $navy;
+    color: $ivory;
+    border-color: $navy;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// ── Standard Fields ──────────────────────────────────────────────────────────
 
 .field {
   display: flex;
