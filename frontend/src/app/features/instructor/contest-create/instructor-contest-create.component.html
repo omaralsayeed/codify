@@ -11,11 +11,11 @@
 
     <!-- Validation errors -->
     @if (errors().length > 0) {
-      <ul class="error-list" role="alert" aria-live="polite">
-        @for (err of errors(); track err) {
-          <li>{{ err }}</li>
-        }
-      </ul>
+    <ul class="error-list" role="alert" aria-live="polite">
+      @for (err of errors(); track err) {
+      <li>{{ err }}</li>
+      }
+    </ul>
     }
 
     <!-- ── Section 1: Contest Information ─────────────────────────────── -->
@@ -26,30 +26,15 @@
         <label class="field-label" for="contest-title">
           Title <span class="required" aria-hidden="true">*</span>
         </label>
-        <input
-          id="contest-title"
-          class="field-input"
-          type="text"
-          placeholder="e.g. Arrays & Hashing Sprint"
-          [(ngModel)]="form.title"
-          name="title"
-          maxlength="100"
-          required
-          autocomplete="off"
-        />
+        <input id="contest-title" class="field-input" type="text" placeholder="e.g. Arrays & Hashing Sprint"
+          [(ngModel)]="form.title" name="title" maxlength="100" required autocomplete="off" />
       </div>
 
       <div class="field">
         <label class="field-label" for="contest-desc">Description</label>
-        <textarea
-          id="contest-desc"
-          class="field-input field-textarea"
-          placeholder="Optional — brief context for this contest."
-          [(ngModel)]="form.description"
-          name="description"
-          rows="3"
-          maxlength="400"
-        ></textarea>
+        <textarea id="contest-desc" class="field-input field-textarea"
+          placeholder="Optional — brief context for this contest." [(ngModel)]="form.description" name="description"
+          rows="3" maxlength="400"></textarea>
       </div>
 
       <div class="field-row">
@@ -57,27 +42,14 @@
           <label class="field-label" for="start-at">
             Start <span class="required" aria-hidden="true">*</span>
           </label>
-          <input
-            id="start-at"
-            class="field-input"
-            type="datetime-local"
-            [(ngModel)]="form.startAt"
-            name="startAt"
-            required
-          />
+          <input id="start-at" class="field-input" type="datetime-local" [(ngModel)]="form.startAt" name="startAt"
+            required />
         </div>
         <div class="field">
           <label class="field-label" for="end-at">
             End <span class="required" aria-hidden="true">*</span>
           </label>
-          <input
-            id="end-at"
-            class="field-input"
-            type="datetime-local"
-            [(ngModel)]="form.endAt"
-            name="endAt"
-            required
-          />
+          <input id="end-at" class="field-input" type="datetime-local" [(ngModel)]="form.endAt" name="endAt" required />
         </div>
       </div>
     </div>
@@ -91,14 +63,8 @@
       </h2>
       <p class="section-hint">Search by title or topic. Select at least one.</p>
 
-      <app-search-select
-        label="Problems"
-        placeholder="Search problems…"
-        [searchFn]="searchProblems"
-        [selected]="selectedProblems()"
-        (selectItem)="addProblem($event)"
-        (deselectItem)="removeProblem($event)"
-      />
+      <app-search-select label="Problems" placeholder="Search problems…" [searchFn]="searchProblems"
+        [selected]="selectedProblems()" (selectItem)="addProblem($event)" (deselectItem)="removeProblem($event)" />
     </div>
 
     <div class="form-divider" aria-hidden="true"></div>
@@ -114,36 +80,7 @@
             Enter student emails to send contest invitations. Students will accept or decline the invite.
           </p>
         </div>
-        @if (availableStudents().length > 0) {
-          <button type="button" class="btn-text" (click)="addAllTaughtStudents()">
-            + Invite all my students ({{ availableStudents().length }})
-          </button>
-        }
       </div>
-
-      <!-- Quick add from enrolled students -->
-      @if (availableStudents().length > 0) {
-        <div class="quick-students-wrap">
-          <span class="quick-label">Your Students:</span>
-          <div class="quick-chips">
-            @for (s of availableStudents(); track s.id) {
-              <button
-                type="button"
-                class="quick-student-chip"
-                [class.quick-student-chip--added]="selectedEmails().includes(s.email)"
-                (click)="quickAddStudent(s)"
-              >
-                {{ s.name || s.email }}
-                @if (selectedEmails().includes(s.email)) {
-                  ✓
-                } @else {
-                  +
-                }
-              </button>
-            }
-          </div>
-        </div>
-      }
 
       <!-- Email Input and Chips Container -->
       <div class="email-input-wrapper" (click)="$event.stopPropagation()">
@@ -153,38 +90,18 @@
               <span class="email-chip">
                 <span class="email-icon">✉</span>
                 <span class="email-text">{{ email }}</span>
-                <button
-                  type="button"
-                  class="chip-remove"
-                  (click)="removeEmail(email)"
-                  aria-label="Remove email"
-                >✕</button>
+                <button type="button" class="chip-remove" (click)="removeEmail(email)"
+                  aria-label="Remove email">✕</button>
               </span>
             }
 
-            <input
-              id="student-emails-input"
-              class="email-inline-input"
-              type="text"
-              placeholder="Type name or email…"
-              [(ngModel)]="emailInput"
-              (input)="onEmailInput()"
-              (focus)="onEmailInput()"
-              (keydown)="onEmailKeydown($event)"
-              (blur)="onEmailBlur()"
-              name="emailInput"
-              autocomplete="off"
-              role="combobox"
-              aria-autocomplete="list"
-              [attr.aria-expanded]="showSuggest()"
-            />
+            <input id="student-emails-input" class="email-inline-input" type="text"
+              placeholder="Type name or email…" [(ngModel)]="emailInput" (input)="onEmailInput()"
+              (focus)="onEmailInput()" (keydown)="onEmailKeydown($event)" (blur)="onEmailBlur()" name="emailInput"
+              autocomplete="off" role="combobox" aria-autocomplete="list" [attr.aria-expanded]="showSuggest()" />
           </div>
-          <button
-            type="button"
-            class="btn-add-email"
-            (click)="addEmailChip(emailInput)"
-            [disabled]="!emailInput.trim()"
-          >
+          <button type="button" class="btn-add-email" (click)="addEmailChip(emailInput)"
+            [disabled]="!emailInput.trim()">
             Add
           </button>
         </div>
@@ -193,12 +110,8 @@
         @if (showSuggest() && emailSuggestions.length > 0) {
           <ul class="email-suggest-list" role="listbox">
             @for (s of emailSuggestions; track s.id; let i = $index) {
-              <li
-                class="email-suggest-item"
-                [class.email-suggest-item--active]="i === activeIndex"
-                role="option"
-                (mousedown)="pickSuggestion(s); $event.preventDefault()"
-              >
+              <li class="email-suggest-item" [class.email-suggest-item--active]="i === activeIndex" role="option"
+                (mousedown)="pickSuggestion(s); $event.preventDefault()">
                 <span class="suggest-avatar">{{ s.name.charAt(0).toUpperCase() }}</span>
                 <span class="suggest-info">
                   <span class="suggest-name">{{ s.name }}</span>
@@ -211,19 +124,20 @@
       </div>
 
       <p class="field-subtext">
-        💡 Tip: You can paste multiple comma-separated emails at once (e.g. <code>student1@codify.com, student2@codify.com</code>).
+        💡 Tip: You can paste multiple comma-separated emails at once (e.g.
+        <code>student1@codify.com, student2@codify.com</code>).
       </p>
     </div>
 
-    <div class="form-divider" aria-hidden="true"></div>
+        <div class="form-divider" aria-hidden="true"></div>
 
-    <!-- ── Section 4: Actions ─────────────────────────────────────────── -->
-    <div class="form-actions">
-      <a class="btn-secondary" routerLink="../">Cancel</a>
-      <button class="btn-primary" type="submit" [disabled]="submitting()">
-        {{ submitting() ? 'Creating…' : 'Create Contest & Send Invites' }}
-      </button>
-    </div>
+        <!-- ── Section 4: Actions ─────────────────────────────────────────── -->
+        <div class="form-actions">
+          <a class="btn-secondary" routerLink="../">Cancel</a>
+          <button class="btn-primary" type="submit" [disabled]="submitting()">
+            {{ submitting() ? 'Creating…' : 'Create Contest & Send Invites' }}
+          </button>
+        </div>
 
   </form>
 

@@ -106,7 +106,7 @@ public class ContestService(
             assignedStudents.AddRange(instructorStudents);
         }
 
-        // Add participants as Pending invitations and link to InstructorStudents
+        // Add participants with Pending invitation status
         foreach (var student in assignedStudents.DistinctBy(s => s.Id))
         {
             contest.ContestParticipants.Add(new ContestParticipant
@@ -121,9 +121,6 @@ public class ContestService(
                 Rank = 0,
                 JoinedAt = DateTime.UtcNow
             });
-
-            // Ensure the student is registered under this instructor
-            await userRepo.EnsureInstructorStudentEnrolledAsync(instructorId, student.Id);
         }
 
         await contestRepo.AddAsync(contest);

@@ -212,21 +212,6 @@ export class InstructorContestCreateComponent implements OnInit {
     this.selectedEmails.update(list => list.filter(e => e !== email));
   }
 
-  quickAddStudent(student: { id: string; name: string; email: string }): void {
-    if (student.email) {
-      this.addEmailChip(student.email);
-      this.cdr.markForCheck();
-    }
-  }
-
-  addAllTaughtStudents(): void {
-    const all = this.availableStudents().map(s => s.email).filter(Boolean);
-    this.selectedEmails.update(current => {
-      const set = new Set([...current, ...all]);
-      return Array.from(set);
-    });
-  }
-
   // ── Validation ────────────────────────────────────────────────────────────
 
   private validate(): string[] {
