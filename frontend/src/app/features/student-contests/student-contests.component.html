@@ -144,10 +144,10 @@
                 <!-- Problem list preview -->
                 @if (contest.problems && contest.problems.length > 0) {
                   <div class="problem-chips-wrap">
-                    <span class="chips-label">Contest Problems:</span>
+                    <span class="chips-label">Contest Problems ({{ contest.problems.length }}):</span>
                     <div class="chips-list">
                       @for (prob of contest.problems; track prob.id) {
-                        <a [routerLink]="['/problems', prob.id]" class="problem-chip">
+                        <a [routerLink]="['/contests', contest.id]" class="problem-chip">
                           <span class="prob-num">P{{ prob.order }}</span>
                           <span class="prob-name">{{ prob.title }}</span>
                           <span class="prob-pts">{{ prob.points }} pts</span>
@@ -158,23 +158,13 @@
                 }
 
                 <div class="card-footer">
-                  @if (contest.problems && contest.problems.length > 0) {
-                    <a [routerLink]="['/problems', contest.problems[0].id]" class="btn-enter-contest">
-                      <span>Enter Arena & Solve</span>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                        <polyline points="12 5 19 12 12 19"></polyline>
-                      </svg>
-                    </a>
-                  } @else if (contest.problemIds.length > 0) {
-                    <a [routerLink]="['/problems', contest.problemIds[0]]" class="btn-enter-contest">
-                      <span>Enter Arena & Solve</span>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                        <polyline points="12 5 19 12 12 19"></polyline>
-                      </svg>
-                    </a>
-                  }
+                  <a [routerLink]="['/contests', contest.id]" class="btn-enter-contest">
+                    <span>Enter Arena & Choose Problem</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                      <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                  </a>
                 </div>
               </div>
             }
@@ -213,6 +203,16 @@
                     <span class="meta-label">Total Problems:</span>
                     <span class="meta-value">{{ contest.problems?.length || contest.problemIds.length }} Problems</span>
                   </div>
+                </div>
+
+                <div class="card-footer">
+                  <a [routerLink]="['/contests', contest.id]" class="btn-enter-contest btn-enter-contest--upcoming">
+                    <span>View Contest Lineup</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                      <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                  </a>
                 </div>
               </div>
             }

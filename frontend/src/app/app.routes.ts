@@ -78,6 +78,16 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
 
+  // Student contest arena lobby — view all problems & choose which to solve
+  {
+    path: 'contests/:id',
+    loadComponent: () =>
+      import('./features/student-contests/contest-arena/student-contest-arena.component').then(
+        (m) => m.StudentContestArenaComponent
+      ),
+    canActivate: [authGuard],
+  },
+
   // Instructor module
   {
     path: 'instructor',

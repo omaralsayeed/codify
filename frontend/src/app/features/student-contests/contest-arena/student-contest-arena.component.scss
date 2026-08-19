@@ -1,0 +1,582 @@
+@use '../../../styles/variables' as *;
+
+.arena-page {
+  min-height: calc(100vh - 64px);
+  background: $ivory;
+  padding: 32px 24px 64px;
+}
+
+.arena-container {
+  max-width: 1120px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+// ── Loading & Not-found states ───────────────────────────────────────────────
+
+.arena-loading,
+.arena-not-found {
+  background: $white;
+  border: 1px solid $border;
+  border-radius: $r;
+  padding: 64px 32px;
+  text-align: center;
+  box-shadow: $shadow;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+
+  h2 {
+    font-family: $ff-display;
+    font-size: 22px;
+    color: $navy;
+    margin: 0;
+  }
+
+  p {
+    color: $muted;
+    font-size: 14px;
+    margin: 0;
+    max-width: 420px;
+  }
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(46, 134, 171, 0.15);
+  border-top-color: $blue;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.nf-icon {
+  font-size: 40px;
+}
+
+.btn-back-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 20px;
+  background: $navy;
+  color: $ivory;
+  border-radius: $r;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.15s;
+
+  &:hover { background: $navy2; }
+}
+
+// ── Navigation ───────────────────────────────────────────────────────────────
+
+.arena-nav {
+  display: flex;
+  align-items: center;
+}
+
+.nav-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: $blue;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  transition: color 0.15s;
+
+  &:hover {
+    color: $navy;
+    text-decoration: underline;
+  }
+}
+
+// ── Hero Banner ──────────────────────────────────────────────────────────────
+
+.arena-hero {
+  background: $white;
+  border: 1px solid $border;
+  border-radius: 12px;
+  padding: 28px 32px;
+  box-shadow: $shadow;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+.hero-main {
+  flex: 1;
+  min-width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.status-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+
+  &--live {
+    background: #e6f7f2;
+    color: #0d8a68;
+    border: 1px solid rgba(13, 138, 104, 0.25);
+  }
+
+  &--upcoming {
+    background: #edf6f9;
+    color: $blue;
+    border: 1px solid rgba(46, 134, 171, 0.25);
+  }
+
+  &--ended {
+    background: #f1f3f5;
+    color: $muted;
+    border: 1px solid $border;
+  }
+}
+
+.live-pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #0d8a68;
+  box-shadow: 0 0 0 0 rgba(13, 138, 104, 0.7);
+  animation: pulse-live 1.5s infinite;
+}
+
+@keyframes pulse-live {
+  0%   { box-shadow: 0 0 0 0 rgba(13, 138, 104, 0.7); }
+  70%  { box-shadow: 0 0 0 6px rgba(13, 138, 104, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(13, 138, 104, 0); }
+}
+
+.timer-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f8f9fa;
+  border: 1px solid $border;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: $charcoal;
+
+  &--live {
+    background: #fff8eb;
+    border-color: rgba(224, 159, 62, 0.4);
+    color: #9c6307;
+  }
+}
+
+.contest-title {
+  font-family: $ff-display;
+  font-size: 26px;
+  color: $navy;
+  margin: 0;
+  line-height: 1.25;
+}
+
+.contest-description {
+  font-size: 14px;
+  color: $muted;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.contest-instructor-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: $muted;
+  flex-wrap: wrap;
+}
+
+.inst-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, $blue 0%, $navy 100%);
+  color: $ivory;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.inst-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.inst-label { color: $muted; }
+.inst-name { color: $navy; font-weight: 600; }
+.meta-separator { color: $border; }
+.window-info { color: $charcoal; font-size: 13px; }
+
+.hero-stats-card {
+  display: flex;
+  align-items: center;
+  background: #f8fafb;
+  border: 1px solid $border;
+  border-radius: 10px;
+  padding: 16px 24px;
+  gap: 20px;
+  flex-shrink: 0;
+}
+
+.stat-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.stat-val {
+  font-family: $ff-display;
+  font-size: 22px;
+  font-weight: 700;
+  color: $navy;
+}
+
+.stat-lbl {
+  font-size: 11px;
+  font-weight: 600;
+  color: $muted;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.stat-divider {
+  width: 1px;
+  height: 32px;
+  background: $border;
+}
+
+// ── Tabs ─────────────────────────────────────────────────────────────────────
+
+.arena-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 2px solid $border;
+  padding-bottom: 2px;
+}
+
+.tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 10px 18px;
+  font-family: $ff-body;
+  font-size: 14px;
+  font-weight: 600;
+  color: $muted;
+  cursor: pointer;
+  margin-bottom: -4px;
+  transition: all 0.15s;
+
+  &:hover {
+    color: $navy;
+  }
+
+  &--active {
+    color: $blue;
+    border-bottom-color: $blue;
+  }
+}
+
+// ── Instruction Banner ───────────────────────────────────────────────────────
+
+.section-instruction-box {
+  background: #edf6f9;
+  border: 1px solid rgba(46, 134, 171, 0.25);
+  border-radius: 10px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.instruction-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.instruction-text {
+  font-size: 13px;
+  color: $navy;
+
+  strong {
+    display: block;
+    font-size: 14px;
+    margin-bottom: 2px;
+  }
+
+  p {
+    margin: 0;
+    color: #356075;
+  }
+}
+
+// ── Problems Grid ───────────────────────────────────────────────────────────
+
+.problems-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.problem-card {
+  background: $white;
+  border: 1px solid $border;
+  border-radius: 12px;
+  padding: 22px 24px;
+  box-shadow: $shadow;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(10, 37, 64, 0.08);
+    border-color: rgba(46, 134, 171, 0.4);
+  }
+}
+
+.prob-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.prob-index-badge {
+  font-size: 12px;
+  font-weight: 700;
+  color: $blue;
+  background: #edf6f9;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.prob-diff-badge {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 6px;
+
+  &.diff--easy {
+    background: #e6f7f2;
+    color: #0d8a68;
+  }
+
+  &.diff--medium {
+    background: #fff8eb;
+    color: #b25e02;
+  }
+
+  &.diff--hard {
+    background: #fde8e8;
+    color: #c81e1e;
+  }
+}
+
+.prob-card-title {
+  font-family: $ff-display;
+  font-size: 18px;
+  color: $navy;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.prob-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 4px;
+  border-top: 1px dashed $border;
+}
+
+.points-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #b25e02;
+}
+
+.pts-icon {
+  font-size: 14px;
+}
+
+.prob-status-indicator {
+  font-size: 12px;
+  color: $muted;
+  font-weight: 500;
+}
+
+.prob-card-footer {
+  margin-top: auto;
+  padding-top: 8px;
+}
+
+.btn-solve-now {
+  width: 100%;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: $navy;
+  color: $ivory;
+  border: none;
+  border-radius: $r;
+  font-family: $ff-body;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.15s;
+
+  &:hover {
+    background: $blue;
+    color: $white;
+    gap: 12px;
+  }
+}
+
+// ── Standings Table ─────────────────────────────────────────────────────────
+
+.standings-section {
+  background: $white;
+  border: 1px solid $border;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: $shadow;
+}
+
+.standings-empty {
+  text-align: center;
+  padding: 48px 24px;
+
+  .empty-icon { font-size: 36px; margin-bottom: 8px; }
+  h3 { font-family: $ff-display; font-size: 18px; color: $navy; margin: 0 0 6px; }
+  p { color: $muted; font-size: 14px; margin: 0; }
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.standings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+
+  th {
+    text-align: left;
+    padding: 12px 16px;
+    font-size: 12px;
+    font-weight: 700;
+    color: $muted;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 2px solid $border;
+  }
+
+  td {
+    padding: 14px 16px;
+    border-bottom: 1px solid $border;
+    color: $charcoal;
+  }
+}
+
+.standings-row {
+  transition: background 0.1s;
+
+  &:hover {
+    background: #f8fafb;
+  }
+
+  &.row-top-1 { background: rgba(224, 159, 62, 0.05); }
+  &.row-top-2 { background: rgba(140, 160, 180, 0.05); }
+  &.row-top-3 { background: rgba(205, 127, 50, 0.05); }
+}
+
+.rank-medal {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.rank-num {
+  font-weight: 600;
+  color: $muted;
+}
+
+.student-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.student-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #edf6f9;
+  color: $navy;
+  border: 1px solid rgba(46, 134, 171, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.student-name {
+  font-weight: 600;
+  color: $navy;
+}
+
+.score-badge {
+  display: inline-block;
+  background: #edf6f9;
+  color: $navy;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: 700;
+}
