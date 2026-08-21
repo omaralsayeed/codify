@@ -6,8 +6,8 @@ namespace Codify.Infrastructure.Search;
 
 /// <summary>
 /// Populates the Chroma Cloud knowledge base with concept-tag explanations and
-/// problem statements. Each document is embedded via text-embedding-3-small and
-/// stored with metadata (source type, concept tag, difficulty) so the Tutor Agent's
+/// problem statements. Each document is embedded via HuggingFace BAAI/bge-small-en-v1.5 
+/// and stored with metadata (source type, concept tag, difficulty) so the Tutor Agent's
 /// search_knowledge_base tool can retrieve grounded context at hint time.
 /// </summary>
 public class KnowledgeBaseIngestionService(

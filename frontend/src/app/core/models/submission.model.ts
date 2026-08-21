@@ -42,24 +42,32 @@ export interface SubmissionResult {
   outputSummary?: string;
 }
 
-export type FeedbackType = 'quality' | 'optimization' | 'anomaly';
+export type FeedbackType = 'CodeQuality' | 'Optimization' | 'AiGenerated' | 'quality' | 'optimization' | 'anomaly';
 
 export interface FeedbackItem {
   id: string;
-  type: FeedbackType;
-  title: string;
-  description: string;
-  message?: string;
-  lineStart: number | null;
-  lineEnd: number | null;
+  feedbackType: 'CodeQuality' | 'Optimization' | 'AiGenerated';
+  message: string;
+  confidence?: number | null;
+  createdAt: string;
+}
+
+export interface FeedbackItemDisplay {
+  type: 'quality' | 'optimization' | 'anomaly';
+  message: string;
   severity: 'low' | 'medium' | 'high';
+  // Optional fields for backward compatibility with template
+  id?: string;
+  title?: string;
+  description?: string;
+  lineStart?: number | null;
+  lineEnd?: number | null;
 }
 
 export interface SubmissionFeedback {
-  submissionId: string;
   overallScore: number;
-  summary: string;
-  feedbackItems: FeedbackItem[];
+  feedbackItems: FeedbackItemDisplay[];
+  summary?: string; // Optional summary field for template
 }
 
 export interface TestCaseResultDetail {
@@ -87,6 +95,6 @@ export interface SubmissionDetailResponse {
   totalTestCases: number;
   score: number;
   result: SubmissionResult;
-  aiFeedback: FeedbackItem[];
+  aiFeedback: FeedbackItemDisplay[];
   testCaseResults?: TestCaseResultDetail[];
 }

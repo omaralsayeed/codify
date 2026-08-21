@@ -109,7 +109,10 @@ public class TutorAgentService(
             }
             else
             {
-                logger.LogInformation("🏁 Agent returned final response. Parsing JSON...");
+                logger.LogInformation("🏁 Agent returned final response. Response details: HasToolCalls={HasToolCalls}, ToolCallsCount={ToolCallsCount}, FinalTextLength={FinalTextLength}", 
+                    response.HasToolCalls, response.ToolCalls?.Count ?? 0, response.FinalText?.Length ?? 0);
+                logger.LogInformation("📄 Final text content: {FinalText}", response.FinalText ?? "(null)");
+                
                 result = ParseFinalResponse(response.FinalText ?? string.Empty, input.HintLevel, toolsUsed);
                 break;
             }
@@ -163,10 +166,22 @@ public class TutorAgentService(
 
         try
         {
-            // Strip markdown fences if the model wrapped the JSON.
-            var cleaned = rawText.Replace("```json", string.Empty).Replace("```", string.Empty).Trim();
+            // The API might return tool calls + reasoning + JSON all in one response
+            // Extract just the JSON object from the text
+            var jsonStart = rawText.IndexOf('{');
+            var jsonEnd = rawText.LastIndexOf('}');
 
-            var result = JsonSerializer.Deserialize<HintResponse>(cleaned, JsonOptions);
+            if (jsonStart < 0 || jsonEnd < 0 || jsonEnd <= jsonStart)
+            {
+                logger.LogWarning("Tutor agent response doesn't contain JSON object. Response: {Response}", 
+                    rawText.Length > 200 ? rawText.Substring(0, 200) + "..." : rawText);
+                return CreateFallback(suggestedLevel, toolsUsed);
+            }
+
+            var jsonText = rawText.Substring(jsonStart, jsonEnd - jsonStart + 1);
+            logger.LogInformation("📄 [DEBUG] Extracted JSON from response:\n{Json}", jsonText);
+
+            var result = JsonSerializer.Deserialize<HintResponse>(jsonText, JsonOptions);
             if (result is null || string.IsNullOrWhiteSpace(result.HintText))
             {
                 logger.LogWarning("Tutor agent returned invalid/empty hint payload.");
@@ -180,7 +195,7 @@ public class TutorAgentService(
         }
         catch (JsonException ex)
         {
-            logger.LogWarning(ex, "Tutor agent JSON parse failed.");
+            logger.LogWarning(ex, "Tutor agent JSON parse failed. Raw text length: {Length}", rawText.Length);
             return CreateFallback(suggestedLevel, toolsUsed);
         }
     }
