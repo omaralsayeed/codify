@@ -13,6 +13,7 @@ import {
   PublicProfileData,
 } from '../models/analytics.model';
 import { ServiceError } from '../models/submission.model';
+import { environment } from '../../../environments/environment';
 
 /** Shape of every response envelope from the backend: { data: T } */
 interface ApiEnvelope<T> { data: T; }
@@ -46,7 +47,7 @@ interface BackendStudentAnalytics {
 @Injectable({ providedIn: 'root' })
 export class AnalyticsService {
   private readonly http = inject(HttpClient);
-  private readonly API  = 'http://localhost:5237/api';
+  private readonly API  = environment.apiUrl;
 
   private headers(): HttpHeaders {
     const token = localStorage.getItem('codify_token') ?? '';

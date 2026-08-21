@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Problem } from '../models/problem.model';
 import { mapDifficulty, difficultyToNumber, Difficulty } from '../utils/enum-mappers';
+import { environment } from '../../../environments/environment';
 
 // Backend API response interfaces
 interface ProblemListItem {
@@ -53,7 +54,7 @@ interface ApiEnvelope<T> {
 @Injectable({ providedIn: 'root' })
 export class ProblemService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = 'http://localhost:5237/api';
+  private readonly baseUrl = environment.apiUrl;
 
   /**
    * Get authorization headers with JWT token

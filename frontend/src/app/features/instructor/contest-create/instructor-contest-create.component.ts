@@ -9,6 +9,7 @@ import { ProblemService } from '../../../core/services/problem.service';
 import { InstructorService } from '../../../core/services/instructor.service';
 import { SearchSelectComponent, SelectItem } from '../../../shared/components/search-select/search-select.component';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { environment } from '../../../../environments/environment';
 
 interface FormState {
   title: string;
@@ -32,7 +33,7 @@ export class InstructorContestCreateComponent implements OnInit {
   private readonly instructorSvc = inject(InstructorService);
   private readonly cdr           = inject(ChangeDetectorRef);
   private readonly http          = inject(HttpClient);
-  private readonly apiBase       = 'http://localhost:5237/api';
+  private readonly apiBase       = environment.apiUrl;
 
   // ── Form fields ───────────────────────────────────────────────────────────
 

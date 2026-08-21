@@ -7,6 +7,7 @@ import {
   InstructorStudentSummary,
   IntegrityFlag,
 } from '../models/instructor.model';
+import { environment } from '../../../environments/environment';
 
 interface ApiEnvelope<T> {
   data: T;
@@ -59,7 +60,7 @@ export interface BackendIntegrityFlag {
 @Injectable({ providedIn: 'root' })
 export class InstructorService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = 'http://localhost:5237/api/analytics';
+  private readonly baseUrl = `${environment.apiUrl}/analytics`;
 
   private cachedStudents: InstructorStudentSummary[] = [];
   private cachedFlags: IntegrityFlag[] = [];

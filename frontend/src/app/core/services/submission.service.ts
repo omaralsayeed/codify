@@ -7,7 +7,7 @@
  *   GET  /api/submissions/:id        → poll for final verdict
  *   GET  /api/submissions/:id/feedback → AI code-quality feedback (mock until backend ships)
  *
- * Base URL: http://localhost:5237  (matches launchSettings.json http profile)
+ * Base URL: configured via environment.apiUrl (see src/environments/)
  *
  * Auth: reads the JWT from localStorage key 'codify_token'.
  * TODO: replace the manual header with a proper HttpInterceptor once
@@ -36,6 +36,7 @@ import {
   FeedbackItem,
   FeedbackItemDisplay,
 } from '../models/submission.model';
+import { environment } from '../../../environments/environment';
 
 /** Shape of every response envelope from the backend: { data: T } */
 interface ApiEnvelope<T> { data: T; }
@@ -58,7 +59,7 @@ const PENDING_STATUSES = new Set(['Pending', 'Running']);
 @Injectable({ providedIn: 'root' })
 export class SubmissionService {
   private readonly http = inject(HttpClient);
-  private readonly API  = 'http://localhost:5237/api';
+  private readonly API  = environment.apiUrl;
 
   // ── Auth helper ────────────────────────────────────────────────────────────
 

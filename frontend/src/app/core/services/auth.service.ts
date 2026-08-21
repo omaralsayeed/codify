@@ -5,6 +5,7 @@ import { map, catchError, switchMap, timeout } from 'rxjs/operators';
 import { User, UpdateProfileDto } from '../models/user.model';
 import { AuthResult, RegisterData } from '../models/auth.model';
 import { mapRole, roleToNumber } from '../utils/enum-mappers';
+import { environment } from '../../../environments/environment';
 
 // Backend API response interfaces
 interface LoginApiResponse {
@@ -36,7 +37,7 @@ interface ApiError {
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = 'http://localhost:5237/api';
+  private readonly baseUrl = environment.apiUrl;
 
   // Signal-based state management
   private _currentUser = signal<User | null>(null);
