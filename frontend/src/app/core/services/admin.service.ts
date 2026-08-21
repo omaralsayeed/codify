@@ -3,6 +3,7 @@ import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { mapRole, mapDifficulty } from '../utils/enum-mappers';
+import { environment } from '../../../environments/environment';
 
 // ── Shared types (exported for use in admin components) ───────────────────────
 
@@ -137,7 +138,7 @@ interface RawProblemRow {
 @Injectable({ providedIn: 'root' })
 export class AdminService {
   private readonly http    = inject(HttpClient);
-  private readonly baseUrl = 'http://localhost:5237/api';
+  private readonly baseUrl = environment.apiUrl;
 
   // ── Auth header ─────────────────────────────────────────────────────────────
   private headers(): HttpHeaders {
