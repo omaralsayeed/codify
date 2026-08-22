@@ -90,3 +90,15 @@ export interface SubmissionDetailResponse {
   aiFeedback: FeedbackItem[];
   testCaseResults?: TestCaseResultDetail[];
 }
+
+/** Lightweight summary returned by GET /api/problems/:id/submissions */
+export interface SubmissionSummaryResponse {
+  submissionId: string;
+  language: string;
+  status: SubmissionStatus;
+  submittedAt: string;
+  executionTimeMs: number | null;
+  memoryUsedKb: number | null;
+  passedTestCases: number;
+  totalTestCases: number;
+}

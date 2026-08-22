@@ -12,6 +12,7 @@ import { ProblemService } from '../../core/services/problem.service';
 import {
   RunCodeResponse,
   SubmissionDetailResponse,
+  SubmissionSummaryResponse,
   ServiceError,
   SubmissionFeedback,
   FeedbackType,
@@ -222,6 +223,20 @@ public:
 
   // Layer 3: editor glow class toggled on accepted
   editorGlowing = false;
+
+  // ── Submission History state (Task F2) ────────────────────────────────────
+  submissionHistory:        SubmissionSummaryResponse[] = [];
+  isSubmissionHistoryLoading: boolean = false;
+  submissionHistoryError:   string | null = null;
+  private historyLoaded     = false; // guard: only fetch once per problem load
+
+  // ── Settings modal state (Task F3) ───────────────────────────────────────
+  isSettingsModalOpen = false;
+  settingsForm = {
+    title:       '',
+    description: '',
+    difficulty:  '',
+  };
 
   get showResultBanner(): boolean {
     // Banner shows as soon as submit is triggered (even while judging)
@@ -514,6 +529,10 @@ public:
   private loadProblem(id: string): void {
     this.isProblemLoading = true;
     this.problemLoadError = null;
+    // Reset history so switching problems re-fetches
+    this.historyLoaded = false;
+    this.submissionHistory = [];
+    this.submissionHistoryError = null;
 
     this.problemSvc.getById(id).pipe(takeUntil(this.destroy$)).subscribe({
       next: (problem) => {
@@ -637,6 +656,8 @@ public:
             this.isSolved = true;
             this.triggerAcceptedCelebration();
           }
+          // Reset so the submissions tab re-fetches and shows the new entry
+          this.historyLoaded = false;
           this.setActiveTab('submissions');
 
           // Fetch AI feedback in the background — parallel to the user reading
@@ -1014,10 +1035,93 @@ public:
     this.dismissHintOverlay();
   }
 
-  onSettings(): void {}
+  onSettings(): void {
+    // Only instructors and admins can edit problems
+    const role = this.auth.user()?.role;
+    if (role !== 'instructor' && role !== 'admin') return;
+
+    this.settingsForm = {
+      title:       this.problemTitle,
+      description: this.problemDescription,
+      difficulty:  this.problemDifficulty,
+    };
+    this.isSettingsModalOpen = true;
+  }
+
+  closeSettingsModal(): void {
+    this.isSettingsModalOpen = false;
+  }
+
+  saveSettings(): void {
+    if (!this.problemId) return;
+    const payload = {
+      title:      this.settingsForm.title.trim(),
+      statement:  this.settingsForm.description.trim(),
+      difficulty: this.difficultyToNumber(this.settingsForm.difficulty),
+    };
+    this.problemSvc.update(this.problemId, payload)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.problemTitle       = this.settingsForm.title.trim();
+          this.problemDescription = this.settingsForm.description.trim();
+          this.problemDifficulty  = this.settingsForm.difficulty;
+          this.isSettingsModalOpen = false;
+          this.showToast('Problem updated successfully.');
+        },
+        error: () => {
+          this.showToast('Failed to save changes. Please try again.');
+        },
+      });
+  }
+
+  private difficultyToNumber(difficulty: string): number {
+    switch (difficulty.toLowerCase()) {
+      case 'easy':   return 1;
+      case 'medium': return 2;
+      case 'hard':   return 3;
+      default:       return 1;
+    }
+  }
+
+  get canEditProblem(): boolean {
+    const role = this.auth.user()?.role;
+    return role === 'instructor' || role === 'admin';
+  }
+
+  /** Students can submit. Instructors and admins cannot (backend returns 403). */
+  get canSubmit(): boolean {
+    const role = this.auth.user()?.role;
+    // Unauthenticated users also can't submit, but auth guard handles that
+    return role === 'student';
+  }
 
   // ── Tab switching ─────────────────────────────────────────────────────────
-  setActiveTab(tab: ActiveTab): void { this.activeTab = tab; }
+  setActiveTab(tab: ActiveTab): void {
+    this.activeTab = tab;
+    if (tab === 'submissions' && !this.historyLoaded) {
+      this.loadSubmissionHistory();
+    }
+  }
+
+  loadSubmissionHistory(): void {
+    if (!this.problemId) return;
+    this.isSubmissionHistoryLoading = true;
+    this.submissionHistoryError = null;
+    this.submissionSvc.getSubmissionsByProblem(this.problemId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (history) => {
+          this.submissionHistory = history;
+          this.historyLoaded = true;
+          this.isSubmissionHistoryLoading = false;
+        },
+        error: () => {
+          this.submissionHistoryError = 'Failed to load submission history. Please try again.';
+          this.isSubmissionHistoryLoading = false;
+        },
+      });
+  }
 
   setBottomTab(tab: 'testcases' | 'result' | 'feedback'): void {
     this.activeBottomTab = tab;

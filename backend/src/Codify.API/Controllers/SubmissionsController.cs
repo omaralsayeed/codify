@@ -21,7 +21,7 @@ public class SubmissionsController(ISubmissionService submissionService) : Contr
     /// Rate limited: 30 requests per hour per user.
     /// </summary>
     [HttpPost]
-    [Authorize(Roles = "Student")]
+    [Authorize(Roles = "Student,Instructor")]
     [EnableRateLimiting("submissions")]
     public async Task<IActionResult> Create([FromBody] CreateSubmissionRequest request)
     {

@@ -3823,3 +3823,198 @@
   .feedback-severity-strip { animation: none; }
   .feedback-tab-dot     { transition: none; }
 }
+
+// ── Submission History Table (Task F2) ────────────────────────────────────────
+.submissions-history {
+  padding: 16px;
+  overflow-x: auto;
+}
+
+.submissions-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: $ff-body;
+  font-size: 13px;
+
+  th {
+    text-align: left;
+    padding: 8px 12px;
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: $muted;
+    border-bottom: 1px solid $border;
+  }
+
+  td {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    vertical-align: middle;
+  }
+
+  tr:last-child td {
+    border-bottom: none;
+  }
+
+  tr:hover td {
+    background: rgba(255, 255, 255, 0.03);
+  }
+}
+
+.submission-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+
+  &--accepted {
+    color: #22c55e;
+    background: rgba(34, 197, 94, 0.12);
+  }
+
+  &--rejected {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.12);
+  }
+}
+
+.submission-lang {
+  color: $muted;
+  font-size: 12px;
+}
+
+.submission-meta {
+  color: $muted;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.submission-date {
+  color: $muted;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+// ── Settings Modal (Task F3) ──────────────────────────────────────────────────
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 24px;
+}
+
+.modal-panel {
+  background: #1e1e1e;
+  border: 1px solid $border;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 540px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid $border;
+}
+
+.modal-title {
+  font-family: $ff-heading;
+  font-size: 16px;
+  font-weight: 600;
+  color: $text-primary;
+  margin: 0;
+}
+
+.modal-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: $muted;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+
+  &:hover {
+    background: $border;
+    color: $text-primary;
+  }
+}
+
+.modal-body {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.modal-label {
+  font-family: $ff-body;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: $muted;
+}
+
+.modal-input,
+.modal-select,
+.modal-textarea {
+  font-family: $ff-body;
+  font-size: 14px;
+  color: $text-primary;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid $border;
+  border-radius: 6px;
+  padding: 8px 12px;
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+
+  &:focus {
+    border-color: $teal;
+    background: rgba(255, 255, 255, 0.07);
+  }
+
+  option {
+    background: #1e1e1e;
+    color: $text-primary;
+  }
+}
+
+.modal-textarea {
+  resize: vertical;
+  min-height: 120px;
+  line-height: 1.5;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 24px 20px;
+  border-top: 1px solid $border;
+}
