@@ -1089,11 +1089,10 @@ public:
     return role === 'instructor' || role === 'admin';
   }
 
-  /** Students can submit. Instructors and admins cannot (backend returns 403). */
+  /** Students and instructors can submit (backend updated to allow both roles). */
   get canSubmit(): boolean {
     const role = this.auth.user()?.role;
-    // Unauthenticated users also can't submit, but auth guard handles that
-    return role === 'student';
+    return role === 'student' || role === 'instructor';
   }
 
   // ── Tab switching ─────────────────────────────────────────────────────────

@@ -110,20 +110,8 @@
       </button>
     </div>
 
-    <!-- Right: settings + avatar -->
+    <!-- Right: avatar -->
     <div class="toolbar-right">
-      @if (canEditProblem) {
-        <button class="toolbar-icon-btn" (click)="onSettings()" type="button"
-                aria-label="Edit problem settings">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
-               fill="none" stroke="currentColor" stroke-width="2"
-               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="3"></circle>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-          </svg>
-        </button>
-      }
-
       @if (auth.isLoggedIn()) {
         <div class="toolbar-avatar" aria-label="User avatar">
           {{ auth.user()?.avatarInitials }}
@@ -423,31 +411,52 @@
                     <table class="submissions-table" aria-label="Submission history">
                       <thead>
                         <tr>
+                          <th scope="col" class="col-num">#</th>
                           <th scope="col">Status</th>
                           <th scope="col">Language</th>
                           <th scope="col">Runtime</th>
                           <th scope="col">Memory</th>
-                          <th scope="col">Submitted</th>
                         </tr>
                       </thead>
                       <tbody>
-                        @for (sub of submissionHistory; track sub.submissionId) {
+                        @for (sub of submissionHistory; track sub.submissionId; let i = $index) {
                           <tr>
+                            <td class="submission-num">{{ submissionHistory.length - i }}</td>
                             <td>
                               <span class="submission-status"
                                     [class.submission-status--accepted]="sub.status === 'Accepted'"
                                     [class.submission-status--rejected]="sub.status !== 'Accepted'">
                                 {{ sub.status }}
                               </span>
+                              <span class="submission-date">{{ sub.submittedAt | date:'MMM d, y' }}</span>
                             </td>
-                            <td class="submission-lang">{{ sub.language }}</td>
+                            <td>
+                              <span class="submission-lang-pill">{{ sub.language }}</span>
+                            </td>
                             <td class="submission-meta">
-                              {{ sub.executionTimeMs != null ? sub.executionTimeMs + ' ms' : '—' }}
+                              @if (sub.executionTimeMs != null) {
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor" stroke-width="2"
+                                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                  <circle cx="12" cy="12" r="10"></circle>
+                                  <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                                {{ sub.executionTimeMs }} ms
+                              } @else { — }
                             </td>
                             <td class="submission-meta">
-                              {{ sub.memoryUsedKb != null ? (sub.memoryUsedKb / 1024).toFixed(1) + ' MB' : '—' }}
+                              @if (sub.memoryUsedKb != null) {
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor" stroke-width="2"
+                                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                  <rect x="2" y="6" width="20" height="12" rx="2"></rect>
+                                  <path d="M12 12h.01"></path>
+                                  <path d="M7 12h.01"></path>
+                                  <path d="M17 12h.01"></path>
+                                </svg>
+                                {{ (sub.memoryUsedKb / 1024).toFixed(1) }} MB
+                              } @else { — }
                             </td>
-                            <td class="submission-date">{{ sub.submittedAt | date:'MMM d, y, h:mm a' }}</td>
                           </tr>
                         }
                       </tbody>
