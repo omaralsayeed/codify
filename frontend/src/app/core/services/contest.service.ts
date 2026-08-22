@@ -9,6 +9,7 @@ import {
   CreateContestPayload,
   StudentContestsOverview,
 } from '../models/contest.model';
+import { environment } from '../../../environments/environment';
 
 interface ApiEnvelope<T> {
   data: T;
@@ -54,7 +55,7 @@ function normalizeContest(c: any): Contest {
 @Injectable({ providedIn: 'root' })
 export class ContestService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = 'http://localhost:5237/api/contests';
+  private readonly baseUrl = `${environment.apiUrl}/contests`;
 
   private contests: Contest[] = [];
   private results: ContestResult[] = [];

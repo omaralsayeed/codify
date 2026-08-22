@@ -5,9 +5,9 @@ namespace Codify.Infrastructure.Search;
 
 /// <summary>
 /// High-level RAG retrieval over the Chroma Cloud knowledge base. Embeds the
-/// query with text-embedding-3-small, runs a similarity search against the
-/// concept documents stored in Chroma (source = "concept"), and formats the
-/// top-k chunks for injection into agent prompts.
+/// query with HuggingFace BAAI/bge-small-en-v1.5 (384 dimensions), runs a 
+/// similarity search against the concept documents stored in Chroma 
+/// (source = "concept"), and formats the top-k chunks for injection into agent prompts.
 ///
 /// Fails gracefully: if embedding or retrieval throws (e.g. Chroma outage),
 /// returns an empty list and logs — agents then proceed without RAG context.

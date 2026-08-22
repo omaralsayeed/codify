@@ -4,7 +4,7 @@
  * Covers the backend endpoint:
  *   POST /api/ai/hints
  *
- * Base URL: http://localhost:5237  (matches launchSettings.json http profile)
+ * Base URL: configured via environment.apiUrl (see src/environments/)
  * Auth: reads JWT from localStorage key 'codify_token'.
  *
  * The backend returns one hint per call. The caller is responsible for
@@ -20,6 +20,7 @@ import { HttpClient, HttpHeaders, HttpErrorResponse } from '@angular/common/http
 import { Observable, of, throwError, delay, catchError, map } from 'rxjs';
 import { HintRequest, HintResponse } from '../models/hint.model';
 import { ServiceError } from '../models/submission.model';
+import { environment } from '../../../environments/environment';
 
 /** Shape of every response envelope from the backend: { data: T } */
 interface ApiEnvelope<T> { data: T; }
@@ -27,7 +28,7 @@ interface ApiEnvelope<T> { data: T; }
 @Injectable({ providedIn: 'root' })
 export class HintService {
   private readonly http = inject(HttpClient);
-  private readonly API  = 'http://localhost:5237/api';
+  private readonly API  = environment.apiUrl;
 
   // ── Auth helper ────────────────────────────────────────────────────────────
 

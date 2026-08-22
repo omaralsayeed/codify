@@ -44,7 +44,7 @@ public class OpenAiEmbeddingService(
 
         try
         {
-            using var response = await _httpClient.PostAsJsonAsync("embeddings", payload, cancellationToken);
+            using var response = await _httpClient.PostAsJsonAsync("student/chat", payload, cancellationToken);
             response.EnsureSuccessStatusCode();
 
             var json = await response.Content.ReadAsStringAsync(cancellationToken);

@@ -117,59 +117,19 @@ public class ChromaCloudVectorStore(
     private string CollectionsBasePath() => $"{TenantDatabasePath()}/collections";
 
     /// <summary>
-    /// Resolves the configured collection's id, creating the collection if it
-    /// does not exist yet (get-or-create semantics).
+    /// Returns the configured collection ID directly without fetching.
+    /// The CollectionName option is treated as the collection ID.
     /// </summary>
-    private async Task<string> GetCollectionIdAsync(CancellationToken cancellationToken)
+    private Task<string> GetCollectionIdAsync(CancellationToken cancellationToken)
     {
         if (!string.IsNullOrEmpty(_collectionId))
-            return _collectionId;
+            return Task.FromResult(_collectionId);
 
-        // 1. Try to fetch the collection by name.
-        var getUrl = $"{CollectionsBasePath()}/{Uri.EscapeDataString(_options.CollectionName)}";
-        var getResponse = await _httpClient.GetAsync(getUrl, cancellationToken);
+        if (string.IsNullOrEmpty(_options.CollectionName))
+            throw new InvalidOperationException("Collection ID (CollectionName) is not configured.");
 
-        if (getResponse.IsSuccessStatusCode)
-        {
-            var json = await getResponse.Content.ReadAsStringAsync(cancellationToken);
-            _collectionId = ExtractCollectionId(json);
-            if (!string.IsNullOrEmpty(_collectionId))
-                return _collectionId;
-        }
-
-        // 2. Not found — create it.
-        var createPayload = new { name = _options.CollectionName, get_or_create = true };
-        var createResponse = await _httpClient.PostAsJsonAsync(CollectionsBasePath(), createPayload, cancellationToken);
-
-        if (!createResponse.IsSuccessStatusCode && createResponse.StatusCode != HttpStatusCode.Conflict)
-        {
-            var body = await createResponse.Content.ReadAsStringAsync(cancellationToken);
-            _logger.LogWarning("Chroma collection create returned {Status}: {Body}", createResponse.StatusCode, body);
-        }
-
-        var createJson = await createResponse.Content.ReadAsStringAsync(cancellationToken);
-        _collectionId = ExtractCollectionId(createJson);
-
-        if (string.IsNullOrEmpty(_collectionId))
-            throw new InvalidOperationException(
-                $"Could not resolve Chroma collection id for '{_options.CollectionName}'.");
-
-        return _collectionId;
-    }
-
-    private static string? ExtractCollectionId(string json)
-    {
-        try
-        {
-            using var doc = JsonDocument.Parse(json);
-            if (doc.RootElement.TryGetProperty("id", out var idElement))
-                return idElement.GetString();
-            return null;
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
+        _collectionId = _options.CollectionName;
+        return Task.FromResult(_collectionId);
     }
 
     private static Dictionary<string, object>? BuildWhereClause(string? conceptTag, string? source)
