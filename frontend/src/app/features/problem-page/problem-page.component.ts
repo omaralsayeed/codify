@@ -225,10 +225,51 @@ public:
   editorGlowing = false;
 
   // ── Submission History state (Task F2) ────────────────────────────────────
-  submissionHistory:        SubmissionSummaryResponse[] = [];
+  submissionHistory:          SubmissionSummaryResponse[] = [];
   isSubmissionHistoryLoading: boolean = false;
-  submissionHistoryError:   string | null = null;
-  private historyLoaded     = false; // guard: only fetch once per problem load
+  submissionHistoryError:     string | null = null;
+  private historyLoaded       = false;
+
+  // Filter dropdowns on the history table header
+  historyFilterStatus:   string = 'all';
+  historyFilterLanguage: string = 'all';
+  isStatusDropdownOpen   = false;
+  isLangDropdownOpen     = false;
+
+  get historyStatusOptions(): string[] {
+    const seen = new Set(this.submissionHistory.map(s => s.status));
+    return ['all', ...Array.from(seen)];
+  }
+
+  get historyLanguageOptions(): string[] {
+    const seen = new Set(this.submissionHistory.map(s => s.language));
+    return ['all', ...Array.from(seen)];
+  }
+
+  get filteredHistory(): SubmissionSummaryResponse[] {
+    return this.submissionHistory.filter(s => {
+      const statusOk = this.historyFilterStatus   === 'all' || s.status   === this.historyFilterStatus;
+      const langOk   = this.historyFilterLanguage === 'all' || s.language === this.historyFilterLanguage;
+      return statusOk && langOk;
+    });
+  }
+
+  statusLabel(status: string): string {
+    switch (status) {
+      case 'Accepted':           return 'Accepted';
+      case 'WrongAnswer':        return 'Wrong Answer';
+      case 'TimeLimitExceeded':  return 'Time Limit Exceeded';
+      case 'RuntimeError':       return 'Runtime Error';
+      case 'Pending':            return 'Pending';
+      case 'Running':            return 'Running';
+      default:                   return status;
+    }
+  }
+
+  closeHistoryDropdowns(): void {
+    this.isStatusDropdownOpen = false;
+    this.isLangDropdownOpen   = false;
+  }
 
   // ── Settings modal state (Task F3) ───────────────────────────────────────
   isSettingsModalOpen = false;
@@ -533,6 +574,8 @@ public:
     this.historyLoaded = false;
     this.submissionHistory = [];
     this.submissionHistoryError = null;
+    this.historyFilterStatus   = 'all';
+    this.historyFilterLanguage = 'all';
 
     this.problemSvc.getById(id).pipe(takeUntil(this.destroy$)).subscribe({
       next: (problem) => {

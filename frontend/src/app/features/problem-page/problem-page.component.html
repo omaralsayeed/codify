@@ -407,55 +407,150 @@
 
                 <!-- History table -->
                 @if (!isSubmissionHistoryLoading && !submissionHistoryError && submissionHistory.length > 0) {
-                  <div class="submissions-history">
+                  <div class="submissions-history" (click)="closeHistoryDropdowns()">
                     <table class="submissions-table" aria-label="Submission history">
                       <thead>
                         <tr>
+                          <!-- # -->
                           <th scope="col" class="col-num">#</th>
-                          <th scope="col">Status</th>
-                          <th scope="col">Language</th>
+
+                          <!-- Status — filterable -->
+                          <th scope="col" class="col-filterable">
+                            <div class="th-filter-wrap">
+                              <span>Status</span>
+                              <button
+                                class="th-chevron-btn"
+                                [class.th-chevron-btn--active]="historyFilterStatus !== 'all'"
+                                (click)="$event.stopPropagation(); isLangDropdownOpen = false; isStatusDropdownOpen = !isStatusDropdownOpen"
+                                type="button"
+                                aria-label="Filter by status">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                                     viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                     stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                                     aria-hidden="true">
+                                  <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                              </button>
+                              @if (isStatusDropdownOpen) {
+                                <div class="th-dropdown" (click)="$event.stopPropagation()">
+                                  @for (opt of historyStatusOptions; track opt) {
+                                    <button
+                                      class="th-dropdown-item"
+                                      [class.th-dropdown-item--active]="historyFilterStatus === opt"
+                                      (click)="historyFilterStatus = opt; isStatusDropdownOpen = false"
+                                      type="button">
+                                      {{ opt === 'all' ? 'All Statuses' : statusLabel(opt) }}
+                                    </button>
+                                  }
+                                </div>
+                              }
+                            </div>
+                          </th>
+
+                          <!-- Language — filterable -->
+                          <th scope="col" class="col-filterable">
+                            <div class="th-filter-wrap">
+                              <span>Language</span>
+                              <button
+                                class="th-chevron-btn"
+                                [class.th-chevron-btn--active]="historyFilterLanguage !== 'all'"
+                                (click)="$event.stopPropagation(); isStatusDropdownOpen = false; isLangDropdownOpen = !isLangDropdownOpen"
+                                type="button"
+                                aria-label="Filter by language">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                                     viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                     stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                                     aria-hidden="true">
+                                  <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                              </button>
+                              @if (isLangDropdownOpen) {
+                                <div class="th-dropdown" (click)="$event.stopPropagation()">
+                                  @for (opt of historyLanguageOptions; track opt) {
+                                    <button
+                                      class="th-dropdown-item"
+                                      [class.th-dropdown-item--active]="historyFilterLanguage === opt"
+                                      (click)="historyFilterLanguage = opt; isLangDropdownOpen = false"
+                                      type="button">
+                                      {{ opt === 'all' ? 'All Languages' : opt }}
+                                    </button>
+                                  }
+                                </div>
+                              }
+                            </div>
+                          </th>
+
                           <th scope="col">Runtime</th>
                           <th scope="col">Memory</th>
                         </tr>
                       </thead>
                       <tbody>
-                        @for (sub of submissionHistory; track sub.submissionId; let i = $index) {
+                        @if (filteredHistory.length === 0) {
                           <tr>
-                            <td class="submission-num">{{ submissionHistory.length - i }}</td>
-                            <td>
+                            <td colspan="5" class="submission-empty-filter">
+                              No submissions match the selected filters.
+                            </td>
+                          </tr>
+                        }
+                        @for (sub of filteredHistory; track sub.submissionId; let i = $index) {
+                          <tr class="submission-row">
+                            <!-- # -->
+                            <td class="submission-num">{{ i + 1 }}</td>
+
+                            <!-- Status + date -->
+                            <td class="submission-status-cell">
                               <span class="submission-status"
                                     [class.submission-status--accepted]="sub.status === 'Accepted'"
-                                    [class.submission-status--rejected]="sub.status !== 'Accepted'">
-                                {{ sub.status }}
+                                    [class.submission-status--wrong]="sub.status === 'WrongAnswer' || sub.status === 'RuntimeError'"
+                                    [class.submission-status--tle]="sub.status === 'TimeLimitExceeded'"
+                                    [class.submission-status--pending]="sub.status === 'Pending' || sub.status === 'Running'">
+                                {{ statusLabel(sub.status) }}
                               </span>
                               <span class="submission-date">{{ sub.submittedAt | date:'MMM d, y' }}</span>
                             </td>
+
+                            <!-- Language pill -->
                             <td>
                               <span class="submission-lang-pill">{{ sub.language }}</span>
                             </td>
-                            <td class="submission-meta">
-                              @if (sub.executionTimeMs != null) {
-                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"
-                                     fill="none" stroke="currentColor" stroke-width="2"
-                                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                  <circle cx="12" cy="12" r="10"></circle>
-                                  <polyline points="12 6 12 12 16 14"></polyline>
-                                </svg>
-                                {{ sub.executionTimeMs }} ms
-                              } @else { — }
+
+                            <!-- Runtime — clock icon -->
+                            <td>
+                              <div class="submission-meta">
+                                @if (sub.executionTimeMs != null) {
+                                  <!-- Feather clock -->
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                                       viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                       stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"
+                                       aria-hidden="true">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                  </svg>
+                                  <span>{{ sub.executionTimeMs }} ms</span>
+                                } @else {
+                                  <span class="submission-na">N/A</span>
+                                }
+                              </div>
                             </td>
-                            <td class="submission-meta">
-                              @if (sub.memoryUsedKb != null) {
-                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"
-                                     fill="none" stroke="currentColor" stroke-width="2"
-                                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                  <rect x="2" y="6" width="20" height="12" rx="2"></rect>
-                                  <path d="M12 12h.01"></path>
-                                  <path d="M7 12h.01"></path>
-                                  <path d="M17 12h.01"></path>
-                                </svg>
-                                {{ (sub.memoryUsedKb / 1024).toFixed(1) }} MB
-                              } @else { — }
+
+                            <!-- Memory — database stack icon -->
+                            <td>
+                              <div class="submission-meta">
+                                @if (sub.memoryUsedKb != null) {
+                                  <!-- Feather database -->
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                                       viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                       stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"
+                                       aria-hidden="true">
+                                    <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                                    <path d="M21 12c0 1.66-4.03 3-9 3S3 13.66 3 12"></path>
+                                    <path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"></path>
+                                  </svg>
+                                  <span>{{ (sub.memoryUsedKb / 1024).toFixed(1) }} MB</span>
+                                } @else {
+                                  <span class="submission-na">N/A</span>
+                                }
+                              </div>
                             </td>
                           </tr>
                         }
