@@ -93,21 +93,48 @@ public static class DependencyInjection
         // Chroma Cloud (vector database for RAG)
         services.Configure<ChromaCloudOptions>(configuration.GetSection(ChromaCloudOptions.SectionName));
 
-        services.AddSingleton<ILLMClient, OpenAiChatClient>();
+        // Custom API Chat Client with HttpClient for /student/chat endpoint
+        services.AddHttpClient<ILLMClient, CustomApiChatClient>((sp, client) =>
+        {
+            var openAi = sp.GetRequiredService<IOptions<OpenAiOptions>>().Value;
+            
+            var baseUrl = string.IsNullOrWhiteSpace(openAi.BaseUrl)
+                ? "https://api.openai.com/v1"
+                : openAi.BaseUrl.TrimEnd('/');
+            
+            client.BaseAddress = new Uri(baseUrl);
+            client.Timeout = TimeSpan.FromSeconds(120);
+            
+            // Add authorization header
+            if (!string.IsNullOrWhiteSpace(openAi.ApiKey))
+            {
+                client.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", openAi.ApiKey);
+            }
+        });
+
         services.AddSingleton<IPromptLoader, PromptLoader>();
 
         // RAG layer: embeddings -> Chroma Cloud vector store -> knowledge base search
-        services.AddHttpClient<IEmbeddingService, OpenAiEmbeddingService>((sp, client) =>
+        // Using HuggingFace embedding service instead of OpenAI
+        services.Configure<EmbeddingApiOptions>(
+            configuration.GetSection(EmbeddingApiOptions.SectionName));
+
+        services.AddHttpClient<IEmbeddingService, HuggingFaceEmbeddingService>((sp, client) =>
         {
-            var openAi = sp.GetRequiredService<IOptions<OpenAiOptions>>().Value;
-            var baseUrl = string.IsNullOrWhiteSpace(openAi.BaseUrl)
-                ? "https://api.openai.com/v1/"
-                : openAi.BaseUrl.TrimEnd('/') + "/";
-            client.BaseAddress = new Uri(baseUrl);
-            client.Timeout = TimeSpan.FromSeconds(30);
-            if (!string.IsNullOrWhiteSpace(openAi.ApiKey))
+            var embeddingApi = sp.GetRequiredService<IOptions<EmbeddingApiOptions>>().Value;
+            
+            if (!string.IsNullOrWhiteSpace(embeddingApi.BaseUrl))
+                client.BaseAddress = new Uri(embeddingApi.BaseUrl);
+            
+            client.Timeout = TimeSpan.FromSeconds(embeddingApi.TimeoutSeconds > 0 ? embeddingApi.TimeoutSeconds : 30);
+            
+            if (!string.IsNullOrWhiteSpace(embeddingApi.ApiKey))
+            {
+                // ApiKey should already include "Bearer " prefix from config
                 client.DefaultRequestHeaders.Authorization =
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", openAi.ApiKey);
+                    System.Net.Http.Headers.AuthenticationHeaderValue.Parse(embeddingApi.ApiKey);
+            }
         });
 
         services.AddHttpClient<IVectorStore, ChromaCloudVectorStore>((sp, client) =>
@@ -117,8 +144,11 @@ public static class DependencyInjection
                 client.BaseAddress = new Uri(chroma.Endpoint.TrimEnd('/') + "/");
             client.Timeout = TimeSpan.FromSeconds(chroma.TimeoutSeconds > 0 ? chroma.TimeoutSeconds : 20);
             if (!string.IsNullOrWhiteSpace(chroma.ApiKey))
+            {
                 client.DefaultRequestHeaders.Authorization =
                     new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", chroma.ApiKey);
+                client.DefaultRequestHeaders.Add("x-chroma-token", chroma.ApiKey);
+            }
         });
 
         services.AddScoped<IKnowledgeBaseSearchService, KnowledgeBaseSearchService>();

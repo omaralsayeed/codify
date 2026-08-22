@@ -274,13 +274,13 @@ public class JudgeEvaluationService(
             var feedbackItems = await codeCheckerAgent.AnalyzeAsync(agentInput, cancellationToken);
 
             var records = feedbackItems.Select(item =>
-                FeedbackRecord.Create(submission.Id, item.FeedbackType, item.Message, item.Confidence));
+                FeedbackRecord.Create(submission.Id, item.FeedbackType, item.Message, item.Confidence)).ToList();
 
             await feedbackRepo.AddRangeAsync(records);
             await feedbackRepo.SaveChangesAsync();
 
             logger.LogInformation(
-                "CodeChecker saved {Count} feedback records for submission {SubmissionId}.",
+                "✅ CodeChecker saved {Count} feedback records for submission {SubmissionId}.",
                 feedbackItems.Count, submission.Id);
         }
         catch (Exception ex)

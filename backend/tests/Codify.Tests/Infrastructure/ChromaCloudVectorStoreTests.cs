@@ -17,6 +17,12 @@ public class ChromaCloudVectorStoreTests
     {
         var handler = new FakeHttpMessageHandler(responder);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://api.trychroma.com/") };
+        
+        // Configure headers as done in production DependencyInjection
+        httpClient.DefaultRequestHeaders.Authorization = 
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "test-key");
+        httpClient.DefaultRequestHeaders.Add("x-chroma-token", "test-key");
+        
         var options = Options.Create(new ChromaCloudOptions
         {
             Endpoint = "https://api.trychroma.com",

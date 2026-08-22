@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Codify.Application.Agents;
 using Codify.Application.Interfaces;
 using Codify.Domain.Enums;
@@ -73,7 +74,10 @@ public class CodeAnalysisAgentService(
 
             var output = JsonSerializer.Deserialize<CodeAnalysisLlmOutput>(cleaned, JsonOptions);
             if (output is null)
+            {
+                logger.LogWarning("Code Analysis Agent deserialization returned null for submission {SubmissionId}.", submissionId);
                 return Fallback();
+            }
 
             var items = new List<CodeCheckerFeedbackItem>();
 
@@ -123,6 +127,11 @@ public class CodeAnalysisAgentService(
             logger.LogWarning(ex, "Code Analysis Agent JSON parse failed for submission {SubmissionId}.", submissionId);
             return Fallback();
         }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Code Analysis Agent unexpected error for submission {SubmissionId}.", submissionId);
+            return Fallback();
+        }
     }
 
     private static string FormatHeuristics(CodeAnalysisHeuristics h)
@@ -149,15 +158,25 @@ public class CodeAnalysisAgentService(
     /// <summary>Internal DTO for the LLM's structured output.</summary>
     private sealed class CodeAnalysisLlmOutput
     {
+        [JsonPropertyName("feedbackItems")]
         public List<RawFeedbackItem> FeedbackItems { get; set; } = [];
+        
+        [JsonPropertyName("aiGenerated")]
         public bool AiGenerated { get; set; }
+        
+        [JsonPropertyName("aiGeneratedConfidence")]
         public double AiGeneratedConfidence { get; set; }
+        
+        [JsonPropertyName("aiGeneratedIndicators")]
         public string AiGeneratedIndicators { get; set; } = string.Empty;
     }
 
     private sealed class RawFeedbackItem
     {
+        [JsonPropertyName("feedbackType")]
         public string FeedbackType { get; set; } = string.Empty;
+        
+        [JsonPropertyName("message")]
         public string Message { get; set; } = string.Empty;
     }
 }

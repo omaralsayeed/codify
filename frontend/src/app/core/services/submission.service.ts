@@ -35,6 +35,7 @@ import {
   ServiceError,
   SubmissionFeedback,
   FeedbackItem,
+  FeedbackItemDisplay,
 } from '../models/submission.model';
 import { environment } from '../../../environments/environment';
 
@@ -188,24 +189,181 @@ export class SubmissionService {
    * Fetches AI-generated code-quality feedback for a completed submission.
    * Called automatically by the component once a submission ID is available.
    *
-   * The endpoint does not yet exist in the backend — a typed mock is returned
-   * while the real implementation is pending.
-   *
-   * TODO: replace mock with real API call once backend endpoint ships:
-   * return this.http
-   *   .get<ApiEnvelope<SubmissionFeedback>>(
-   *     `${this.API}/submissions/${submissionId}/feedback`,
-   *     { headers: this.headers() },
-   *   )
-   *   .pipe(map(r => r.data), catchError(e => this.handleError(e)));
+   * Since feedback is generated asynchronously by a background job that takes
+   * ~7-8 seconds, this method implements intelligent polling:
+   * - Retries up to 6 times (max 15 seconds total)
+   * - Uses exponential backoff: 1s, 2s, 3s, 4s, 5s
+   * - Returns immediately if feedback is available
+   * - Returns empty array if still not ready after max attempts
    */
   getSubmissionFeedback(submissionId: string): Observable<SubmissionFeedback> {
+    return this.pollForFeedback(submissionId, 0);
+  }
+
+  /**
+   * Recursive polling helper for feedback.
+   * @param submissionId - The submission ID to fetch feedback for
+   * @param attempt - Current attempt number (0-indexed)
+   * @param maxAttempts - Maximum number of polling attempts
+   */
+  private pollForFeedback(
+    submissionId: string,
+    attempt: number,
+    maxAttempts: number = 6
+  ): Observable<SubmissionFeedback> {
     return this.http
-      .get<ApiEnvelope<SubmissionFeedback>>(
+      .get<ApiEnvelope<FeedbackItem[]>>(
         `${this.API}/submissions/${submissionId}/feedback`,
         { headers: this.headers() },
       )
-      .pipe(map(r => r.data), catchError(e => this.handleError(e)));
+      .pipe(
+        map(r => r.data),
+        switchMap(feedbackArray => {
+          // If we got feedback items, transform and return immediately
+          if (feedbackArray && feedbackArray.length > 0) {
+            return of(this.transformFeedbackResponse(feedbackArray));
+          }
+
+          // If we've exhausted our attempts, return empty feedback
+          if (attempt >= maxAttempts) {
+            console.warn(`[Feedback] No feedback available after ${maxAttempts} attempts for submission ${submissionId}`);
+            return of(this.emptyFeedback());
+          }
+
+          // Calculate delay: 1s, 2s, 3s, 4s, 5s
+          const delayMs = (attempt + 1) * 1000;
+          console.log(`[Feedback] Attempt ${attempt + 1}/${maxAttempts}: No feedback yet, retrying in ${delayMs}ms...`);
+
+          // Wait and retry
+          return timer(delayMs).pipe(
+            switchMap(() => this.pollForFeedback(submissionId, attempt + 1, maxAttempts))
+          );
+        }),
+        catchError(e => {
+          // On error, if we haven't exhausted attempts, retry after delay
+          if (attempt < maxAttempts) {
+            const delayMs = (attempt + 1) * 1000;
+            console.warn(`[Feedback] Error on attempt ${attempt + 1}, retrying in ${delayMs}ms...`, e);
+            return timer(delayMs).pipe(
+              switchMap(() => this.pollForFeedback(submissionId, attempt + 1, maxAttempts))
+            );
+          }
+          // Exhausted attempts, return error
+          return this.handleError(e);
+        })
+      );
+  }
+
+  /**
+   * Transforms the backend feedback array into the frontend SubmissionFeedback shape.
+   * Calculates an overall score based on feedback types:
+   * - CodeQuality: +10 points each
+   * - Optimization: +15 points each
+   * - AiGenerated: -20 points
+   * Base score starts at 50, clamped between 0-100.
+   */
+  private transformFeedbackResponse(feedbackArray: FeedbackItem[]): SubmissionFeedback {
+    let score = 50; // Base score
+
+    const items: FeedbackItemDisplay[] = feedbackArray.map((item, index) => {
+      // Adjust score based on feedback type
+      if (item.feedbackType === 'CodeQuality') {
+        score += 10;
+      } else if (item.feedbackType === 'Optimization') {
+        score += 15;
+      } else if (item.feedbackType === 'AiGenerated') {
+        score -= 20;
+      }
+
+      // Map backend type to frontend display type
+      const displayType = this.mapFeedbackType(item.feedbackType);
+      const severity = item.feedbackType === 'AiGenerated' ? 'high' as const : 'low' as const;
+
+      return {
+        id: item.id || `feedback-${index}`,
+        type: displayType,
+        title: this.generateTitle(item.feedbackType),
+        description: item.message,
+        message: item.message,
+        severity,
+        lineStart: null,
+        lineEnd: null,
+      };
+    });
+
+    // Clamp score between 0 and 100
+    score = Math.max(0, Math.min(100, score));
+
+    return {
+      overallScore: score,
+      feedbackItems: items,
+      summary: this.generateSummary(feedbackArray),
+    };
+  }
+
+  /**
+   * Generates a title for the feedback item based on its type.
+   */
+  private generateTitle(type: 'CodeQuality' | 'Optimization' | 'AiGenerated'): string {
+    switch (type) {
+      case 'CodeQuality':
+        return 'Code Quality';
+      case 'Optimization':
+        return 'Performance Optimization';
+      case 'AiGenerated':
+        return 'AI Detection';
+      default:
+        return 'Feedback';
+    }
+  }
+
+  /**
+   * Generates a summary for the feedback response.
+   */
+  private generateSummary(feedbackArray: FeedbackItem[]): string {
+    const qualityCount = feedbackArray.filter(f => f.feedbackType === 'CodeQuality').length;
+    const optimizationCount = feedbackArray.filter(f => f.feedbackType === 'Optimization').length;
+    const aiGeneratedCount = feedbackArray.filter(f => f.feedbackType === 'AiGenerated').length;
+
+    if (feedbackArray.length === 0) {
+      return 'No feedback available yet. The analysis may still be processing.';
+    }
+
+    const parts: string[] = [];
+    if (qualityCount > 0) parts.push(`${qualityCount} code quality suggestion${qualityCount > 1 ? 's' : ''}`);
+    if (optimizationCount > 0) parts.push(`${optimizationCount} optimization tip${optimizationCount > 1 ? 's' : ''}`);
+    if (aiGeneratedCount > 0) parts.push(`AI generation detected`);
+
+    return `Your submission received ${parts.join(', ')}.`;
+  }
+
+  /**
+   * Maps backend feedback types to frontend display types.
+   * Backend: CodeQuality, Optimization, AiGenerated
+   * Frontend: quality, optimization, anomaly
+   */
+  private mapFeedbackType(backendType: 'CodeQuality' | 'Optimization' | 'AiGenerated'): 'quality' | 'optimization' | 'anomaly' {
+    switch (backendType) {
+      case 'CodeQuality':
+        return 'quality';
+      case 'Optimization':
+        return 'optimization';
+      case 'AiGenerated':
+        return 'anomaly';
+      default:
+        return 'quality'; // Fallback
+    }
+  }
+
+  /**
+   * Returns an empty feedback response when no feedback is available.
+   */
+  private emptyFeedback(): SubmissionFeedback {
+    return {
+      overallScore: 50, // Neutral score
+      feedbackItems: [],
+      summary: 'Feedback is being generated in the background. Please check back in a moment.',
+    };
   }
 
   // ── Mock implementations ───────────────────────────────────────────────────
