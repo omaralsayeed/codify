@@ -50,6 +50,13 @@ export class NavbarComponent implements OnInit {
     return this.auth.user()?.role === 'admin';
   }
 
+  get planLabel(): string {
+    const plan = this.auth.user()?.plan;
+    if (plan === 'learner')  return 'Learner';
+    if (plan === 'proplus')  return 'Pro Plus';
+    return 'Free Plan';
+  }
+
   logout(): void {
     this.auth.logout();
     this.isMobileMenuOpen = false;

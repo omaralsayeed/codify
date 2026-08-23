@@ -10,10 +10,11 @@
   <!-- Desktop: Guest links -->
   @if (!auth.isLoggedIn()) {
     <div class="nav-links nav-links--desktop">
-      <a routerLink="/" fragment="features" class="nav-link">Features</a>
-      <a routerLink="/" fragment="how"      class="nav-link">How it works</a>
-      <a routerLink="/" fragment="student"  class="nav-link">For students</a>
-      <a routerLink="/" fragment="instructor" class="nav-link">For instructors</a>
+      <a routerLink="/" fragment="features"    class="nav-link">Features</a>
+      <a routerLink="/" fragment="how"         class="nav-link">How it works</a>
+      <a routerLink="/" fragment="student"     class="nav-link">For students</a>
+      <a routerLink="/" fragment="instructor"  class="nav-link">For instructors</a>
+      <a routerLink="/" fragment="pricing"     class="nav-link">Pricing</a>
       <button class="btn btn--ghost"    (click)="navigateTo('/auth/login')">Log in</button>
       <button class="btn btn--primary"  (click)="navigateTo('/auth/register')">Get started</button>
     </div>
@@ -114,7 +115,15 @@
               }
               <div class="profile-info">
                 <div class="profile-name">{{ auth.user()?.name }}</div>
-                <div class="profile-plan">{{ isAdmin ? 'Administrator' : 'Free Plan' }}</div>
+                <div class="profile-plan">
+                  @if (isAdmin) {
+                    Administrator
+                  } @else {
+                    <a routerLink="/" fragment="pricing" class="profile-plan-link" (click)="isProfileOpen=false">
+                      {{ planLabel }} · View Plans →
+                    </a>
+                  }
+                </div>
               </div>
             </div>
             <div class="quick-actions">
@@ -229,6 +238,7 @@
         <a routerLink="/" fragment="how"        class="mobile-link" (click)="isMobileMenuOpen=false">How it works</a>
         <a routerLink="/" fragment="student"    class="mobile-link" (click)="isMobileMenuOpen=false">For students</a>
         <a routerLink="/" fragment="instructor" class="mobile-link" (click)="isMobileMenuOpen=false">For instructors</a>
+        <a routerLink="/" fragment="pricing"    class="mobile-link" (click)="isMobileMenuOpen=false">Pricing</a>
         <div class="mobile-menu-actions">
           <button class="btn btn--ghost"   (click)="navigateTo('/auth/login')">Log in</button>
           <button class="btn btn--primary" (click)="navigateTo('/auth/register')">Get started</button>
@@ -243,7 +253,7 @@
           }
           <div class="profile-info">
             <div class="profile-name">{{ auth.user()?.name }}</div>
-            <div class="profile-plan">{{ isAdmin ? 'Administrator' : 'Free Plan' }}</div>
+            <div class="profile-plan">{{ isAdmin ? 'Administrator' : planLabel }}</div>
           </div>
         </div>
         @if (!isAdmin) {

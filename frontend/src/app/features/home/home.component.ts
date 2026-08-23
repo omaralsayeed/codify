@@ -4,6 +4,7 @@ import { FeaturesSectionComponent }            from './components/features-secti
 import { HowItWorksComponent }                 from './components/how-it-works/how-it-works.component';
 import { StudentDashboardPreviewComponent }    from './components/student-dashboard-preview/student-dashboard-preview.component';
 import { InstructorDashboardPreviewComponent } from './components/instructor-dashboard-preview/instructor-dashboard-preview.component';
+import { PricingComponent }                    from './components/pricing/pricing.component';
 
 @Component({
   selector: 'app-home',
@@ -14,6 +15,7 @@ import { InstructorDashboardPreviewComponent } from './components/instructor-das
     HowItWorksComponent,
     StudentDashboardPreviewComponent,
     InstructorDashboardPreviewComponent,
+    PricingComponent,
   ],
   template: `
     <app-hero />
@@ -21,6 +23,7 @@ import { InstructorDashboardPreviewComponent } from './components/instructor-das
     <app-how-it-works />
     <app-student-dashboard-preview />
     <app-instructor-dashboard-preview />
+    <app-pricing />
   `
 })
 export class HomeComponent {}
