@@ -5,9 +5,9 @@ import { RouterLink } from '@angular/router';
 // ─────────────────────────────────────────────────────────────────────────────
 // ⬇️  REPLACE THESE WITH YOUR REAL STRIPE DASHBOARD LINKS BEFORE THE DEMO
 // ─────────────────────────────────────────────────────────────────────────────
-const STRIPE_LINK_LEARNER_MONTHLY  = 'https://buy.stripe.com/test_REPLACE_ME_LEARNER_MONTHLY';
+const STRIPE_LINK_LEARNER_MONTHLY  = 'https://buy.stripe.com/test_5kQ7sLgbcfKs2FM3AW2B200';
 const STRIPE_LINK_LEARNER_YEARLY   = 'https://buy.stripe.com/test_REPLACE_ME_LEARNER_YEARLY';
-const STRIPE_LINK_PROPLUS_MONTHLY  = 'https://buy.stripe.com/test_REPLACE_ME_PROPLUS_MONTHLY';
+const STRIPE_LINK_PROPLUS_MONTHLY  = 'https://buy.stripe.com/test_fZu8wPe349m40xEb3o2B201';
 const STRIPE_LINK_PROPLUS_YEARLY   = 'https://buy.stripe.com/test_REPLACE_ME_PROPLUS_YEARLY';
 // ─────────────────────────────────────────────────────────────────────────────
 
