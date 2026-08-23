@@ -185,26 +185,6 @@
             </button>
             <button 
               class="problem-tab"
-              [class.problem-tab--active]="activeTab === 'editorial'"
-              (click)="setActiveTab('editorial')"
-              type="button"
-              role="tab"
-              [attr.aria-selected]="activeTab === 'editorial'"
-              aria-controls="editorial-panel">
-              Editorial
-            </button>
-            <button 
-              class="problem-tab"
-              [class.problem-tab--active]="activeTab === 'solutions'"
-              (click)="setActiveTab('solutions')"
-              type="button"
-              role="tab"
-              [attr.aria-selected]="activeTab === 'solutions'"
-              aria-controls="solutions-panel">
-              Solutions
-            </button>
-            <button 
-              class="problem-tab"
               [class.problem-tab--active]="activeTab === 'submissions'"
               (click)="setActiveTab('submissions')"
               type="button"
@@ -360,20 +340,6 @@
                   }
 
                 }
-              </div>
-            }
-
-            <!-- Editorial Tab -->
-            @if (activeTab === 'editorial') {
-              <div id="editorial-panel" role="tabpanel" aria-labelledby="editorial-tab" class="tab-placeholder">
-                <p>Editorial content will be available after you solve the problem.</p>
-              </div>
-            }
-
-            <!-- Solutions Tab -->
-            @if (activeTab === 'solutions') {
-              <div id="solutions-panel" role="tabpanel" aria-labelledby="solutions-tab" class="tab-placeholder">
-                <p>Community solutions will appear here.</p>
               </div>
             }
 
