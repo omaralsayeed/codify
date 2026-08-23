@@ -675,42 +675,64 @@ public:
     if (!this.isBottomPanelOpen) this.isBottomPanelOpen = true;
     this.activeBottomTab = 'result';
 
+    // PHASE 1: Submit and get initial response (202 Accepted with Pending status)
     this.submissionSvc.submit(this.problemId, this.currentCode, this.selectedLanguage)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: result => {
-          this.submitResult    = result;
-          this.submissionId    = result.submissionId;
-          this.isSubmitting    = false;
-          this.submitPhase     = 'done';
-          this.submissionError = null;
+        next: initialResponse => {
+          console.log('[Submit Phase 1] Got initial response:', initialResponse.status, 'ID:', initialResponse.submissionId);
+          
+          // Store submission ID and show "Pending" state
+          this.submissionId = initialResponse.submissionId;
+          this.submitResult = initialResponse;
+          
+          // PHASE 2: Start polling for final result
+          this.submissionSvc.pollSubmission(initialResponse.submissionId)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+              next: finalResult => {
+                console.log('[Submit Phase 2] Got final result:', finalResult.status);
+                
+                this.submitResult    = finalResult;
+                this.isSubmitting    = false;
+                this.submitPhase     = 'done';
+                this.submissionError = null;
 
-          // ── Unexpected / unknown status guard ─────────────────────────
-          const knownStatuses = ['Accepted','WrongAnswer','RuntimeError','TimeLimitExceeded','CompileError'];
-          if (!knownStatuses.includes(result.status)) {
-            this.submissionError = 'Something went wrong. Try again.';
-            this.submitPhase     = 'error';
-            this.isSubmitting    = false;
-            return;
-          }
+                // ── Unexpected / unknown status guard ─────────────────────────
+                const knownStatuses = ['Accepted','WrongAnswer','RuntimeError','TimeLimitExceeded','CompileError'];
+                if (!knownStatuses.includes(finalResult.status)) {
+                  this.submissionError = 'Something went wrong. Try again.';
+                  this.submitPhase     = 'error';
+                  this.isSubmitting    = false;
+                  return;
+                }
 
-          this.submitFlash = result.status === 'Accepted' ? 'accepted' : 'rejected';
-          setTimeout(() => { this.submitFlash = null; }, 700);
+                this.submitFlash = finalResult.status === 'Accepted' ? 'accepted' : 'rejected';
+                setTimeout(() => { this.submitFlash = null; }, 700);
 
-          if (result.status === 'Accepted') {
-            this.isSolved = true;
-            this.triggerAcceptedCelebration();
-          }
-          // Reset so the submissions tab re-fetches and shows the new entry
-          this.historyLoaded = false;
-          this.setActiveTab('submissions');
+                if (finalResult.status === 'Accepted') {
+                  this.isSolved = true;
+                  this.triggerAcceptedCelebration();
+                }
+                // Reset so the submissions tab re-fetches and shows the new entry
+                this.historyLoaded = false;
+                this.setActiveTab('submissions');
+              },
+              error: (pollErr: ServiceError) => {
+                console.error('[Submit Phase 2] Polling failed:', pollErr);
+                this.submitError     = pollErr;
+                this.submissionError = pollErr.message ?? 'Failed to get submission result.';
+                this.isSubmitting    = false;
+                this.submitPhase     = 'error';
+              }
+            });
 
-          // Fetch AI feedback in the background — parallel to the user reading
-          // the result banner. By the time they click the Feedback tab it will
-          // likely already be ready.
-          this.fetchFeedback(result.submissionId);
+          // PHASE 3: Fetch AI feedback in parallel (non-blocking)
+          // This runs independently and doesn't block the submission result display
+          this.fetchFeedback(initialResponse.submissionId);
         },
         error: (err: ServiceError) => {
+          console.error('[Submit Phase 1] Initial submit failed:', err);
           this.submitError     = err;
           this.submissionError = err.message ?? 'Something went wrong. Try again.';
           this.isSubmitting    = false;
@@ -791,6 +813,7 @@ public:
    * matching the same pattern used by run() and submit() above.
    */
   fetchFeedback(submissionId: string): void {
+    console.log('[Feedback Phase 1] Starting feedback fetch for submission:', submissionId);
     this.isFeedbackLoading    = true;
     this.feedbackError        = null;
     this.submissionFeedback   = null;
@@ -803,6 +826,7 @@ public:
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: feedback => {
+          console.log('[Feedback Phase 2] Feedback loaded successfully. Score:', feedback.overallScore, 'Items:', feedback.feedbackItems.length);
           this.submissionFeedback = feedback;
           this.isFeedbackLoading  = false;
 
@@ -824,6 +848,7 @@ public:
                       '| items:', feedback.feedbackItems.length);
         },
         error: () => {
+          console.error('[Feedback Phase 3] Feedback loading failed for submission:', submissionId);
           this.feedbackError     = 'Could not load feedback. Try again.';
           this.isFeedbackLoading = false;
           console.error('[FeedbackService ✗] failed to load feedback for', submissionId);

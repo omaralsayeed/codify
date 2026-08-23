@@ -123,8 +123,8 @@ export class SubmissionService {
    * POST /api/submissions  → 202 Accepted  { data: SubmissionDetailResponse }
    *
    * The backend returns a 'Pending' submission immediately.
-   * We then poll GET /api/submissions/:id every 1.5 s until the status
-   * leaves 'Pending' / 'Running', then emit the final result and complete.
+   * This method now returns the initial response immediately WITHOUT polling.
+   * The component should call pollSubmission() separately to get the final result.
    */
   submit(problemId: string, code: string, editorLang: string): Observable<SubmissionDetailResponse> {
     const lang = this.backendLang(editorLang);
@@ -140,9 +140,17 @@ export class SubmissionService {
       .post<ApiEnvelope<SubmissionDetailResponse>>(`${this.API}/submissions`, body, { headers: this.headers() })
       .pipe(
         map(r => r.data),
-        switchMap(pending => this.pollUntilDone(pending.submissionId.toString())),
+        // No longer polling here - return immediately
         catchError(e => this.handleError(e)),
       );
+  }
+
+  /**
+   * Polls for the final submission result.
+   * Call this after submit() returns to get the final verdict.
+   */
+  pollSubmission(submissionId: string): Observable<SubmissionDetailResponse> {
+    return this.pollUntilDone(submissionId);
   }
 
   /**
@@ -160,9 +168,19 @@ export class SubmissionService {
    * takeWhile with inclusive: true ensures the final (done) value is emitted.
    */
   private pollUntilDone(id: string): Observable<SubmissionDetailResponse> {
+    console.log('[Polling] Starting to poll submission:', id);
+    let pollCount = 0;
     return timer(0, 1500).pipe(
-      switchMap(() => this.getSubmission(id)),
-      takeWhile(r => PENDING_STATUSES.has(r.status), /* inclusive */ true),
+      switchMap(() => {
+        pollCount++;
+        console.log(`[Polling] Attempt ${pollCount} - fetching submission status...`);
+        return this.getSubmission(id);
+      }),
+      takeWhile(r => {
+        const isPending = PENDING_STATUSES.has(r.status);
+        console.log(`[Polling] Attempt ${pollCount} - Status: ${r.status}, Is Pending: ${isPending}`);
+        return isPending;
+      }, /* inclusive */ true),
       last(),
     );
   }

@@ -50,10 +50,31 @@ public class CodeAnalysisAgentService(
         {
             rawResponse = await llmClient.CompleteAsync(systemPrompt, "Return only the JSON response.", cancellationToken);
         }
-        catch (Exception ex)
+        catch (Exception primaryEx)
         {
-            logger.LogError(ex, "Code Analysis Agent LLM call failed for submission {SubmissionId}.", input.SubmissionId);
-            return Fallback();
+            logger.LogError(primaryEx, "Primary LLM failed. Trying Groq fallback...");
+            try
+            {
+                var groqKey = Environment.GetEnvironmentVariable("GROQ_API_KEY") ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(groqKey))
+                {
+                    logger.LogError("GROQ_API_KEY not set");
+                    return Fallback();
+                }
+                
+                rawResponse = await GroqHelper.CallGroqAsync(
+                    groqKey, 
+                    systemPrompt, 
+                    "Return only the JSON response.", 
+                    "llama-3.3-70b-versatile",
+                    cancellationToken);
+                logger.LogInformation("✅ Groq fallback succeeded for Code Checker");
+            }
+            catch (Exception groqEx)
+            {
+                logger.LogError(groqEx, "Groq fallback also failed");
+                return Fallback();
+            }
         }
 
         // 4. Parse and validate the structured output.

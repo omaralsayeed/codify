@@ -47,10 +47,31 @@ public class TaggingAgentService(
         {
             rawResponse = await llmClient.CompleteAsync(systemPrompt, "Return only the JSON response.", cancellationToken);
         }
-        catch (Exception ex)
+        catch (Exception primaryEx)
         {
-            logger.LogError(ex, "Tagging agent LLM call failed for problem '{Title}'.", input.ProblemTitle);
-            return EmptyResult("LLM call failed.");
+            logger.LogError(primaryEx, "Primary LLM failed. Trying Groq fallback...");
+            try
+            {
+                var groqKey = Environment.GetEnvironmentVariable("GROQ_API_KEY") ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(groqKey))
+                {
+                    logger.LogError("GROQ_API_KEY not set");
+                    return EmptyResult("LLM call failed and GROQ_API_KEY not configured.");
+                }
+                
+                rawResponse = await GroqHelper.CallGroqAsync(
+                    groqKey, 
+                    systemPrompt, 
+                    "Return only the JSON response.", 
+                    "openai/gpt-oss-20b",
+                    cancellationToken);
+                logger.LogInformation("✅ Groq fallback succeeded for Tagging Agent");
+            }
+            catch (Exception groqEx)
+            {
+                logger.LogError(groqEx, "Groq fallback also failed");
+                return EmptyResult("Both primary and fallback LLM calls failed.");
+            }
         }
 
         // 4. Parse and validate against the allowed tag list.

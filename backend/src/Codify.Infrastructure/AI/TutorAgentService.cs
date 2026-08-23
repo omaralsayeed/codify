@@ -91,12 +91,48 @@ public class TutorAgentService(
                     iterations, MaxIterations, input.ProblemId);
                 break; // Fall back to default hint
             }
-            catch (Exception ex)
+            catch (Exception primaryEx)
             {
-                logger.LogError(ex, 
-                    "❌ Tutor agent LLM call failed at iteration {Iteration}. ProblemId={ProblemId}, Error: {ErrorType} - {ErrorMessage}", 
-                    iterations, input.ProblemId, ex.GetType().Name, ex.Message);
-                break;
+                logger.LogWarning(primaryEx, 
+                    "⚠️  Primary LLM failed at iteration {Iteration}. Trying Groq fallback...", 
+                    iterations);
+                
+                // Try Groq fallback
+                try
+                {
+                    var groqKey = Environment.GetEnvironmentVariable("GROQ_API_KEY") ?? string.Empty;
+                    if (string.IsNullOrWhiteSpace(groqKey))
+                    {
+                        throw new InvalidOperationException("GROQ_API_KEY not set");
+                    }
+                    
+                    // Build simple prompt from messages
+                    var systemMsg = messages.FirstOrDefault(m => m.Role == "system")?.Content ?? "";
+                    var userMsg = messages.FirstOrDefault(m => m.Role == "user")?.Content ?? "Generate a helpful hint";
+                    
+                    var groqResponse = await GroqHelper.CallGroqAsync(
+                        groqKey, 
+                        systemMsg, 
+                        userMsg, 
+                        "openai/gpt-oss-20b", 
+                        cancellationToken);
+                    
+                    logger.LogInformation("✅ Groq fallback succeeded for Tutor Agent");
+                    
+                    // Return the groq response as final text
+                    response = new LlmResponse 
+                    { 
+                        FinalText = groqResponse, 
+                        ModelUsed = "llama-3.3-70b-versatile", 
+                        TotalTokens = 0 
+                    };
+                    lastModelUsed = "llama-3.3-70b-versatile";
+                }
+                catch (Exception groqEx)
+                {
+                    logger.LogError(groqEx, "❌ Groq fallback also failed at iteration {Iteration}", iterations);
+                    break; // Will use fallback hint
+                }
             }
 
             if (response.HasToolCalls)
@@ -246,19 +282,52 @@ public class TutorAgentService(
         try
         {
             // The API might return tool calls + reasoning + JSON all in one response
-            // Extract just the JSON object from the text
-            var jsonStart = rawText.IndexOf('{');
-            var jsonEnd = rawText.LastIndexOf('}');
+            // Remove markdown code fences if present (```json ... ```)
+            var cleanedText = rawText;
+            if (rawText.Contains("```json"))
+            {
+                var jsonBlockStart = rawText.IndexOf("```json");
+                var jsonBlockEnd = rawText.IndexOf("```", jsonBlockStart + 7);
+                if (jsonBlockStart >= 0 && jsonBlockEnd > jsonBlockStart)
+                {
+                    // Extract content between ```json and closing ```
+                    cleanedText = rawText.Substring(jsonBlockStart + 7, jsonBlockEnd - (jsonBlockStart + 7)).Trim();
+                    logger.LogInformation("📝 [DEBUG] Removed markdown code fence, extracted block length: {Length}", cleanedText.Length);
+                }
+            }
+            else if (rawText.Contains("```"))
+            {
+                // Handle generic ``` fences
+                var fenceStart = rawText.IndexOf("```");
+                var fenceEnd = rawText.IndexOf("```", fenceStart + 3);
+                if (fenceStart >= 0 && fenceEnd > fenceStart)
+                {
+                    cleanedText = rawText.Substring(fenceStart + 3, fenceEnd - (fenceStart + 3)).Trim();
+                    logger.LogInformation("📝 [DEBUG] Removed generic code fence, extracted block length: {Length}", cleanedText.Length);
+                }
+            }
 
-            if (jsonStart < 0 || jsonEnd < 0 || jsonEnd <= jsonStart)
+            // Extract just the JSON object from the text
+            var jsonStart = cleanedText.IndexOf('{');
+            if (jsonStart < 0)
             {
                 logger.LogWarning("Tutor agent response doesn't contain JSON object. Response: {Response}", 
-                    rawText.Length > 200 ? rawText.Substring(0, 200) + "..." : rawText);
+                    cleanedText.Length > 200 ? cleanedText.Substring(0, 200) + "..." : cleanedText);
                 return CreateFallback(suggestedLevel, toolsUsed);
             }
 
-            var jsonText = rawText.Substring(jsonStart, jsonEnd - jsonStart + 1);
-            logger.LogInformation("📄 [DEBUG] Extracted JSON from response:\n{Json}", jsonText);
+            // Find the matching closing brace by counting nesting level
+            var jsonEnd = FindMatchingCloseBrace(cleanedText, jsonStart);
+            if (jsonEnd < 0)
+            {
+                logger.LogWarning("Tutor agent response contains unclosed JSON object. Response: {Response}", 
+                    cleanedText.Length > 200 ? cleanedText.Substring(0, 200) + "..." : cleanedText);
+                return CreateFallback(suggestedLevel, toolsUsed);
+            }
+
+            var jsonText = cleanedText.Substring(jsonStart, jsonEnd - jsonStart + 1);
+            logger.LogInformation("📄 [DEBUG] Extracted JSON from response (length: {Length}):\n{Json}", 
+                jsonText.Length, jsonText.Length > 500 ? jsonText.Substring(0, 500) + "..." : jsonText);
 
             var result = JsonSerializer.Deserialize<HintResponse>(jsonText, JsonOptions);
             if (result is null || string.IsNullOrWhiteSpace(result.HintText))
@@ -291,6 +360,64 @@ public class TutorAgentService(
             ToolsUsed = toolsUsed,
             ReasoningSummary = "Fallback: LLM call failed or returned invalid response."
         };
+    }
+
+    /// <summary>
+    /// Finds the matching closing brace for the opening brace at startIndex.
+    /// Handles nested braces by counting depth. Returns -1 if no match found.
+    /// </summary>
+    private static int FindMatchingCloseBrace(string text, int startIndex)
+    {
+        if (startIndex < 0 || startIndex >= text.Length || text[startIndex] != '{')
+            return -1;
+
+        var depth = 0;
+        var inString = false;
+        var escapeNext = false;
+
+        for (var i = startIndex; i < text.Length; i++)
+        {
+            var ch = text[i];
+
+            // Handle escape sequences in strings
+            if (escapeNext)
+            {
+                escapeNext = false;
+                continue;
+            }
+
+            if (ch == '\\' && inString)
+            {
+                escapeNext = true;
+                continue;
+            }
+
+            // Track string boundaries (so we don't count braces inside strings)
+            if (ch == '"')
+            {
+                inString = !inString;
+                continue;
+            }
+
+            // Only count braces outside of strings
+            if (!inString)
+            {
+                if (ch == '{')
+                {
+                    depth++;
+                }
+                else if (ch == '}')
+                {
+                    depth--;
+                    if (depth == 0)
+                    {
+                        return i; // Found the matching close brace
+                    }
+                }
+            }
+        }
+
+        return -1; // No matching close brace found
     }
 
     private static string BuildUserMessage(TutorAgentInput input)
