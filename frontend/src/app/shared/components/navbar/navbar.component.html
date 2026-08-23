@@ -14,7 +14,7 @@
       <a routerLink="/" fragment="how"         class="nav-link">How it works</a>
       <a routerLink="/" fragment="student"     class="nav-link">For students</a>
       <a routerLink="/" fragment="instructor"  class="nav-link">For instructors</a>
-      <a routerLink="/" fragment="pricing"     class="nav-link">Pricing</a>
+      <a routerLink="/pricing"                 class="nav-link">Pricing</a>
       <button class="btn btn--ghost"    (click)="navigateTo('/auth/login')">Log in</button>
       <button class="btn btn--primary"  (click)="navigateTo('/auth/register')">Get started</button>
     </div>
@@ -126,7 +126,7 @@
                   @if (isAdmin) {
                     Administrator
                   } @else {
-                    <a routerLink="/" fragment="pricing" class="profile-plan-link" (click)="isProfileOpen=false">
+                    <a routerLink="/pricing" class="profile-plan-link" (click)="isProfileOpen=false">
                       {{ planLabel }} · View Plans →
                     </a>
                   }
@@ -252,7 +252,7 @@
         <a routerLink="/" fragment="how"        class="mobile-link" (click)="isMobileMenuOpen=false">How it works</a>
         <a routerLink="/" fragment="student"    class="mobile-link" (click)="isMobileMenuOpen=false">For students</a>
         <a routerLink="/" fragment="instructor" class="mobile-link" (click)="isMobileMenuOpen=false">For instructors</a>
-        <a routerLink="/" fragment="pricing"    class="mobile-link" (click)="isMobileMenuOpen=false">Pricing</a>
+        <a routerLink="/pricing"                class="mobile-link" (click)="isMobileMenuOpen=false">Pricing</a>
         <div class="mobile-menu-actions">
           <button class="btn btn--ghost"   (click)="navigateTo('/auth/login')">Log in</button>
           <button class="btn btn--primary" (click)="navigateTo('/auth/register')">Get started</button>
