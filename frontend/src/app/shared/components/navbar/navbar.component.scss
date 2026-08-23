@@ -200,6 +200,8 @@
 
 .profile-trigger {
   display: flex; align-items: center;
+  gap: 8px;
+  position: relative; // anchors the mobile plan badge dot
   background: transparent; border: none;
   cursor: pointer; padding: 0;
   transition: opacity 0.15s;
@@ -244,7 +246,70 @@
   margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
-.profile-plan { font-family: $ff-body; font-size: 12px; color: $muted; }
+.profile-plan {
+  font-family: $ff-body;
+  font-size: 12px;
+  color: $muted;
+}
+
+.profile-plan-link {
+  color: $blue;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.15s;
+
+  &:hover {
+    color: darken($blue, 10%);
+    text-decoration: underline;
+  }
+}
+
+// ─── Plan badge — beside avatar in desktop & mobile nav ──────────────────────
+.plan-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-family: $ff-mono;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  animation: badge-appear 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  pointer-events: none; // click passes through to the button
+
+  // Learner — brand blue
+  &--learner {
+    background: rgba($blue, 0.12);
+    color: $blue;
+    border: 1px solid rgba($blue, 0.25);
+  }
+
+  // Pro Plus — amber/gold
+  &--proplus {
+    background: linear-gradient(135deg, rgba(200, 169, 81, 0.18) 0%, rgba(230, 180, 34, 0.18) 100%);
+    color: darken($gold, 8%);
+    border: 1px solid rgba($gold, 0.35);
+  }
+
+  // Mobile variant — icon only, compact
+  &--mobile {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    padding: 1px 5px;
+    font-size: 10px;
+    border-radius: 10px;
+    z-index: 1;
+  }
+}
+
+// Badge entrance animation
+@keyframes badge-appear {
+  from { opacity: 0; transform: scale(0.7) translateX(6px); }
+  to   { opacity: 1; transform: scale(1) translateX(0); }
+}
 
 .quick-actions {
   display: grid; grid-template-columns: repeat(3, 1fr);

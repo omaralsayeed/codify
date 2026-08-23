@@ -9,6 +9,8 @@ export interface User {
   username?: string;
   joinedAt?: string;
   password?: string;
+  /** Subscription plan — set client-side after Stripe redirect, persisted in localStorage */
+  plan?: 'free' | 'learner' | 'proplus';
   // Extended profile fields
   headline?: string;
   bio?: string;

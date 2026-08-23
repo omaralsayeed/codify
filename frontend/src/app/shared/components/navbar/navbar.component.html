@@ -10,10 +10,11 @@
   <!-- Desktop: Guest links -->
   @if (!auth.isLoggedIn()) {
     <div class="nav-links nav-links--desktop">
-      <a routerLink="/" fragment="features" class="nav-link">Features</a>
-      <a routerLink="/" fragment="how"      class="nav-link">How it works</a>
-      <a routerLink="/" fragment="student"  class="nav-link">For students</a>
-      <a routerLink="/" fragment="instructor" class="nav-link">For instructors</a>
+      <a routerLink="/" fragment="features"    class="nav-link">Features</a>
+      <a routerLink="/" fragment="how"         class="nav-link">How it works</a>
+      <a routerLink="/" fragment="student"     class="nav-link">For students</a>
+      <a routerLink="/" fragment="instructor"  class="nav-link">For instructors</a>
+      <a routerLink="/pricing"                 class="nav-link">Pricing</a>
       <button class="btn btn--ghost"    (click)="navigateTo('/auth/login')">Log in</button>
       <button class="btn btn--primary"  (click)="navigateTo('/auth/register')">Get started</button>
     </div>
@@ -98,6 +99,13 @@
       <!-- Profile Dropdown -->
       <div class="profile-container">
         <button class="profile-trigger" (click)="toggleProfile($event)" aria-label="Profile menu">
+          <!-- Plan badge — shown for learner/proplus, hidden for free/admin -->
+          @if (!isAdmin && auth.user()?.plan && auth.user()?.plan !== 'free') {
+            <span class="plan-badge plan-badge--{{ auth.user()?.plan }}">
+              @if (auth.user()?.plan === 'proplus') { ⚡ Pro Plus }
+              @if (auth.user()?.plan === 'learner') { Learner }
+            </span>
+          }
           @if (auth.user()?.avatarUrl) {
             <img class="nav-avatar nav-avatar--photo" [src]="auth.user()!.avatarUrl" [alt]="auth.user()!.name" />
           } @else {
@@ -114,7 +122,15 @@
               }
               <div class="profile-info">
                 <div class="profile-name">{{ auth.user()?.name }}</div>
-                <div class="profile-plan">{{ isAdmin ? 'Administrator' : 'Free Plan' }}</div>
+                <div class="profile-plan">
+                  @if (isAdmin) {
+                    Administrator
+                  } @else {
+                    <a routerLink="/pricing" class="profile-plan-link" (click)="isProfileOpen=false">
+                      {{ planLabel }} · View Plans →
+                    </a>
+                  }
+                </div>
               </div>
             </div>
             <div class="quick-actions">
@@ -204,6 +220,13 @@
         }
         <!-- Avatar (opens mobile menu) -->
         <button class="profile-trigger" (click)="toggleMobileMenu($event)" aria-label="Open menu">
+          <!-- Plan badge mobile -->
+          @if (!isAdmin && auth.user()?.plan && auth.user()?.plan !== 'free') {
+            <span class="plan-badge plan-badge--{{ auth.user()?.plan }} plan-badge--mobile">
+              @if (auth.user()?.plan === 'proplus') { ⚡ }
+              @if (auth.user()?.plan === 'learner') { ★ }
+            </span>
+          }
           @if (auth.user()?.avatarUrl) {
             <img class="nav-avatar nav-avatar--photo" [src]="auth.user()!.avatarUrl" [alt]="auth.user()!.name" />
           } @else {
@@ -229,6 +252,7 @@
         <a routerLink="/" fragment="how"        class="mobile-link" (click)="isMobileMenuOpen=false">How it works</a>
         <a routerLink="/" fragment="student"    class="mobile-link" (click)="isMobileMenuOpen=false">For students</a>
         <a routerLink="/" fragment="instructor" class="mobile-link" (click)="isMobileMenuOpen=false">For instructors</a>
+        <a routerLink="/pricing"                class="mobile-link" (click)="isMobileMenuOpen=false">Pricing</a>
         <div class="mobile-menu-actions">
           <button class="btn btn--ghost"   (click)="navigateTo('/auth/login')">Log in</button>
           <button class="btn btn--primary" (click)="navigateTo('/auth/register')">Get started</button>
@@ -243,7 +267,7 @@
           }
           <div class="profile-info">
             <div class="profile-name">{{ auth.user()?.name }}</div>
-            <div class="profile-plan">{{ isAdmin ? 'Administrator' : 'Free Plan' }}</div>
+            <div class="profile-plan">{{ isAdmin ? 'Administrator' : planLabel }}</div>
           </div>
         </div>
         @if (!isAdmin) {

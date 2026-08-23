@@ -104,6 +104,15 @@ export const routes: Routes = [
       import('./features/admin/admin.routes').then((m) => m.ADMIN_ROUTES),
   },
 
+  // Standalone pricing page
+  {
+    path: 'pricing',
+    loadComponent: () =>
+      import('./features/home/components/pricing/pricing.component').then(
+        (m) => m.PricingComponent
+      ),
+  },
+
   {
     path: '**',
     redirectTo: '',
