@@ -1,0 +1,402 @@
+@use '../../../../styles/variables' as *;
+
+// ─── Section wrapper ──────────────────────────────────────────────────────────
+.pricing-section {
+  background: var(--ivory);
+  position: relative;
+  overflow: hidden;
+
+  // Subtle radial glow behind cards — decorative only
+  &::before {
+    content: '';
+    position: absolute;
+    top: -120px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 800px;
+    height: 500px;
+    background: radial-gradient(ellipse at center, rgba(46, 134, 171, 0.07) 0%, transparent 70%);
+    pointer-events: none;
+  }
+}
+
+// ─── Header ───────────────────────────────────────────────────────────────────
+.pricing-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.pricing-title {
+  font-family: $ff-display;
+  font-size: clamp(28px, 3.5vw, 42px);
+  color: $navy;
+  margin-bottom: 12px;
+}
+
+.pricing-subtitle {
+  font-size: 16px;
+  color: $muted;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+// ─── Toggle ───────────────────────────────────────────────────────────────────
+.pricing-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: var(--ivory2);
+  border: 1px solid $border;
+  border-radius: 40px;
+  padding: 4px;
+  width: fit-content;
+  margin: 0 auto 56px;
+}
+
+.toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 22px;
+  border-radius: 32px;
+  border: none;
+  background: transparent;
+  font-family: $ff-body;
+  font-size: 14px;
+  font-weight: 500;
+  color: $muted;
+  cursor: pointer;
+  transition: background 0.22s ease, color 0.22s ease, box-shadow 0.22s ease;
+
+  &--active {
+    background: $white;
+    color: $navy;
+    box-shadow: 0 2px 8px rgba(26, 43, 74, 0.12);
+  }
+
+  &:hover:not(.toggle-btn--active) {
+    color: $navy;
+  }
+}
+
+.toggle-save-chip {
+  background: $teal-lt;
+  color: $teal;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: $ff-mono;
+  padding: 2px 8px;
+  border-radius: 20px;
+  letter-spacing: 0.04em;
+}
+
+// ─── Grid ─────────────────────────────────────────────────────────────────────
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  align-items: start;
+
+  @media (max-width: $tablet) {
+    grid-template-columns: 1fr;
+    max-width: 480px;
+    margin: 0 auto;
+    gap: 32px;
+  }
+}
+
+// ─── Card ─────────────────────────────────────────────────────────────────────
+.pricing-card {
+  position: relative;
+  background: $white;
+  border: 1px solid $border;
+  border-radius: $r-lg;
+  padding: 32px 28px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: $shadow-lg;
+  }
+
+  // ── Highlighted (Learner) ──
+  &--highlighted {
+    border: 2px solid $blue;
+    box-shadow: 0 0 0 4px rgba(46, 134, 171, 0.10), $shadow;
+    transform: scale(1.03);
+    z-index: 1;
+
+    &:hover {
+      transform: scale(1.03) translateY(-3px);
+      box-shadow: 0 0 0 4px rgba(46, 134, 171, 0.14), $shadow-lg;
+    }
+  }
+}
+
+// ─── Popular badge ────────────────────────────────────────────────────────────
+.popular-badge {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: $blue;
+  color: $white;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: $ff-mono;
+  letter-spacing: 0.04em;
+  padding: 4px 16px;
+  border-radius: 20px;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(46, 134, 171, 0.30);
+}
+
+// ─── Card header ──────────────────────────────────────────────────────────────
+.card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.plan-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: $navy;
+  margin: 0;
+}
+
+.plan-tagline {
+  font-size: 13px;
+  color: $muted;
+  line-height: 1.5;
+  margin: 0;
+}
+
+// ─── Price ────────────────────────────────────────────────────────────────────
+.card-price {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.price-strikethrough {
+  font-size: 13px;
+  color: $muted;
+  text-decoration: line-through;
+  opacity: 0.7;
+  animation: price-fade 0.25s ease;
+}
+
+.price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.price-amount {
+  font-family: $ff-display;
+  font-size: clamp(28px, 4vw, 36px);
+  font-weight: 700;
+  color: $navy;
+  line-height: 1;
+  animation: price-fade 0.25s ease;
+}
+
+.price-currency {
+  font-size: 16px;
+  font-weight: 600;
+  color: $navy2;
+}
+
+.price-period {
+  font-size: 13px;
+  color: $muted;
+  align-self: flex-end;
+  padding-bottom: 3px;
+}
+
+.price-caption {
+  font-size: 12px;
+  color: $muted;
+  margin: 0;
+  min-height: 18px;
+}
+
+.price-badge {
+  display: inline-block;
+  background: $teal-lt;
+  color: $teal;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: $ff-mono;
+  padding: 2px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.03em;
+  animation: price-fade 0.25s ease;
+}
+
+// Price fade animation on toggle
+@keyframes price-fade {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+// ─── Feature list ─────────────────────────────────────────────────────────────
+.feature-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1; // push CTA to bottom
+}
+
+.feature-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  color: $charcoal;
+  line-height: 1.4;
+
+  &--excluded {
+    opacity: 0.4;
+
+    .feature-icon {
+      color: $muted;
+      font-style: normal;
+    }
+
+    .feature-label {
+      text-decoration: line-through;
+    }
+  }
+}
+
+.feature-icon {
+  flex-shrink: 0;
+  font-size: 14px;
+  width: 20px;
+  text-align: center;
+  margin-top: 1px;
+}
+
+.feature-label {
+  flex: 1;
+}
+
+// ─── CTA buttons ──────────────────────────────────────────────────────────────
+.card-cta {
+  margin-top: auto;
+}
+
+.cta-btn {
+  display: block;
+  width: 100%;
+  padding: 12px 20px;
+  border-radius: $r;
+  font-family: $ff-body;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+  transition: filter 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+
+  &--ghost {
+    background: transparent;
+    border: 1.5px solid $border;
+    color: $navy;
+
+    &:hover {
+      background: var(--ivory2);
+      border-color: $navy2;
+    }
+  }
+
+  &--primary {
+    background: $blue;
+    color: $white;
+
+    &:hover {
+      filter: brightness(1.08);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(46, 134, 171, 0.35);
+    }
+  }
+
+  &--premium {
+    background: linear-gradient(135deg, #c8960c 0%, #e6b422 50%, #c8960c 100%);
+    color: $white;
+    box-shadow: 0 2px 12px rgba(200, 169, 81, 0.30);
+
+    &:hover {
+      filter: brightness(1.08);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(200, 169, 81, 0.45);
+    }
+  }
+}
+
+// ─── Trust line ───────────────────────────────────────────────────────────────
+.pricing-trust {
+  text-align: center;
+  margin-top: 40px;
+  font-size: 13px;
+  color: $muted;
+  letter-spacing: 0.01em;
+}
+
+// ─── Dark theme ───────────────────────────────────────────────────────────────
+@media (prefers-color-scheme: dark) {
+  .pricing-section  { background: #111827; }
+  .pricing-title    { color: #f1f5f9; }
+  .pricing-subtitle { color: #94a3b8; }
+
+  .pricing-toggle {
+    background: #1e293b;
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .toggle-btn {
+    color: #94a3b8;
+    &--active { background: #0f172a; color: #f1f5f9; }
+    &:hover:not(.toggle-btn--active) { color: #f1f5f9; }
+  }
+
+  .pricing-card {
+    background: #1e293b;
+    border-color: rgba(255, 255, 255, 0.08);
+
+    &--highlighted {
+      border-color: $blue;
+      box-shadow: 0 0 0 4px rgba(46, 134, 171, 0.15), 0 8px 40px rgba(0, 0, 0, 0.4);
+    }
+  }
+
+  .plan-name    { color: #f1f5f9; }
+  .plan-tagline { color: #94a3b8; }
+  .price-amount { color: #f1f5f9; }
+  .price-currency, .price-period, .price-caption { color: #64748b; }
+  .feature-item { color: #cbd5e1; }
+
+  .cta-btn {
+    &--ghost {
+      border-color: rgba(255, 255, 255, 0.15);
+      color: #f1f5f9;
+      &:hover { background: #0f172a; }
+    }
+  }
+
+  .pricing-trust { color: #64748b; }
+
+  .pricing-section::before {
+    background: radial-gradient(ellipse at center, rgba(46, 134, 171, 0.12) 0%, transparent 70%);
+  }
+}

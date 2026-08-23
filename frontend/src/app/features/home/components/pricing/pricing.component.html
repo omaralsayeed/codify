@@ -1,0 +1,128 @@
+<section id="pricing" class="pricing-section section-pad">
+  <div class="section-inner">
+
+    <!-- Header -->
+    <div class="pricing-header">
+      <span class="section-tag tag-blue">Pricing</span>
+      <h2 class="pricing-title">Simple, transparent pricing</h2>
+      <p class="pricing-subtitle">
+        Start free. Upgrade when you need AI-powered guidance.
+      </p>
+    </div>
+
+    <!-- Monthly / Yearly Toggle -->
+    <div class="pricing-toggle" role="group" aria-label="Billing cycle">
+      <button
+        class="toggle-btn"
+        [class.toggle-btn--active]="!isYearly()"
+        (click)="setBilling('monthly')"
+        aria-pressed="{{ !isYearly() }}">
+        Monthly
+      </button>
+      <button
+        class="toggle-btn"
+        [class.toggle-btn--active]="isYearly()"
+        (click)="setBilling('yearly')"
+        aria-pressed="{{ isYearly() }}">
+        Yearly
+        <span class="toggle-save-chip">Save 17%</span>
+      </button>
+    </div>
+
+    <!-- Cards -->
+    <div class="pricing-grid">
+      @for (plan of plans(); track plan.id) {
+        <div
+          class="pricing-card"
+          [class.pricing-card--highlighted]="plan.highlighted"
+          [class.pricing-card--free]="plan.id === 'free'"
+          [class.pricing-card--proplus]="plan.id === 'proplus'">
+
+          <!-- Most Popular badge -->
+          @if (plan.highlighted) {
+            <div class="popular-badge">⭐ Most Popular</div>
+          }
+
+          <!-- Plan header -->
+          <div class="card-header">
+            <h3 class="plan-name">{{ plan.name }}</h3>
+            <p class="plan-tagline">{{ plan.tagline }}</p>
+          </div>
+
+          <!-- Price -->
+          <div class="card-price">
+            @if (isYearly() && plan.monthlyPriceEGP > 0) {
+              <span class="price-strikethrough">{{ strikethroughPrice(plan) | number }} EGP</span>
+            }
+            <div class="price-row">
+              <span class="price-amount">
+                @if (displayPrice(plan) === 0) {
+                  Free
+                } @else {
+                  {{ displayPrice(plan) | number }}
+                  <span class="price-currency">EGP</span>
+                }
+              </span>
+              @if (displayPrice(plan) > 0) {
+                <span class="price-period">/ {{ isYearly() ? 'year' : 'month' }}</span>
+              }
+            </div>
+            <p class="price-caption">
+              @if (isYearly() && plan.yearlyBadge) {
+                <span class="price-badge">{{ plan.yearlyBadge }}</span>
+              } @else if (displayPrice(plan) > 0) {
+                Billed monthly
+              } @else {
+                No credit card required
+              }
+            </p>
+          </div>
+
+          <!-- Features list -->
+          <ul class="feature-list">
+            @for (feat of plan.features; track feat.label) {
+              <li class="feature-item" [class.feature-item--excluded]="!feat.included">
+                <span class="feature-icon">{{ feat.included ? feat.icon : '✗' }}</span>
+                <span class="feature-label">{{ feat.label }}</span>
+              </li>
+            }
+          </ul>
+
+          <!-- CTA -->
+          <div class="card-cta">
+            @if (plan.ctaType === 'route') {
+              <a
+                [routerLink]="plan.ctaTarget"
+                class="cta-btn cta-btn--ghost">
+                {{ plan.ctaLabel }}
+              </a>
+            } @else if (plan.id === 'learner') {
+              <a
+                [href]="plan.ctaTarget"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="cta-btn cta-btn--primary">
+                {{ plan.ctaLabel }}
+              </a>
+            } @else {
+              <a
+                [href]="plan.ctaTarget"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="cta-btn cta-btn--premium">
+                {{ plan.ctaLabel }} ⚡
+              </a>
+            }
+          </div>
+
+        </div>
+      }
+    </div>
+
+    <!-- Trust line -->
+    <p class="pricing-trust">
+      🔒 Secure payment via Stripe &nbsp;·&nbsp; Cancel anytime &nbsp;·&nbsp; No hidden fees
+    </p>
+
+  </div>
+</section>
