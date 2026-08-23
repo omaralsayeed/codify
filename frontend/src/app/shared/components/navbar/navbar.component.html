@@ -99,6 +99,13 @@
       <!-- Profile Dropdown -->
       <div class="profile-container">
         <button class="profile-trigger" (click)="toggleProfile($event)" aria-label="Profile menu">
+          <!-- Plan badge — shown for learner/proplus, hidden for free/admin -->
+          @if (!isAdmin && auth.user()?.plan && auth.user()?.plan !== 'free') {
+            <span class="plan-badge plan-badge--{{ auth.user()?.plan }}">
+              @if (auth.user()?.plan === 'proplus') { ⚡ Pro Plus }
+              @if (auth.user()?.plan === 'learner') { Learner }
+            </span>
+          }
           @if (auth.user()?.avatarUrl) {
             <img class="nav-avatar nav-avatar--photo" [src]="auth.user()!.avatarUrl" [alt]="auth.user()!.name" />
           } @else {
@@ -213,6 +220,13 @@
         }
         <!-- Avatar (opens mobile menu) -->
         <button class="profile-trigger" (click)="toggleMobileMenu($event)" aria-label="Open menu">
+          <!-- Plan badge mobile -->
+          @if (!isAdmin && auth.user()?.plan && auth.user()?.plan !== 'free') {
+            <span class="plan-badge plan-badge--{{ auth.user()?.plan }} plan-badge--mobile">
+              @if (auth.user()?.plan === 'proplus') { ⚡ }
+              @if (auth.user()?.plan === 'learner') { ★ }
+            </span>
+          }
           @if (auth.user()?.avatarUrl) {
             <img class="nav-avatar nav-avatar--photo" [src]="auth.user()!.avatarUrl" [alt]="auth.user()!.name" />
           } @else {
