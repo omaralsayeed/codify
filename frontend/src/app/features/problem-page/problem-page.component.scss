@@ -3823,3 +3823,333 @@
   .feedback-severity-strip { animation: none; }
   .feedback-tab-dot     { transition: none; }
 }
+
+// ── Submission History Table ──────────────────────────────────────────────────
+.submissions-history {
+  overflow-x: auto;
+}
+
+.submissions-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: $ff-body;
+  font-size: 13px;
+
+  // ── Header ──
+  thead tr {
+    border-bottom: 2px solid $border;
+  }
+
+  th {
+    padding: 10px 16px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: $muted;
+    text-align: left;
+    white-space: nowrap;
+    user-select: none;
+
+    &.col-num {
+      width: 44px;
+      text-align: center;
+    }
+
+    &.col-filterable {
+      // relative so the dropdown positions against the th
+      position: relative;
+    }
+  }
+
+  // ── Body rows ──
+  tbody tr {
+    border-bottom: 1px solid $border;
+    transition: background 0.12s;
+
+    &:last-child { border-bottom: none; }
+
+    &:hover td { background: $ivory; }
+  }
+
+  td {
+    padding: 14px 16px;
+    vertical-align: middle;
+  }
+}
+
+// ── Header filter wrapper ──────────────────────────────────────────────────────
+.th-filter-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+}
+
+.th-chevron-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: transparent;
+  color: $muted;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  padding: 0;
+
+  &:hover {
+    background: $ivory2;
+    color: $navy;
+  }
+
+  &--active {
+    color: $teal;
+  }
+}
+
+// ── Filter dropdown ────────────────────────────────────────────────────────────
+.th-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 100;
+  background: $white;
+  border: 1px solid $border;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(26, 43, 74, 0.12);
+  min-width: 160px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+}
+
+.th-dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 7px 12px;
+  font-family: $ff-body;
+  font-size: 13px;
+  color: $navy2;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+
+  &:hover {
+    background: $ivory;
+    color: $navy;
+  }
+
+  &--active {
+    background: $teal-lt;
+    color: $teal;
+    font-weight: 600;
+  }
+}
+
+// ── Row number ─────────────────────────────────────────────────────────────────
+.submission-num {
+  text-align: center;
+  font-family: $ff-mono;
+  font-size: 12px;
+  color: $muted;
+  width: 44px;
+}
+
+// ── Status cell ────────────────────────────────────────────────────────────────
+.submission-status-cell {
+  min-width: 140px;
+}
+
+.submission-status {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.25;
+
+  &--accepted { color: #2ecc71; }
+  &--wrong    { color: #e74c3c; }
+  &--tle      { color: #e67e22; }
+  &--pending  { color: $muted;  }
+}
+
+.submission-date {
+  display: block;
+  font-size: 11px;
+  color: $muted;
+  margin-top: 3px;
+  font-weight: 400;
+}
+
+// ── Language pill ──────────────────────────────────────────────────────────────
+.submission-lang-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-family: $ff-mono;
+  font-size: 12px;
+  font-weight: 500;
+  background: $ivory2;
+  color: $navy2;
+  border: 1px solid $border;
+  white-space: nowrap;
+}
+
+// ── Runtime / Memory cells ─────────────────────────────────────────────────────
+.submission-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: $ff-mono;
+  font-size: 13px;
+  color: $charcoal;
+  white-space: nowrap;
+
+  svg {
+    flex-shrink: 0;
+    color: $muted;
+    vertical-align: middle;
+  }
+}
+
+// ── N/A muted text ─────────────────────────────────────────────────────────────
+.submission-na {
+  color: $muted;
+  font-style: italic;
+}
+
+// ── No results after filter ────────────────────────────────────────────────────
+.submission-empty-filter {
+  text-align: center;
+  padding: 32px 16px;
+  font-size: 13px;
+  color: $muted;
+  font-style: italic;
+}
+
+// ── Settings Modal (Task F3) ──────────────────────────────────────────────────
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 24px;
+}
+
+.modal-panel {
+  background: #1e1e1e;
+  border: 1px solid $border;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 540px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid $border;
+}
+
+.modal-title {
+  font-family: $ff-display;
+  font-size: 16px;
+  font-weight: 600;
+  color: #cccccc;
+  margin: 0;
+}
+
+.modal-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: $muted;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+
+  &:hover {
+    background: $border;
+    color: #cccccc;
+  }
+}
+
+.modal-body {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.modal-label {
+  font-family: $ff-body;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: $muted;
+}
+
+.modal-input,
+.modal-select,
+.modal-textarea {
+  font-family: $ff-body;
+  font-size: 14px;
+  color: #cccccc;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid $border;
+  border-radius: 6px;
+  padding: 8px 12px;
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+
+  &:focus {
+    border-color: $teal;
+    background: rgba(255, 255, 255, 0.07);
+  }
+
+  option {
+    background: #1e1e1e;
+    color: #cccccc;
+  }
+}
+
+.modal-textarea {
+  resize: vertical;
+  min-height: 120px;
+  line-height: 1.5;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 24px 20px;
+  border-top: 1px solid $border;
+}

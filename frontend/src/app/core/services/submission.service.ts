@@ -30,6 +30,7 @@ import {
   RunCodeResponse,
   CreateSubmissionRequest,
   SubmissionDetailResponse,
+  SubmissionSummaryResponse,
   SubmissionLanguage,
   ServiceError,
   SubmissionFeedback,
@@ -164,6 +165,20 @@ export class SubmissionService {
       takeWhile(r => PENDING_STATUSES.has(r.status), /* inclusive */ true),
       last(),
     );
+  }
+
+  /**
+   * GET /api/problems/:id/submissions
+   * Returns the current user's submission history for a specific problem,
+   * ordered by submittedAt DESC. Called when the Submissions tab is activated.
+   */
+  getSubmissionsByProblem(problemId: string): Observable<SubmissionSummaryResponse[]> {
+    return this.http
+      .get<ApiEnvelope<SubmissionSummaryResponse[]>>(
+        `${this.API}/problems/${problemId}/submissions`,
+        { headers: this.headers() },
+      )
+      .pipe(map(r => r.data), catchError(e => this.handleError(e)));
   }
 
   // ── AI Feedback ───────────────────────────────────────────────────────────

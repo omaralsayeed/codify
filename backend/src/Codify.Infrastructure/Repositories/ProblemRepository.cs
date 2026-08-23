@@ -25,7 +25,8 @@ public class ProblemRepository(CodifyDbContext db) : IProblemRepository
             query = query.Where(p => p.Difficulty == filter.Difficulty.Value);
 
         if (!string.IsNullOrWhiteSpace(filter.Tag))
-            query = query.Where(p => p.ProblemTags.Any(pt => pt.ConceptTag.Name == filter.Tag));
+            query = query.Where(p => p.ProblemTags.Any(
+                pt => EF.Functions.Like(pt.ConceptTag.Name, $"%{filter.Tag}%")));
 
         if (!string.IsNullOrWhiteSpace(filter.Search))
             query = query.Where(p => p.Title.Contains(filter.Search));
@@ -102,7 +103,8 @@ public class ProblemRepository(CodifyDbContext db) : IProblemRepository
 
         // Tag filter
         if (!string.IsNullOrWhiteSpace(filter.Tag))
-            query = query.Where(p => p.ProblemTags.Any(pt => pt.ConceptTag.Name == filter.Tag));
+            query = query.Where(p => p.ProblemTags.Any(
+                pt => EF.Functions.Like(pt.ConceptTag.Name, $"%{filter.Tag}%")));
 
         // IsActive filter — null means return both
         if (filter.IsActive.HasValue)

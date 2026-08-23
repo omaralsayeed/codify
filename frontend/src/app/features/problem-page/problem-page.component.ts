@@ -12,6 +12,7 @@ import { ProblemService } from '../../core/services/problem.service';
 import {
   RunCodeResponse,
   SubmissionDetailResponse,
+  SubmissionSummaryResponse,
   ServiceError,
   SubmissionFeedback,
   FeedbackType,
@@ -222,6 +223,61 @@ public:
 
   // Layer 3: editor glow class toggled on accepted
   editorGlowing = false;
+
+  // ── Submission History state (Task F2) ────────────────────────────────────
+  submissionHistory:          SubmissionSummaryResponse[] = [];
+  isSubmissionHistoryLoading: boolean = false;
+  submissionHistoryError:     string | null = null;
+  private historyLoaded       = false;
+
+  // Filter dropdowns on the history table header
+  historyFilterStatus:   string = 'all';
+  historyFilterLanguage: string = 'all';
+  isStatusDropdownOpen   = false;
+  isLangDropdownOpen     = false;
+
+  get historyStatusOptions(): string[] {
+    const seen = new Set(this.submissionHistory.map(s => s.status));
+    return ['all', ...Array.from(seen)];
+  }
+
+  get historyLanguageOptions(): string[] {
+    const seen = new Set(this.submissionHistory.map(s => s.language));
+    return ['all', ...Array.from(seen)];
+  }
+
+  get filteredHistory(): SubmissionSummaryResponse[] {
+    return this.submissionHistory.filter(s => {
+      const statusOk = this.historyFilterStatus   === 'all' || s.status   === this.historyFilterStatus;
+      const langOk   = this.historyFilterLanguage === 'all' || s.language === this.historyFilterLanguage;
+      return statusOk && langOk;
+    });
+  }
+
+  statusLabel(status: string): string {
+    switch (status) {
+      case 'Accepted':           return 'Accepted';
+      case 'WrongAnswer':        return 'Wrong Answer';
+      case 'TimeLimitExceeded':  return 'Time Limit Exceeded';
+      case 'RuntimeError':       return 'Runtime Error';
+      case 'Pending':            return 'Pending';
+      case 'Running':            return 'Running';
+      default:                   return status;
+    }
+  }
+
+  closeHistoryDropdowns(): void {
+    this.isStatusDropdownOpen = false;
+    this.isLangDropdownOpen   = false;
+  }
+
+  // ── Settings modal state (Task F3) ───────────────────────────────────────
+  isSettingsModalOpen = false;
+  settingsForm = {
+    title:       '',
+    description: '',
+    difficulty:  '',
+  };
 
   get showResultBanner(): boolean {
     // Banner shows as soon as submit is triggered (even while judging)
@@ -514,6 +570,12 @@ public:
   private loadProblem(id: string): void {
     this.isProblemLoading = true;
     this.problemLoadError = null;
+    // Reset history so switching problems re-fetches
+    this.historyLoaded = false;
+    this.submissionHistory = [];
+    this.submissionHistoryError = null;
+    this.historyFilterStatus   = 'all';
+    this.historyFilterLanguage = 'all';
 
     this.problemSvc.getById(id).pipe(takeUntil(this.destroy$)).subscribe({
       next: (problem) => {
@@ -637,6 +699,8 @@ public:
             this.isSolved = true;
             this.triggerAcceptedCelebration();
           }
+          // Reset so the submissions tab re-fetches and shows the new entry
+          this.historyLoaded = false;
           this.setActiveTab('submissions');
 
           // Fetch AI feedback in the background — parallel to the user reading
@@ -1014,10 +1078,92 @@ public:
     this.dismissHintOverlay();
   }
 
-  onSettings(): void {}
+  onSettings(): void {
+    // Only instructors and admins can edit problems
+    const role = this.auth.user()?.role;
+    if (role !== 'instructor' && role !== 'admin') return;
+
+    this.settingsForm = {
+      title:       this.problemTitle,
+      description: this.problemDescription,
+      difficulty:  this.problemDifficulty,
+    };
+    this.isSettingsModalOpen = true;
+  }
+
+  closeSettingsModal(): void {
+    this.isSettingsModalOpen = false;
+  }
+
+  saveSettings(): void {
+    if (!this.problemId) return;
+    const payload = {
+      title:      this.settingsForm.title.trim(),
+      statement:  this.settingsForm.description.trim(),
+      difficulty: this.difficultyToNumber(this.settingsForm.difficulty),
+    };
+    this.problemSvc.update(this.problemId, payload)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.problemTitle       = this.settingsForm.title.trim();
+          this.problemDescription = this.settingsForm.description.trim();
+          this.problemDifficulty  = this.settingsForm.difficulty;
+          this.isSettingsModalOpen = false;
+          this.showToast('Problem updated successfully.');
+        },
+        error: () => {
+          this.showToast('Failed to save changes. Please try again.');
+        },
+      });
+  }
+
+  private difficultyToNumber(difficulty: string): number {
+    switch (difficulty.toLowerCase()) {
+      case 'easy':   return 1;
+      case 'medium': return 2;
+      case 'hard':   return 3;
+      default:       return 1;
+    }
+  }
+
+  get canEditProblem(): boolean {
+    const role = this.auth.user()?.role;
+    return role === 'instructor' || role === 'admin';
+  }
+
+  /** Students and instructors can submit (backend updated to allow both roles). */
+  get canSubmit(): boolean {
+    const role = this.auth.user()?.role;
+    return role === 'student' || role === 'instructor';
+  }
 
   // ── Tab switching ─────────────────────────────────────────────────────────
-  setActiveTab(tab: ActiveTab): void { this.activeTab = tab; }
+  setActiveTab(tab: ActiveTab): void {
+    this.activeTab = tab;
+    if (tab === 'submissions' && !this.historyLoaded) {
+      this.loadSubmissionHistory();
+    }
+  }
+
+  loadSubmissionHistory(): void {
+    if (!this.problemId) return;
+    this.isSubmissionHistoryLoading = true;
+    this.submissionHistoryError = null;
+    this.submissionSvc.getSubmissionsByProblem(this.problemId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (history) => {
+          this.submissionHistory = history;
+          this.historyLoaded = true;
+          this.isSubmissionHistoryLoading = false;
+        },
+        error: () => {
+          this.submissionHistoryError = 'Failed to load submission history. Please try again.';
+          this.isSubmissionHistoryLoading = false;
+        },
+      });
+  }
 
   setBottomTab(tab: 'testcases' | 'result' | 'feedback'): void {
     this.activeBottomTab = tab;
