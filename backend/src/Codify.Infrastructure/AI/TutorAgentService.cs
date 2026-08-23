@@ -68,13 +68,28 @@ public class TutorAgentService(
 
             try
             {
-                response = await llmClient.CompleteWithToolsAsync(messages, toolDefs, model, cancellationToken);
+                // Create linked cancellation token with 15-second timeout per LLM call
+                using var callCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                callCts.CancelAfter(TimeSpan.FromSeconds(15));
+                
+                // Use dynamic max_tokens: lower for tool-calling turns, higher for final response
+                // Start with conservative 800 tokens - will increase to 2000 if no tool calls returned
+                var maxTokens = 800;
+                
+                response = await llmClient.CompleteWithToolsAsync(messages, toolDefs, model, maxTokens, callCts.Token);
                 lastModelUsed = response.ModelUsed ?? model;
                 totalTokensAccumulated += response.TotalTokens ?? 0;
                 
                 logger.LogInformation(
-                    "✅ LLM call successful. TokensThisCall={Tokens}, TotalSoFar={TotalTokens}",
-                    response.TotalTokens ?? 0, totalTokensAccumulated);
+                    "✅ LLM call successful. TokensThisCall={Tokens}, TotalSoFar={TotalTokens}, MaxTokensUsed={MaxTokens}",
+                    response.TotalTokens ?? 0, totalTokensAccumulated, maxTokens);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                logger.LogWarning(
+                    "⏱️  LLM call timed out after 15s at iteration {Iteration}/{Max}. ProblemId={ProblemId}",
+                    iterations, MaxIterations, input.ProblemId);
+                break; // Fall back to default hint
             }
             catch (Exception ex)
             {
@@ -92,23 +107,87 @@ public class TutorAgentService(
                 
                 messages.Add(new LlmMessage { Role = "assistant", ToolCalls = response.ToolCalls });
 
-                foreach (var toolCall in response.ToolCalls)
+                // Execute all tools in parallel for better performance
+                logger.LogInformation("⚡ Executing {Count} tool(s) in parallel...", response.ToolCalls.Count);
+                var toolTasks = response.ToolCalls.Select(async toolCall =>
                 {
                     toolsUsed.Add(toolCall.Name);
                     logger.LogInformation("⚙️  Executing tool: {ToolName}", toolCall.Name);
+                    var stopwatch = Stopwatch.StartNew();
                     var resultJson = await ExecuteToolCallSafelyAsync(toolCall, input, cancellationToken);
+                    stopwatch.Stop();
+                    logger.LogInformation("✅ Tool {ToolName} completed in {Ms}ms, result length: {Length}", 
+                        toolCall.Name, stopwatch.ElapsedMilliseconds, resultJson.Length);
+                    return (toolCall.Id, resultJson);
+                }).ToList();
+
+                var results = await Task.WhenAll(toolTasks);
+                
+                logger.LogInformation("✅ All {Count} tools completed", results.Length);
+
+                foreach (var (toolCallId, resultJson) in results)
+                {
                     messages.Add(new LlmMessage
                     {
                         Role = "tool",
-                        ToolCallId = toolCall.Id,
+                        ToolCallId = toolCallId,
                         Content = resultJson
                     });
-                    logger.LogInformation("✅ Tool {ToolName} completed, result length: {Length}", 
-                        toolCall.Name, resultJson.Length);
                 }
             }
             else
             {
+                // No tool calls - this is the final response, but it might have been truncated
+                // due to low max_tokens. If response looks incomplete, retry with higher limit.
+                var needsRetry = false;
+                
+                if (string.IsNullOrWhiteSpace(response.FinalText))
+                {
+                    logger.LogWarning("⚠️  Agent returned empty final response, will retry with higher max_tokens");
+                    needsRetry = true;
+                }
+                else if (response.FinalText.Length < 50 && !response.FinalText.Contains("}"))
+                {
+                    logger.LogWarning("⚠️  Agent returned suspiciously short response ({Length} chars), will retry with higher max_tokens", 
+                        response.FinalText.Length);
+                    needsRetry = true;
+                }
+                
+                if (needsRetry && iterations < MaxIterations)
+                {
+                    logger.LogInformation("🔄 Retrying with max_tokens=2000 for complete final response...");
+                    
+                    // Remove the last assistant message if it exists
+                    if (messages.Count > 0 && messages[^1].Role == "assistant")
+                        messages.RemoveAt(messages.Count - 1);
+                    
+                    try
+                    {
+                        using var callCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                        callCts.CancelAfter(TimeSpan.FromSeconds(15));
+                        
+                        response = await llmClient.CompleteWithToolsAsync(messages, toolDefs, model, maxTokens: 2000, callCts.Token);
+                        lastModelUsed = response.ModelUsed ?? model;
+                        totalTokensAccumulated += response.TotalTokens ?? 0;
+                        iterations++; // Count this as an iteration
+                        
+                        logger.LogInformation(
+                            "✅ Retry successful. TokensThisCall={Tokens}, TotalSoFar={TotalTokens}",
+                            response.TotalTokens ?? 0, totalTokensAccumulated);
+                    }
+                    catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                    {
+                        logger.LogWarning("⏱️  Retry LLM call timed out after 15s");
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "❌ Retry LLM call failed: {ErrorType} - {ErrorMessage}", 
+                            ex.GetType().Name, ex.Message);
+                        break;
+                    }
+                }
+                
                 logger.LogInformation("🏁 Agent returned final response. Response details: HasToolCalls={HasToolCalls}, ToolCallsCount={ToolCallsCount}, FinalTextLength={FinalTextLength}", 
                     response.HasToolCalls, response.ToolCalls?.Count ?? 0, response.FinalText?.Length ?? 0);
                 logger.LogInformation("📄 Final text content: {FinalText}", response.FinalText ?? "(null)");

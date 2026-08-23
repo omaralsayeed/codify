@@ -98,12 +98,20 @@ public class CustomApiChatClient(
         IReadOnlyList<LlmMessage> messages,
         IReadOnlyList<LlmToolDefinition> tools,
         CancellationToken cancellationToken = default)
-        => await CompleteWithToolsAsync(messages, tools, modelOverride: null!, cancellationToken);
+        => await CompleteWithToolsAsync(messages, tools, modelOverride: null!, maxTokens: 4000, cancellationToken);
 
     public async Task<LlmResponse> CompleteWithToolsAsync(
         IReadOnlyList<LlmMessage> messages,
         IReadOnlyList<LlmToolDefinition> tools,
         string modelOverride,
+        CancellationToken cancellationToken = default)
+        => await CompleteWithToolsAsync(messages, tools, modelOverride, maxTokens: 4000, cancellationToken);
+
+    public async Task<LlmResponse> CompleteWithToolsAsync(
+        IReadOnlyList<LlmMessage> messages,
+        IReadOnlyList<LlmToolDefinition> tools,
+        string modelOverride,
+        int maxTokens,
         CancellationToken cancellationToken = default)
     {
         var model = string.IsNullOrWhiteSpace(modelOverride)
@@ -142,14 +150,14 @@ public class CustomApiChatClient(
                 system_prompt = systemPrompt,
                 tools = apiTools,
                 tool_choice = apiTools.Count > 0 ? "auto" : (object?)null,
-                max_tokens = 4000
+                max_tokens = maxTokens
             };
 
             _logger.LogInformation(
-                "🔵 Sending LLM request to /student/chat: Model={Model}, Messages={MessageCount}, Tools={ToolCount}",
-                model, apiMessages.Count, tools.Count);
-            _logger.LogInformation("📤 [DEBUG] Request Payload (Tool-Calling):\nModel: {Model}, ApiMessages Count: {MsgCount}, Tools Count: {ToolCount}, SystemPrompt Length: {SysLen}",
-                model, apiMessages.Count, apiTools.Count, systemPrompt?.Length ?? 0);
+                "🔵 Sending LLM request to /student/chat: Model={Model}, Messages={MessageCount}, Tools={ToolCount}, MaxTokens={MaxTokens}",
+                model, apiMessages.Count, tools.Count, maxTokens);
+            _logger.LogInformation("📤 [DEBUG] Request Payload (Tool-Calling):\nModel: {Model}, ApiMessages Count: {MsgCount}, Tools Count: {ToolCount}, MaxTokens: {MaxTokens}, SystemPrompt Length: {SysLen}",
+                model, apiMessages.Count, apiTools.Count, maxTokens, systemPrompt?.Length ?? 0);
 
             var response = await _httpClient.PostAsJsonAsync("chat", payload, cancellationToken);
             
@@ -253,13 +261,27 @@ public class CustomApiChatClient(
         }
 
         // Handle tool result messages
+        // AWS Bedrock Converse API doesn't support role="tool"
+        // Tool results must be sent as user messages with the tool result content
         if (message.Role == "tool")
         {
             return new
             {
-                role = "tool",
-                tool_call_id = message.ToolCallId,
-                content = message.Content
+                role = "user",
+                content = new[]
+                {
+                    new
+                    {
+                        toolResult = new
+                        {
+                            toolUseId = message.ToolCallId,
+                            content = new[]
+                            {
+                                new { text = message.Content }
+                            }
+                        }
+                    }
+                }
             };
         }
 

@@ -161,6 +161,97 @@ public class ExecutionService(
         return MapToExecutionResult(result);
     }
 
+    public async Task<IReadOnlyList<TestCaseExecutionResult>> EvaluateBatchAsync(
+        string code,
+        string language,
+        IEnumerable<TestCase> testCases,
+        int timeLimitMs,
+        int memoryLimitMb,
+        Problem? problem = null,
+        CancellationToken cancellationToken = default)
+    {
+        var testCaseList = testCases.ToList();
+        logger.LogInformation("🔧 [JUDGE0-BATCH] Evaluating code batch: Language={Language}, TestCaseCount={Count}, TimeLimitMs={TimeLimit}, MemoryLimitMb={MemoryLimit}", 
+            language, testCaseList.Count, timeLimitMs, memoryLimitMb);
+        
+        if (testCaseList.Count == 0)
+        {
+            logger.LogWarning("⚠️  [JUDGE0-BATCH] Empty test case list, returning empty results");
+            return Array.Empty<TestCaseExecutionResult>();
+        }
+
+        // ALWAYS wrap user code to handle I/O automatically
+        var executableCode = code;
+        try
+        {
+            logger.LogInformation("🎯 [JUDGE0-BATCH] Auto-wrapping user code for {Language}", language);
+            executableCode = codeWrapperService.WrapUserCode(code, language, null!);
+            logger.LogInformation("✅ [JUDGE0-BATCH] Code wrapped. Original length: {OriginalLen}, Wrapped length: {WrappedLen}", code.Length, executableCode.Length);
+        }
+        catch (NotSupportedException ex)
+        {
+            logger.LogWarning("⚠️  [JUDGE0-BATCH] Auto-wrapping not supported for {Language}: {Message}. Using code as-is.", language, ex.Message);
+            executableCode = code;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "⚠️  [JUDGE0-BATCH] Failed to wrap code for {Language}. Using code as-is.", language);
+            executableCode = code;
+        }
+        
+        var languageId = Judge0LanguageMap.GetLanguageId(language);
+        if (languageId is null)
+        {
+            logger.LogWarning("⚠️  [JUDGE0-BATCH] Unsupported language '{Language}'. Supported: {Supported}", 
+                language, Judge0LanguageMap.SupportedLanguages);
+            var errorResult = new TestCaseExecutionResult
+            {
+                ActualOutput = string.Empty,
+                Stderr = $"Language '{language}' is not supported. Supported: {Judge0LanguageMap.SupportedLanguages}.",
+                RuntimeError = true
+            };
+            return Enumerable.Repeat(errorResult, testCaseList.Count).ToList();
+        }
+
+        logger.LogInformation("✅ [JUDGE0-BATCH] Language mapped: {Language} → Judge0 ID {LanguageId}", language, languageId.Value);
+
+        // Create batch requests
+        var requests = testCaseList.Select(tc => new Judge0SubmissionRequest
+        {
+            SourceCode = executableCode,
+            LanguageId = languageId.Value,
+            Stdin = tc.InputData,
+            CpuTimeLimitSeconds = Math.Max(1, timeLimitMs) / 1000d,
+            MemoryLimitKb = Math.Max(1, memoryLimitMb) * 1024
+        }).ToList();
+
+        logger.LogInformation("📤 [JUDGE0-BATCH] Sending batch request to Judge0: Count={Count}, LanguageId={LangId}, CpuLimit={CpuLimit}s, MemoryLimit={MemLimit}KB", 
+            requests.Count, languageId.Value, requests[0].CpuTimeLimitSeconds, requests[0].MemoryLimitKb);
+
+        IReadOnlyList<Judge0SubmissionResult> results;
+        try
+        {
+            results = await judge0Client.ExecuteBatchAsync(requests, cancellationToken);
+            logger.LogInformation("📥 [JUDGE0-BATCH] Received batch response: Count={Count}, Succeeded={Succeeded}, Failed={Failed}", 
+                results.Count, results.Count(r => !r.PollTimedOut), results.Count(r => r.PollTimedOut));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "🔴 [JUDGE0-BATCH] Batch execution FAILED! ErrorType={ErrorType}, Message={Message}", 
+                ex.GetType().Name, ex.Message);
+            var errorResult = new TestCaseExecutionResult
+            {
+                ActualOutput = string.Empty,
+                Stderr = "Judge0 batch execution failed: " + ex.Message,
+                RuntimeError = true
+            };
+            return Enumerable.Repeat(errorResult, testCaseList.Count).ToList();
+        }
+
+        logger.LogInformation("✅ [JUDGE0-BATCH] Batch execution completed successfully");
+        return results.Select(MapToExecutionResult).ToList();
+    }
+
     // ── Private ───────────────────────────────────────────────────
 
     private static TestCaseExecutionResult MapToExecutionResult(Judge0SubmissionResult result)

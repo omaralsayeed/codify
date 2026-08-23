@@ -31,7 +31,24 @@ public class TutorAgentTools(
     }
 
     public async Task<List<KnowledgeBaseResult>> SearchKnowledgeBaseAsync(string query, string? conceptTag)
-        => await knowledgeBase.SearchAsync(query, conceptTag);
+    {
+        try
+        {
+            // Add 2-second timeout to prevent cold start delays from blocking hint generation
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+            return await knowledgeBase.SearchAsync(query, conceptTag, cancellationToken: cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            logger.LogWarning("⏱️  Knowledge base search timed out after 2s for query '{Query}', falling back to empty results", query);
+            return new List<KnowledgeBaseResult>();
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "⚠️  Knowledge base search failed for query '{Query}', falling back to empty results", query);
+            return new List<KnowledgeBaseResult>();
+        }
+    }
 
     public Task<PartialCodeObservation> CheckPartialCodeAsync(string code, string language)
     {

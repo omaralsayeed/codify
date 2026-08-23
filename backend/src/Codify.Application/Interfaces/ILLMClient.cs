@@ -25,4 +25,15 @@ public interface ILLMClient
         IReadOnlyList<LlmToolDefinition> tools,
         string modelOverride,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Same as CompleteWithToolsAsync but allows specifying max_tokens dynamically.
+    /// Used to reduce token usage for tool-calling turns vs final response turns.
+    /// </summary>
+    Task<LlmResponse> CompleteWithToolsAsync(
+        IReadOnlyList<LlmMessage> messages,
+        IReadOnlyList<LlmToolDefinition> tools,
+        string modelOverride,
+        int maxTokens,
+        CancellationToken cancellationToken = default);
 }

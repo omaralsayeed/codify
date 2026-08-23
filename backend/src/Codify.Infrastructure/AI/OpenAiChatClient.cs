@@ -70,12 +70,20 @@ public class OpenAiChatClient(
         IReadOnlyList<LlmMessage> messages,
         IReadOnlyList<LlmToolDefinition> tools,
         CancellationToken cancellationToken = default)
-        => await CompleteWithToolsAsync(messages, tools, modelOverride: null!, cancellationToken);
+        => await CompleteWithToolsAsync(messages, tools, modelOverride: null!, maxTokens: 4000, cancellationToken);
 
     public async Task<LlmResponse> CompleteWithToolsAsync(
         IReadOnlyList<LlmMessage> messages,
         IReadOnlyList<LlmToolDefinition> tools,
         string modelOverride,
+        CancellationToken cancellationToken = default)
+        => await CompleteWithToolsAsync(messages, tools, modelOverride, maxTokens: 4000, cancellationToken);
+
+    public async Task<LlmResponse> CompleteWithToolsAsync(
+        IReadOnlyList<LlmMessage> messages,
+        IReadOnlyList<LlmToolDefinition> tools,
+        string modelOverride,
+        int maxTokens,
         CancellationToken cancellationToken = default)
     {
         var model = string.IsNullOrWhiteSpace(modelOverride)
@@ -89,7 +97,10 @@ public class OpenAiChatClient(
         {
             var chatMessages = messages.Select(ToChatMessage).ToList();
 
-            var chatOptions = new ChatCompletionOptions();
+            var chatOptions = new ChatCompletionOptions
+            {
+                MaxOutputTokenCount = maxTokens
+            };
             foreach (var tool in tools)
             {
                 chatOptions.Tools.Add(ChatTool.CreateFunctionTool(
@@ -99,11 +110,12 @@ public class OpenAiChatClient(
             }
 
             _logger.LogInformation(
-                "🔵 Sending LLM request: Model={Model}, BaseUrl={BaseUrl}, Messages={MessageCount}, Tools={ToolCount}",
+                "🔵 Sending LLM request: Model={Model}, BaseUrl={BaseUrl}, Messages={MessageCount}, Tools={ToolCount}, MaxTokens={MaxTokens}",
                 model, 
                 string.IsNullOrWhiteSpace(_options.BaseUrl) ? "https://api.openai.com" : _options.BaseUrl,
                 chatMessages.Count, 
-                tools.Count);
+                tools.Count,
+                maxTokens);
 
             var completion = await client.CompleteChatAsync(chatMessages, chatOptions, cancellationToken);
             stopwatch.Stop();

@@ -21,4 +21,18 @@ public interface IExecutionService
         int memoryLimitMb,
         Problem? problem = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Evaluate code against multiple test cases in a single batch request to Judge0.
+    /// This is significantly faster than sequential EvaluateAsync calls.
+    /// Returns results in the same order as test cases.
+    /// </summary>
+    Task<IReadOnlyList<TestCaseExecutionResult>> EvaluateBatchAsync(
+        string code,
+        string language,
+        IEnumerable<TestCase> testCases,
+        int timeLimitMs,
+        int memoryLimitMb,
+        Problem? problem = null,
+        CancellationToken cancellationToken = default);
 }

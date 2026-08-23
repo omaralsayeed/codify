@@ -20,7 +20,12 @@ public static class Judge0Status
     public static bool IsQueuedOrProcessing(int statusId) =>
         statusId is InQueue or Processing;
 
-    public static bool IsTerminal(int statusId) => !IsQueuedOrProcessing(statusId);
+    public static bool IsTerminal(int statusId)
+    {
+        var isTerminal = !IsQueuedOrProcessing(statusId);
+        Console.WriteLine($"[Judge0Status.IsTerminal] StatusId={statusId}, InQueue={InQueue}, Processing={Processing}, IsQueuedOrProcessing={IsQueuedOrProcessing(statusId)}, Result={isTerminal}");
+        return isTerminal;
+    }
 
     public static bool IsRuntimeError(int statusId) =>
         statusId is >= RuntimeErrorRangeStart and <= RuntimeErrorRangeEnd;

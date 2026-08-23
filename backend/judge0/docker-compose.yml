@@ -70,12 +70,30 @@ services:
 
       RAILS_ENV: production
       RAILS_LOG_TO_STDOUT: "true"
+      
+      # ── Concurrency tuning ─────────────────────────────────────────
+      # COUNT: Number of parallel worker processes (default 1-2)
+      # Increase to 4-8 for better throughput with batch submissions
+      COUNT: "6"
+      
+      # MAX_QUEUE_SIZE: Maximum number of submissions in the queue
+      # Higher values allow more submissions to be queued without rejection
+      MAX_QUEUE_SIZE: "200"
+      
+      # WORKERS_COUNT: Worker threads per process (default varies by setup)
+      # This controls how many isolate boxes can run in parallel per worker process
+      WORKERS_COUNT: "4"
 
     volumes:
       - judge0-box:/box
 
     networks:
       - judge0-network
+    
+    # Deploy multiple worker replicas for even better concurrency
+    # Uncomment to run 2 worker containers
+    # deploy:
+    #   replicas: 2
 
 volumes:
   judge0-db:

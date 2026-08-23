@@ -303,6 +303,13 @@ public:
   }
 
   // ── AI Feedback derived getters (Chunk 5 & 6) ────────────────────────────
+  // PERFORMANCE: Cache computed values instead of recalculating on every change detection
+
+  /** Cached feedback counts by type — computed once when feedback loads */
+  private feedbackCounts: Record<'quality' | 'optimization' | 'anomaly', number> = { quality: 0, optimization: 0, anomaly: 0 };
+  
+  /** Cached high severity count — computed once when feedback loads */
+  highSeverityCount = 0;
 
   /**
    * Items after applying activeFeedbackFilter.
@@ -316,14 +323,9 @@ public:
     );
   }
 
-  /** Count per type — used by filter pill labels. */
-  feedbackCountOf(type: FeedbackType): number {
-    return this.submissionFeedback?.feedbackItems.filter(i => i.type === type).length ?? 0;
-  }
-
-  /** Number of high-severity items — drives the warning strip. */
-  get highSeverityCount(): number {
-    return this.submissionFeedback?.feedbackItems.filter(i => i.severity === 'high').length ?? 0;
+  /** Count per type — used by filter pill labels. Returns cached value. */
+  feedbackCountOf(type: 'quality' | 'optimization' | 'anomaly'): number {
+    return this.feedbackCounts[type] ?? 0;
   }
 
   /** True when overallScore === 100 — adds the ✨ decoration. */
@@ -803,6 +805,14 @@ public:
         next: feedback => {
           this.submissionFeedback = feedback;
           this.isFeedbackLoading  = false;
+
+          // PERFORMANCE: Compute feedback counts once instead of on every change detection
+          this.feedbackCounts = {
+            quality: feedback.feedbackItems.filter(i => i.type === 'quality').length,
+            optimization: feedback.feedbackItems.filter(i => i.type === 'optimization').length,
+            anomaly: feedback.feedbackItems.filter(i => i.type === 'anomaly').length,
+          };
+          this.highSeverityCount = feedback.feedbackItems.filter(i => i.severity === 'high').length;
 
           // If the user is already on the Feedback tab when data arrives,
           // start the count-up immediately; otherwise it starts on first tab switch.
