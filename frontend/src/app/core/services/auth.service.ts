@@ -178,6 +178,26 @@ export class AuthService {
   }
 
   /**
+   * Sets the active subscription plan for the current user.
+   * Called after a successful Stripe redirect (reads ?plan= query param).
+   * Patches the live signal immediately and persists to localStorage —
+   * same pattern as setAvatarUrl().
+   */
+  setPlan(plan: 'free' | 'learner' | 'proplus'): void {
+    const current = this._currentUser();
+    if (!current) return;
+
+    const updated: User = { ...current, plan };
+    this._currentUser.set(updated);
+
+    try {
+      localStorage.setItem('codify_user', JSON.stringify(updated));
+    } catch {
+      // localStorage full — plan still visible in memory for this session
+    }
+  }
+
+  /**
    * Updates the current user's profile fields.
    * Optimistic: patches the signal + localStorage immediately,
    * then fires PUT /api/auth/profile in the background.
